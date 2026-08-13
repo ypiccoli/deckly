@@ -16,6 +16,13 @@
   System.__ComObject — o PowerShell não enxerga o vtable da interface
   customizada. Por isso o PowerShell só chama métodos estáticos do C#, nunca
   a interface COM diretamente.
+
+  Nota de performance: compilar o bloco C# via Add-Type (csc.exe por baixo)
+  custa ~1-2s — inaceitável rodando a cada clique no tablet. Por isso a
+  primeira execução compila para um .dll em disco (cache ao lado deste
+  script) e as execuções seguintes só carregam esse .dll pronto (quase
+  instantâneo). Se o cache não puder ser gravado por algum motivo, cai de
+  volta para compilar em memória a cada vez — mais lento, mas nunca quebra.
 #>
 
 param(
@@ -27,7 +34,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Add-Type @"
+$CaminhoDllCache = Join-Path $PSScriptRoot 'windows-media-nativo.dll'
+
+$CodigoFonte = @"
 using System;
 using System.Runtime.InteropServices;
 
@@ -112,6 +121,28 @@ public static class TeclasDeMidia {
     public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 }
 "@
+
+# O cache fica dentro de scripts/ (sistema de arquivos do WSL), o que para o
+# Windows é um caminho de rede (\\wsl.localhost\...). O .NET bloqueia
+# Add-Type -Path / Assembly.LoadFrom em caminhos de rede (FileLoadException,
+# HRESULT 0x80131515 "carregamento a partir de origem remota bloqueado").
+# Solução: ler os bytes manualmente e carregar com Assembly.Load(byte[]),
+# que não carrega informação de zona/origem e não sofre esse bloqueio.
+if (-not (Test-Path $CaminhoDllCache)) {
+    try {
+        Add-Type -TypeDefinition $CodigoFonte -OutputAssembly $CaminhoDllCache
+    } catch {
+        # Não conseguiu gravar o cache (ex.: sem permissão de escrita) — sem
+        # problema, segue sem cache; só fica mais lento a cada chamada.
+    }
+}
+
+try {
+    $bytesMontagem = [System.IO.File]::ReadAllBytes($CaminhoDllCache)
+    [System.Reflection.Assembly]::Load($bytesMontagem) | Out-Null
+} catch {
+    Add-Type -TypeDefinition $CodigoFonte
+}
 
 function Enviar-TeclaVirtual([byte]$codigo) {
     # KEYEVENTF_EXTENDEDKEY = 0x1, KEYEVENTF_KEYUP = 0x2
