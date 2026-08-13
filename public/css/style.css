@@ -133,6 +133,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   grid-auto-rows: 120px;
+  grid-auto-flow: dense;
   gap: 16px;
   align-content: start;
 }
@@ -255,23 +256,225 @@ body {
   }
 }
 
-/* Botão do tipo slider ocupa mais espaço */
+/* Botão do tipo slider: vertical (estilo fader), ocupa 1 coluna e 2 linhas
+   para caber ícone + título + valor + a barra comprida. */
 .botao-slider {
+  grid-column: span 1;
+  grid-row: span 2;
+  cursor: default;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.botao-slider-cabecalho {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.botao-slider-cabecalho .botao-titulo {
+  font-size: 0.78rem;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.botao-slider .slider-valor {
+  font-size: 1.15rem;
+  margin-top: 2px;
+}
+
+/* Os dois sliders de volume ficam fixos nas duas últimas colunas da grade
+   (canto superior direito), juntos, não importa quantos outros botões vierem
+   antes deles — os demais fluem naturalmente à esquerda ao redor (o
+   grid-auto-flow: dense da .grade preenche os buracos ao redor de itens com
+   posição explícita). Como só são esses 2 elementos, não compensa criar um
+   mecanismo genérico de posicionamento no config por esse caso pontual. */
+[data-id="midia.volume_slider"] {
+  grid-column: -3 / -2;
+  grid-row: 1 / 3;
+}
+
+[data-id="spotify.volume_slider"] {
+  grid-column: -2 / -1;
+  grid-row: 1 / 3;
+}
+
+/* Layout específico pedido para a página "Mídia": bloco 2x2 compacto com os
+   controles do Spotify (play/pause + próxima em cima, tocar em + anterior
+   embaixo — sem buracos), "Tocando agora" cola à direita desse bloco (única
+   posição 2x2 livre sobrando), "Mudo" isolado embaixo do slider de volume
+   do Spotify. O "spotify.now_playing" não tem posição própria fixada aqui —
+   sobra pra ele o próximo buraco 2x2 livre. */
+[data-id="spotify.play_pause"] {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+[data-id="spotify.proxima"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+[data-id="spotify.tocar_em"] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+[data-id="spotify.anterior"] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+[data-id="midia.mute"] {
+  grid-column: -2 / -1;
+  grid-row: 3;
+}
+
+/* Botão do tipo info (mostrador somente leitura, ex.: now playing); 2 linhas
+   de grade para caber ícone + título + até 3 linhas de texto sem cortar. */
+.botao-info {
   grid-column: span 2;
+  grid-row: span 2;
   cursor: default;
   align-items: stretch;
   justify-content: center;
 }
 
-.botao-slider-cabecalho {
+.botao-info-cabecalho {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.botao-slider-cabecalho .botao-titulo {
+.botao-info-cabecalho .botao-titulo {
   flex: 1;
   text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+}
+
+.info-linha-principal {
+  margin-top: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--cor-texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-linha-secundaria {
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--cor-texto-fraco);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-linha-terciaria {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--cor-texto-fraco);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Overlay do seletor de dispositivo Spotify ("Tocar em…")
+   Visibilidade controlada pela classe .aberto, não pelo atributo [hidden]:
+   um seletor de classe com "display" tem a MESMA especificidade da regra
+   [hidden] { display: none } da folha de estilo do navegador, e como vem
+   depois na cascata, vence — o [hidden] seria ignorado. */
+.overlay-dispositivos {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 7, 10, 0.75);
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.overlay-dispositivos.aberto {
+  display: flex;
+}
+
+.overlay-cartao {
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-cartao-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: 24px;
+  width: min(420px, 100%);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.overlay-cartao h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--cor-texto);
+}
+
+.lista-dispositivos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.lista-dispositivos-mensagem {
+  color: var(--cor-texto-fraco);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.item-dispositivo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--cor-cartao-borda);
+  background: var(--cor-fundo-cabecalho);
+  color: var(--cor-texto);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.item-dispositivo:active {
+  transform: scale(0.98);
+}
+
+.item-dispositivo.ativo {
+  border-color: var(--cor-acento-2);
+  background: linear-gradient(160deg, rgba(0, 209, 178, 0.16), var(--cor-fundo-cabecalho) 60%);
+}
+
+.item-dispositivo-icone {
+  font-size: 1.3rem;
+}
+
+.overlay-fechar {
+  align-self: flex-end;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--cor-cartao-borda);
+  background: transparent;
+  color: var(--cor-texto-fraco);
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .slider-valor {
@@ -279,17 +482,21 @@ body {
   color: var(--cor-acento-2);
   font-weight: 700;
   min-width: 2.5ch;
-  text-align: right;
+  text-align: center;
 }
 
+/* Vertical (estilo fader): writing-mode + direction fazem o <input type="range">
+   nativo desenhar de baixo (min) pra cima (max) em vez de esquerda->direita. */
 .controle-slider {
-  width: 100%;
-  margin-top: 10px;
+  flex: 1;
+  width: 12px;
+  margin: 10px 0 6px;
+  writing-mode: vertical-lr;
+  direction: rtl;
   -webkit-appearance: none;
   appearance: none;
-  height: 10px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--cor-acento-1), var(--cor-acento-2));
+  background: linear-gradient(0deg, var(--cor-acento-1), var(--cor-acento-2));
   outline: none;
 }
 

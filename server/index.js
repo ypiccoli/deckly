@@ -9,6 +9,7 @@ const WebSocket = require('ws');
 
 const { obterPaginas } = require('./config-loader');
 const criarRotaAcoes = require('./routes/actions');
+const criarRotaSpotifyAuth = require('./routes/spotify-auth');
 
 const media = require('./integrations/media');
 const obs = require('./integrations/obs');
@@ -26,6 +27,7 @@ app.get('/api/config', (req, res) => {
 });
 
 app.use('/action', criarRotaAcoes(integracoes));
+app.use('/spotify', criarRotaSpotifyAuth());
 
 const servidorHttp = http.createServer(app);
 const wss = new WebSocket.Server({ server: servidorHttp, path: '/ws' });
@@ -54,25 +56,25 @@ wss.on('connection', (socket) => {
 
 const PORTA = process.env.PORT || 3000;
 
-async function iniciar() {
-  await Promise.all(
-    Object.values(integracoes).map((integracao) => {
-      if (!integracao.inicializar) return Promise.resolve();
-      return integracao.inicializar().catch((erro) => {
-        console.warn(`[${integracao.nome}] erro ao inicializar: ${erro.message}`);
-      });
-    }),
-  );
+// A porta HTTP sobe imediatamente — não espera as integrações. Cada
+// integração inicializa em segundo plano e só reflete no app quando estiver
+// pronta (via o mesmo evento 'estado' de sempre). Isso evita que uma
+// integração lenta ou indisponível (ex.: OBS fechado, cuja tentativa de
+// conexão pode demorar bem mais que o normal para dar timeout dependendo da
+// rede) trave a subida do servidor inteiro.
+servidorHttp.listen(PORTA, '0.0.0.0', () => {
+  console.log('');
+  console.log(`Stream Deck Web rodando na porta ${PORTA}`);
+  console.log(`  -> Neste PC:        http://localhost:${PORTA}`);
+  console.log(`  -> No tablet (LAN): http://<IP-do-PC-na-rede>:${PORTA}`);
+  console.log('');
+});
 
-  servidorHttp.listen(PORTA, '0.0.0.0', () => {
-    console.log('');
-    console.log(`Stream Deck Web rodando na porta ${PORTA}`);
-    console.log(`  -> Neste PC:        http://localhost:${PORTA}`);
-    console.log(`  -> No tablet (LAN): http://<IP-do-PC-na-rede>:${PORTA}`);
-    console.log('');
+for (const integracao of Object.values(integracoes)) {
+  if (!integracao.inicializar) continue;
+  integracao.inicializar().catch((erro) => {
+    console.warn(`[${integracao.nome}] erro ao inicializar: ${erro.message}`);
   });
 }
-
-iniciar();
 
 module.exports = app;

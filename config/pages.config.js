@@ -8,7 +8,13 @@
 //   id           identificador único, usado em POST /action/:id
 //   titulo       rótulo curto mostrado no botão
 //   icone        emoji (ou texto curto) mostrado no botão
-//   tipo         "botao" (padrão) ou "slider"
+//   iconeAtivo / tituloAtivo
+//                emoji/texto alternativo mostrado quando estadoChave é truthy
+//                (ex.: play/pause do Spotify troca o texto conforme está tocando ou não,
+//                mantendo o mesmo ícone dos outros botões de Spotify)
+//   tipo         "botao" (padrão), "slider", "info" (mostrador somente leitura)
+//                ou "dispositivo" (abre uma lista de opções buscada em
+//                GET /spotify/dispositivos e manda a escolha como parametros.dispositivoId)
 //   integracao   nome da pasta em server/integrations (media | obs | spotify | hue)
 //   acao         nome do método exposto pela integração (veja server/integrations/*/index.js)
 //   parametros   objeto opcional repassado como argumento para a ação
@@ -16,6 +22,9 @@
 //                o botão (ex.: cena ativa, mic mutado, gravando, volume atual)
 //   estiloEstado dica visual de como reagir ao estado: "destaque" | "perigo" | "gravando"
 //   min / max    usados apenas em botões do tipo "slider"
+//   estadoTexto / estadoTextoSecundario / estadoTextoTerciario
+//                usados apenas em botões do tipo "info": caminhos (dot notation)
+//                para as linhas de texto mostradas (ex.: now playing)
 // -----------------------------------------------------------------------------
 
 module.exports = {
@@ -26,27 +35,6 @@ module.exports = {
       icone: '🎵',
       botoes: [
         {
-          id: 'midia.play_pause',
-          titulo: 'Play / Pause',
-          icone: '⏯️',
-          integracao: 'media',
-          acao: 'playPause',
-        },
-        {
-          id: 'midia.anterior',
-          titulo: 'Anterior',
-          icone: '⏮️',
-          integracao: 'media',
-          acao: 'faixaAnterior',
-        },
-        {
-          id: 'midia.proxima',
-          titulo: 'Próxima',
-          icone: '⏭️',
-          integracao: 'media',
-          acao: 'proximaFaixa',
-        },
-        {
           id: 'midia.mute',
           titulo: 'Mudo',
           icone: '🔇',
@@ -56,18 +44,17 @@ module.exports = {
           estiloEstado: 'perigo',
         },
         {
-          id: 'midia.volume_baixar',
-          titulo: 'Vol −',
-          icone: '🔉',
-          integracao: 'media',
-          acao: 'diminuirVolume',
-        },
-        {
-          id: 'midia.volume_subir',
-          titulo: 'Vol +',
-          icone: '🔊',
-          integracao: 'media',
-          acao: 'aumentarVolume',
+          id: 'spotify.now_playing',
+          // Posicionado cedo no array (perto do topo da grade) de propósito —
+          // é a última coisa que deveria acabar cortada por scroll.
+          titulo: 'Tocando agora',
+          icone: '🎵',
+          tipo: 'info',
+          estadoChave: 'spotify.tocando',
+          estadoTexto: 'spotify.musica',
+          estadoTextoSecundario: 'spotify.artista',
+          estadoTextoTerciario: 'spotify.dispositivo',
+          estiloEstado: 'destaque',
         },
         {
           id: 'midia.volume_slider',
@@ -79,6 +66,52 @@ module.exports = {
           integracao: 'media',
           acao: 'definirVolume',
           estadoChave: 'media.volume',
+        },
+        {
+          id: 'spotify.volume_slider',
+          titulo: 'Volume Spotify',
+          icone: '🎧',
+          tipo: 'slider',
+          min: 0,
+          max: 100,
+          integracao: 'spotify',
+          acao: 'definirVolume',
+          estadoChave: 'spotify.volume',
+        },
+        {
+          id: 'spotify.anterior',
+          titulo: 'Spotify ⏮',
+          icone: '🎧',
+          integracao: 'spotify',
+          acao: 'faixaAnterior',
+        },
+        {
+          id: 'spotify.play_pause',
+          // Mesmo ícone dos outros botões de Spotify (🎧); quem muda é o texto,
+          // igual ao "Spotify ⏮"/"Spotify ⏭" — "titulo" quando parado,
+          // "tituloAtivo" quando estadoChave (spotify.tocando) é truthy.
+          titulo: 'Spotify ▶',
+          tituloAtivo: 'Spotify ⏸',
+          icone: '🎧',
+          integracao: 'spotify',
+          acao: 'playPause',
+          estadoChave: 'spotify.tocando',
+          estiloEstado: 'destaque',
+        },
+        {
+          id: 'spotify.proxima',
+          titulo: 'Spotify ⏭',
+          icone: '🎧',
+          integracao: 'spotify',
+          acao: 'proximaFaixa',
+        },
+        {
+          id: 'spotify.tocar_em',
+          titulo: 'Tocar em…',
+          icone: '📡',
+          tipo: 'dispositivo',
+          integracao: 'spotify',
+          acao: 'transferirReproducao',
         },
       ],
     },
@@ -148,14 +181,7 @@ module.exports = {
       titulo: 'Casa',
       icone: '💡',
       botoes: [
-        // Spotify e Hue vêm estruturados mas desativados até você configurar o .env — veja o README.
-        {
-          id: 'spotify.play_pause',
-          titulo: 'Spotify',
-          icone: '🎧',
-          integracao: 'spotify',
-          acao: 'playPause',
-        },
+        // Hue vem estruturado mas desativado até você configurar o .env — veja o README.
         {
           id: 'hue.sala_toggle',
           titulo: 'Luz Sala',

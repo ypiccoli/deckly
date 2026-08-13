@@ -87,8 +87,8 @@
       <div class="botao-slider-cabecalho">
         <span class="botao-icone">${botao.icone || '🎚️'}</span>
         <span class="botao-titulo">${botao.titulo}</span>
-        <span class="slider-valor">${valorInicial}</span>
       </div>
+      <span class="slider-valor">${valorInicial}</span>
       <input type="range" class="controle-slider" min="${min}" max="${max}" value="${valorInicial}" />
     `;
 
@@ -110,6 +110,97 @@
     });
 
     return el;
+  }
+
+  function criarBotaoInfo(botao) {
+    const el = document.createElement('div');
+    el.className = 'botao botao-info';
+    el.dataset.id = botao.id;
+    if (botao.estiloEstado) el.classList.add(`estilo-${botao.estiloEstado}`);
+
+    el.innerHTML = `
+      <div class="botao-info-cabecalho">
+        <span class="botao-icone">${botao.icone || 'ℹ️'}</span>
+        <span class="botao-titulo">${botao.titulo}</span>
+      </div>
+      <div class="info-linha-principal">—</div>
+      <div class="info-linha-secundaria"></div>
+      <div class="info-linha-terciaria"></div>
+    `;
+
+    return el;
+  }
+
+  function atualizarTextoInfo(botao, el) {
+    const principal = botao.estadoTexto ? resolverEstado(estadoGlobal, botao.estadoTexto) : null;
+    const secundaria = botao.estadoTextoSecundario ? resolverEstado(estadoGlobal, botao.estadoTextoSecundario) : null;
+    const terciaria = botao.estadoTextoTerciario ? resolverEstado(estadoGlobal, botao.estadoTextoTerciario) : null;
+    el.querySelector('.info-linha-principal').textContent = principal || 'Nada tocando';
+    el.querySelector('.info-linha-secundaria').textContent = secundaria || '';
+    const elTerciaria = el.querySelector('.info-linha-terciaria');
+    if (elTerciaria) elTerciaria.textContent = terciaria ? `em ${terciaria}` : '';
+  }
+
+  function iconePorTipoDispositivo(tipo) {
+    const mapa = { Computer: '💻', Smartphone: '📱', Speaker: '🔊', TV: '📺', Tablet: '📱', GameConsole: '🎮', CastVideo: '📺', CastAudio: '🔊' };
+    return mapa[tipo] || '📡';
+  }
+
+  function criarBotaoDispositivo(botao) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'botao';
+    el.dataset.id = botao.id;
+
+    el.innerHTML = `
+      <span class="botao-icone">${botao.icone || '📡'}</span>
+      <span class="botao-titulo">${botao.titulo}</span>
+    `;
+
+    el.addEventListener('click', () => abrirSeletorDispositivos(botao));
+
+    return el;
+  }
+
+  async function abrirSeletorDispositivos(botao) {
+    const overlay = document.getElementById('overlay-dispositivos');
+    const lista = document.getElementById('lista-dispositivos');
+    lista.innerHTML = '<p class="lista-dispositivos-mensagem">Buscando dispositivos…</p>';
+    overlay.classList.add('aberto');
+
+    try {
+      const resposta = await fetch('/spotify/dispositivos');
+      const dados = await resposta.json();
+      if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'Falha ao buscar dispositivos');
+
+      lista.innerHTML = '';
+      if (!dados.dispositivos.length) {
+        lista.innerHTML = '<p class="lista-dispositivos-mensagem">Nenhum dispositivo Spotify ativo encontrado. Abra o Spotify em algum aparelho e tente de novo.</p>';
+        return;
+      }
+
+      dados.dispositivos.forEach((dispositivo) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'item-dispositivo';
+        if (dispositivo.is_active) item.classList.add('ativo');
+        item.innerHTML = `
+          <span class="item-dispositivo-icone">${iconePorTipoDispositivo(dispositivo.type)}</span>
+          <span class="item-dispositivo-nome">${dispositivo.name}</span>
+        `;
+        item.addEventListener('click', async () => {
+          overlay.classList.remove('aberto');
+          try {
+            await enviarAcao(botao.id, { dispositivoId: dispositivo.id });
+          } catch (erro) {
+            console.error(erro);
+          }
+        });
+        lista.appendChild(item);
+      });
+    } catch (erro) {
+      lista.innerHTML = `<p class="lista-dispositivos-mensagem">Erro: ${erro.message}</p>`;
+    }
   }
 
   function renderizarAbas() {
@@ -136,7 +227,11 @@
     if (!pagina) return;
 
     pagina.botoes.forEach((botao) => {
-      const el = botao.tipo === 'slider' ? criarBotaoSlider(botao) : criarBotaoNormal(botao);
+      let el;
+      if (botao.tipo === 'slider') el = criarBotaoSlider(botao);
+      else if (botao.tipo === 'info') el = criarBotaoInfo(botao);
+      else if (botao.tipo === 'dispositivo') el = criarBotaoDispositivo(botao);
+      else el = criarBotaoNormal(botao);
       elGrade.appendChild(el);
     });
 
@@ -164,7 +259,20 @@
         return;
       }
 
-      el.classList.toggle('ativo', botaoEstaAtivo(botao));
+      if (botao.tipo === 'info') {
+        atualizarTextoInfo(botao, el);
+      }
+
+      const ativo = botaoEstaAtivo(botao);
+      if (botao.iconeAtivo) {
+        const elIcone = el.querySelector('.botao-icone');
+        if (elIcone) elIcone.textContent = ativo ? botao.iconeAtivo : botao.icone || '⬛';
+      }
+      if (botao.tituloAtivo) {
+        const elTitulo = el.querySelector('.botao-titulo');
+        if (elTitulo) elTitulo.textContent = ativo ? botao.tituloAtivo : botao.titulo;
+      }
+      el.classList.toggle('ativo', ativo);
     });
   }
 
@@ -184,10 +292,22 @@
     elStatusConexao.querySelector('.status-texto').textContent = conectado ? 'ao vivo' : 'reconectando…';
   }
 
+  function configurarOverlayDispositivos() {
+    const overlay = document.getElementById('overlay-dispositivos');
+    document.getElementById('overlay-fechar').addEventListener('click', () => {
+      overlay.classList.remove('aberto');
+    });
+    overlay.addEventListener('click', (evento) => {
+      if (evento.target === overlay) overlay.classList.remove('aberto');
+    });
+  }
+
   async function iniciar() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch((erro) => console.warn('SW: falha ao registrar', erro));
     }
+
+    configurarOverlayDispositivos();
 
     // Inscreve nos eventos do WS antes de esperar o fetch: se a conexão (ou
     // a primeira mensagem de estado) chegar durante o await abaixo, ainda

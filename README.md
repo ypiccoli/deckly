@@ -17,7 +17,7 @@ próprio e 100% configurável editando um arquivo.
 - [Acessar do tablet (rede — importante no WSL2)](#acessar-do-tablet-rede--importante-no-wsl2)
 - [Controle de mídia (Windows via WSL2)](#controle-de-mídia-windows-via-wsl2)
 - [Habilitar o OBS](#habilitar-o-obs)
-- [Habilitar o Spotify](#habilitar-o-spotify-ainda-não-conectado)
+- [Habilitar o Spotify](#habilitar-o-spotify)
 - [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
 - [Editar páginas e botões](#editar-páginas-e-botões)
 - [Estrutura de pastas](#estrutura-de-pastas)
@@ -220,29 +220,52 @@ mesma abstração cuida da diferença.
    grava — tudo isso chega em tempo real pelo WebSocket, então funciona
    mesmo se você trocar de cena pelo próprio OBS (não só pelo tablet).
 
-## Habilitar o Spotify (ainda não conectado)
+## Habilitar o Spotify
 
-O módulo já está todo estruturado em `server/integrations/spotify/index.js`
-(ações, estado, tratamento de erro), mas as chamadas HTTP reais ficam como
-`TODO` — não temos suas credenciais, então não há nada para configurar
-"às cegas". Para habilitar:
+A integração já está implementada (`server/integrations/spotify/index.js`):
+play/pause, próxima/anterior faixa, e "now playing" (música/artista tocando)
+refletido no estado ao vivo a cada 5s. O próprio servidor tem rotas para
+fazer a autorização OAuth pelo navegador — não precisa copiar/colar código
+de autorização manualmente.
 
-1. Crie um app em <https://developer.spotify.com/dashboard>.
-2. Nas configurações do app, adicione um **Redirect URI**, por exemplo
-   `http://localhost:3000/spotify/callback`.
-3. Copie o **Client ID** e o **Client Secret** para o `.env`
-   (`SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`).
-4. Faça o fluxo OAuth "Authorization Code" **uma vez** (manualmente ou
-   implementando a rota de callback) para obter um **refresh token** — veja
-   o guia oficial:
-   <https://developer.spotify.com/documentation/web-api/tutorials/code-flow>.
-5. Preencha `SPOTIFY_REFRESH_TOKEN` no `.env`.
-6. Implemente os `TODO`s em `server/integrations/spotify/index.js`
-   (renovar o access token e chamar `GET/PUT/POST /v1/me/player/*` da Web
-   API do Spotify).
+1. Crie um app em <https://developer.spotify.com/dashboard> ("Create app").
+2. Nas configurações do app (**Edit Settings**), em **Redirect URIs**,
+   adicione exatamente:
+   ```
+   http://127.0.0.1:3000/spotify/callback
+   ```
+   (troque `3000` se você mudou `PORT` no `.env`). Precisa bater
+   **exatamente** com `SPOTIFY_REDIRECT_URI` do `.env` — protocolo, host e
+   porta incluídos. Use `127.0.0.1`, não `localhost`: o Spotify não aceita
+   mais `http://localhost` como URI "segura" — só `https://` ou o IP de
+   loopback literal `127.0.0.1` (é assim mesmo rodando tudo local).
+3. Copie o **Client ID** e o **Client Secret** do app para o `.env`:
+   ```
+   SPOTIFY_CLIENT_ID=...
+   SPOTIFY_CLIENT_SECRET=...
+   ```
+4. Reinicie o servidor (`npm run dev`/`npm start`).
+5. No navegador **do PC** (não do tablet — precisa ser exatamente a URL
+   cadastrada no passo 2), acesse:
+   ```
+   http://127.0.0.1:3000/spotify/login
+   ```
+   Você será redirecionado para o Spotify, faça login e autorize o app. Ao
+   voltar, a página mostra um **refresh token**.
+6. Copie esse valor para `SPOTIFY_REFRESH_TOKEN` no `.env` e reinicie o
+   servidor de novo. Pronto — os botões de Spotify na página "Casa" passam
+   a funcionar.
 
-Enquanto isso, os botões de Spotify na página "Casa" respondem com um erro
-amigável ("ainda não configurada") em vez de quebrar o app.
+**Importante:** os botões de play/pause/próxima/anterior só funcionam se
+houver um **dispositivo Spotify ativo** no momento (o app do Spotify aberto
+e tocando ou pausado em algum lugar — PC, celular, alto-falante). Sem
+dispositivo ativo, a Web API do Spotify recusa os comandos; o erro que
+aparece no tablet ("verifique se há um dispositivo ativo") é exatamente
+isso.
+
+O refresh token não expira por tempo, mas pode ser revogado se você trocar
+sua senha do Spotify ou remover o acesso do app manualmente — se isso
+acontecer, repita os passos 5 e 6.
 
 ## Habilitar o Hue (ainda não conectado)
 
@@ -280,11 +303,12 @@ stream-deck-web/
 │   ├── index.js               # bootstrap: Express + WebSocket + integrações
 │   ├── config-loader.js       # lê e indexa config/pages.config.js
 │   ├── routes/
-│   │   └── actions.js         # POST /action/:id — dispatcher genérico
+│   │   ├── actions.js          # POST /action/:id — dispatcher genérico
+│   │   └── spotify-auth.js     # /spotify/login e /spotify/callback (OAuth, uma vez)
 │   └── integrations/
 │       ├── media/             # play/pause, faixas, mute, volume (Windows)
 │       ├── obs/                # cenas, mic, gravação (obs-websocket-js)
-│       ├── spotify/            # estruturado, aguardando credenciais
+│       ├── spotify/            # play/pause, faixas, now playing (Web API)
 │       └── hue/                 # estruturado, aguardando credenciais
 ├── public/                     # frontend estático (PWA)
 │   ├── index.html

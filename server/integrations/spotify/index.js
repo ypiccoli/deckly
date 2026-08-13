@@ -1,13 +1,23 @@
-// Integração com o Spotify (Web API) — ESTRUTURADA, ainda não conectada.
+// Integração com o Spotify (Web API).
 //
-// Para habilitar (veja o passo a passo completo no README):
+// Fluxo de autorização (uma vez só, feito pelo navegador — veja o README):
 //   1. Crie um app em https://developer.spotify.com/dashboard
-//   2. Preencha SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET / SPOTIFY_REDIRECT_URI no .env
-//   3. Faça o fluxo OAuth "Authorization Code" uma vez para obter um refresh token
-//      e preencha SPOTIFY_REFRESH_TOKEN no .env
-//   4. Implemente os TODOs abaixo usando a Web API (https://api.spotify.com/v1/me/player/*)
+//   2. Preencha SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET no .env
+//   3. Abra http://127.0.0.1:<porta>/spotify/login — o servidor redireciona
+//      para o Spotify, você autoriza, e a rota /spotify/callback (também
+//      deste servidor, veja server/routes/spotify-auth.js) troca o código
+//      pelo refresh token e mostra na tela.
+//   4. Cole esse valor em SPOTIFY_REFRESH_TOKEN no .env e reinicie o servidor.
+//
+// Depois disso, o access token (curta duração) é renovado sozinho a partir
+// do refresh token (longa duração) sempre que necessário.
 
 const EventEmitter = require('events');
+
+const URL_CONTAS_SPOTIFY = 'https://accounts.spotify.com';
+const URL_API_SPOTIFY = 'https://api.spotify.com/v1';
+const ESCOPOS = ['user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing'].join(' ');
+const INTERVALO_POLLING_MS = 5000;
 
 class IntegracaoSpotify extends EventEmitter {
   constructor() {
@@ -18,26 +28,86 @@ class IntegracaoSpotify extends EventEmitter {
       tocando: false,
       musica: null,
       artista: null,
+      volume: 50,
+      dispositivo: null,
     };
-    this.habilitado = Boolean(
-      process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && process.env.SPOTIFY_REFRESH_TOKEN,
-    );
+
+    this.clientId = process.env.SPOTIFY_CLIENT_ID;
+    this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000/spotify/callback';
+    this.refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
+    this.habilitado = Boolean(this.clientId && this.clientSecret && this.refreshToken);
+
+    this.accessToken = null;
+    this.accessTokenExpiraEm = 0;
+    this._intervaloPolling = null;
   }
 
-  async inicializar() {
-    if (!this.habilitado) {
-      console.log('[spotify] Não configurado (preencha SPOTIFY_* no .env para habilitar) — módulo inativo por enquanto.');
-      return;
+  // Usado por server/routes/spotify-auth.js para montar o link de autorização.
+  obterUrlAutorizacao() {
+    const parametros = new URLSearchParams({
+      response_type: 'code',
+      client_id: this.clientId,
+      scope: ESCOPOS,
+      redirect_uri: this.redirectUri,
+    });
+    return `${URL_CONTAS_SPOTIFY}/authorize?${parametros.toString()}`;
+  }
+
+  // Usado por server/routes/spotify-auth.js na troca inicial código -> tokens.
+  async trocarCodigoPorToken(codigo) {
+    const resposta = await fetch(`${URL_CONTAS_SPOTIFY}/api/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: codigo,
+        redirect_uri: this.redirectUri,
+      }),
+    });
+    if (!resposta.ok) {
+      throw new Error(`Falha ao trocar código por token (${resposta.status}): ${await resposta.text()}`);
     }
-    // TODO: obter access token via refresh token e iniciar polling do "now playing"
-    // (GET /v1/me/player), emitindo this.emit('estado', this.estado) a cada mudança.
+    return resposta.json();
   }
 
   async _obterAccessToken() {
-    // TODO: POST https://accounts.spotify.com/api/token
-    //   body: grant_type=refresh_token&refresh_token=<SPOTIFY_REFRESH_TOKEN>
-    //   header: Authorization: Basic base64(client_id:client_secret)
-    throw new Error('Integração Spotify ainda não configurada. Veja o README para habilitar.');
+    this._garantirConfigurado();
+    if (this.accessToken && Date.now() < this.accessTokenExpiraEm) {
+      return this.accessToken;
+    }
+
+    const resposta = await fetch(`${URL_CONTAS_SPOTIFY}/api/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: this.refreshToken,
+      }),
+    });
+    if (!resposta.ok) {
+      throw new Error(`Falha ao renovar o access token do Spotify (${resposta.status}): ${await resposta.text()}`);
+    }
+
+    const dados = await resposta.json();
+    this.accessToken = dados.access_token;
+    this.accessTokenExpiraEm = Date.now() + (dados.expires_in - 60) * 1000;
+    if (dados.refresh_token) this.refreshToken = dados.refresh_token;
+    return this.accessToken;
+  }
+
+  async _chamarApi(caminho, opcoes = {}) {
+    const token = await this._obterAccessToken();
+    return fetch(`${URL_API_SPOTIFY}${caminho}`, {
+      ...opcoes,
+      headers: { ...(opcoes.headers || {}), Authorization: `Bearer ${token}` },
+    });
   }
 
   _garantirConfigurado() {
@@ -46,21 +116,114 @@ class IntegracaoSpotify extends EventEmitter {
     }
   }
 
+  _atualizarEstado(parcial) {
+    this.estado = { ...this.estado, ...parcial };
+    this.emit('estado', this.estado);
+  }
+
+  async _atualizarNowPlaying() {
+    try {
+      const resposta = await this._chamarApi('/me/player');
+      if (resposta.status === 204) {
+        this._atualizarEstado({ conectado: true, tocando: false, musica: null, artista: null, dispositivo: null });
+        return;
+      }
+      if (!resposta.ok) return;
+
+      const dados = await resposta.json();
+      this._atualizarEstado({
+        conectado: true,
+        tocando: Boolean(dados.is_playing),
+        musica: dados.item?.name || null,
+        artista: dados.item?.artists?.map((a) => a.name).join(', ') || null,
+        volume: dados.device?.volume_percent ?? this.estado.volume,
+        dispositivo: dados.device?.name || null,
+      });
+    } catch (erro) {
+      console.warn(`[spotify] Falha ao buscar now playing: ${erro.message}`);
+    }
+  }
+
+  // Usado por server/routes/spotify-auth.js na rota GET /spotify/dispositivos.
+  async listarDispositivos() {
+    this._garantirConfigurado();
+    const resposta = await this._chamarApi('/me/player/devices');
+    if (!resposta.ok) {
+      throw new Error(`Spotify retornou ${resposta.status} ao listar dispositivos.`);
+    }
+    const dados = await resposta.json();
+    return dados.devices || [];
+  }
+
+  async inicializar() {
+    if (!this.habilitado) {
+      console.log(
+        '[spotify] Não configurado (preencha SPOTIFY_* no .env para habilitar) — módulo inativo por enquanto.',
+      );
+      return;
+    }
+    try {
+      await this._obterAccessToken();
+      await this._atualizarNowPlaying();
+      this._intervaloPolling = setInterval(() => this._atualizarNowPlaying(), INTERVALO_POLLING_MS);
+      console.log('[spotify] Conectado à Web API do Spotify.');
+    } catch (erro) {
+      console.warn(`[spotify] Falha ao conectar (${erro.message}). Refaça a autorização em /spotify/login se o refresh token expirou.`);
+    }
+  }
+
   get acoes() {
     return {
       playPause: async () => {
         this._garantirConfigurado();
-        // TODO: PUT /v1/me/player/pause ou /v1/me/player/play conforme this.estado.tocando
+        const caminho = this.estado.tocando ? '/me/player/pause' : '/me/player/play';
+        const resposta = await this._chamarApi(caminho, { method: 'PUT' });
+        if (!resposta.ok && resposta.status !== 204) {
+          throw new Error(`Spotify retornou ${resposta.status} — verifique se há um dispositivo Spotify ativo (app aberto em algum lugar).`);
+        }
+        await this._atualizarNowPlaying();
         return this.estado;
       },
       proximaFaixa: async () => {
         this._garantirConfigurado();
-        // TODO: POST /v1/me/player/next
+        const resposta = await this._chamarApi('/me/player/next', { method: 'POST' });
+        if (!resposta.ok && resposta.status !== 204) {
+          throw new Error(`Spotify retornou ${resposta.status} — verifique se há um dispositivo Spotify ativo.`);
+        }
+        await this._atualizarNowPlaying();
         return this.estado;
       },
       faixaAnterior: async () => {
         this._garantirConfigurado();
-        // TODO: POST /v1/me/player/previous
+        const resposta = await this._chamarApi('/me/player/previous', { method: 'POST' });
+        if (!resposta.ok && resposta.status !== 204) {
+          throw new Error(`Spotify retornou ${resposta.status} — verifique se há um dispositivo Spotify ativo.`);
+        }
+        await this._atualizarNowPlaying();
+        return this.estado;
+      },
+      definirVolume: async (parametros = {}) => {
+        this._garantirConfigurado();
+        const valor = Math.round(Number(parametros.valor ?? parametros.value ?? 0));
+        const resposta = await this._chamarApi(`/me/player/volume?volume_percent=${valor}`, { method: 'PUT' });
+        if (!resposta.ok && resposta.status !== 204) {
+          throw new Error(`Spotify retornou ${resposta.status} — verifique se há um dispositivo Spotify ativo.`);
+        }
+        this._atualizarEstado({ volume: valor });
+        return this.estado;
+      },
+      transferirReproducao: async (parametros = {}) => {
+        this._garantirConfigurado();
+        if (!parametros.dispositivoId) throw new Error('Parâmetro "dispositivoId" é obrigatório.');
+        const resposta = await this._chamarApi('/me/player', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_ids: [parametros.dispositivoId], play: true }),
+        });
+        if (!resposta.ok && resposta.status !== 204) {
+          throw new Error(`Spotify retornou ${resposta.status} ao transferir a reprodução.`);
+        }
+        await this._atualizarNowPlaying();
         return this.estado;
       },
     };
