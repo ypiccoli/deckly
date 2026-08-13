@@ -1,0 +1,15 @@
+{
+  "name": "Stream Deck Web",
+  "short_name": "StreamDeck",
+  "description": "Painel de botões táteis para controlar mídia, OBS, Spotify e Hue no PC.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

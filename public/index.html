@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Stream Deck Web</title>
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="cabecalho">
+      <div class="cabecalho-titulo">
+        <span class="logo">🕹️</span>
+        <span>Stream Deck</span>
+      </div>
+      <nav class="abas" id="abas"></nav>
+      <div class="status-conexao" id="status-conexao" title="Estado da conexão">
+        <span class="status-ponto"></span>
+        <span class="status-texto">conectando…</span>
+      </div>
+    </header>
+
+    <main class="grade" id="grade"></main>
+  </div>
+
+  <script src="js/ws-client.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

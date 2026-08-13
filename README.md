@@ -1,0 +1,330 @@
+# Stream Deck Web
+
+Um "Stream Deck" caseiro: um servidor Node.js roda no seu PC e serve uma
+grade de botões táteis que você abre no **navegador do tablet** (na mesma
+rede Wi-Fi). Cada botão dispara uma ação no PC — mídia/volume, cenas e
+gravação do OBS, e (opcionalmente) Spotify e Philips Hue.
+
+Feito para substituir o Touch Portal: sem limites de plugin, com visual
+próprio e 100% configurável editando um arquivo.
+
+## Sumário
+
+- [Arquitetura](#arquitetura)
+- [Pré-requisitos](#pré-requisitos)
+- [Instalação](#instalação)
+- [Como rodar](#como-rodar)
+- [Acessar do tablet (rede — importante no WSL2)](#acessar-do-tablet-rede--importante-no-wsl2)
+- [Controle de mídia (Windows via WSL2)](#controle-de-mídia-windows-via-wsl2)
+- [Habilitar o OBS](#habilitar-o-obs)
+- [Habilitar o Spotify](#habilitar-o-spotify-ainda-não-conectado)
+- [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
+- [Editar páginas e botões](#editar-páginas-e-botões)
+- [Estrutura de pastas](#estrutura-de-pastas)
+- [Scripts npm](#scripts-npm)
+- [Solução de problemas](#solução-de-problemas)
+
+## Arquitetura
+
+```
+Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + ws)
+                                                          |
+                                                          ├── integrations/media   -> Windows (teclas de mídia + volume)
+                                                          ├── integrations/obs     -> obs-websocket-js
+                                                          ├── integrations/spotify -> Web API (estrutura pronta, desativada)
+                                                          └── integrations/hue     -> CLIP API v2 (estrutura pronta, desativada)
+```
+
+- O frontend (`public/`) é HTML/CSS/JS puro, sem framework e sem build step.
+  Busca a grade de botões em `GET /api/config` e dispara ações em
+  `POST /action/:id`. Um WebSocket (`/ws`) empurra o estado ao vivo (cena
+  ativa, mic mudo, gravando, volume) para os botões atualizarem sozinhos.
+- Cada integração em `server/integrations/*` é isolada: expõe um objeto
+  `acoes` (as funções que os botões chamam) e emite eventos `estado` que o
+  servidor retransmite pelo WebSocket. Adicionar uma integração nova não
+  exige tocar nas outras.
+- O layout dos botões fica em `config/pages.config.js` — edite esse arquivo
+  para adicionar/remover/reordenar botões sem mexer no código.
+
+## Pré-requisitos
+
+- Windows 10/11 com **WSL2** instalado (é onde este projeto foi pensado para
+  rodar) — mas também funciona rodando o Node nativamente no Windows.
+- **Node.js 18+** dentro do ambiente onde o servidor vai rodar (aqui, dentro
+  da distro WSL2). Confira com `node --version`.
+- Tablet Android (ou qualquer navegador moderno) na **mesma rede Wi-Fi** do
+  PC.
+- Opcional: OBS Studio 28+ (já vem com obs-websocket embutido), conta
+  Spotify e/ou uma Philips Hue Bridge.
+
+## Instalação
+
+```bash
+cd ~/projetos/stream-deck-web
+npm install
+cp .env.example .env
+```
+
+Abra o `.env` e ajuste o que precisar (a porta padrão já funciona sem
+alterar nada; OBS/Spotify/Hue são opcionais — veja as seções abaixo).
+
+## Como rodar
+
+```bash
+npm start        # produção
+npm run dev       # desenvolvimento, reinicia sozinho a cada alteração (nodemon)
+```
+
+Ao subir, o terminal mostra algo como:
+
+```
+Stream Deck Web rodando na porta 3000
+  -> Neste PC:        http://localhost:3000
+  -> No tablet (LAN): http://<IP-do-PC-na-rede>:3000
+```
+
+## Acessar do tablet (rede — importante no WSL2)
+
+Este é o ponto que mais confunde quem nunca mexeu em rede do WSL2, então
+vamos com calma.
+
+**O problema:** por padrão, o WSL2 roda atrás de um NAT interno. O Windows
+consegue falar com o servidor via `localhost:3000` (o próprio WSL2 encaminha
+isso automaticamat), mas **outros dispositivos da sua rede (como o tablet)
+não conseguem** alcançar o IP do Windows na LAN, porque esse IP não está
+"escutando" a porta 3000 — quem escuta é o Linux dentro do WSL2, com um IP
+interno que não existe fora da máquina.
+
+Existem duas formas de resolver. Use a **Opção A** se possível — é bem mais
+simples e não precisa ser refeita a cada reinício.
+
+### Opção A (recomendada): modo de rede "mirrored"
+
+Disponível em Windows 11 22H2+ com WSL >= 2.0. Nesse modo, o WSL2 passa a
+compartilhar diretamente as interfaces de rede do Windows — o servidor fica
+acessível pelo mesmo IP que o próprio Windows usa na LAN.
+
+1. No **Windows** (não no WSL), abra o Bloco de Notas e crie/edite o arquivo:
+   `C:\Users\SEU_USUARIO\.wslconfig`
+2. Cole o conteúdo:
+   ```ini
+   [wsl2]
+   networkingMode=mirrored
+   ```
+3. Ainda no Windows, abra o PowerShell e rode:
+   ```powershell
+   wsl --shutdown
+   ```
+4. Abra o terminal do WSL de novo e inicie o servidor (`npm start`).
+5. Descubra o IP do seu PC na rede Wi-Fi/Ethernet: no Windows, rode
+   `ipconfig` e procure o adaptador da sua rede (ex.: "Ethernet" ou
+   "Wi-Fi"), campo `Endereço IPv4` (algo como `192.168.68.115`).
+6. No navegador do tablet, acesse `http://<esse-IP>:3000`.
+
+Se o `.wslconfig` não existir ainda ou você não tiver certeza da versão do
+WSL, rode `wsl --version` no PowerShell — você precisa de `2.0.0` ou mais
+recente para o modo mirrored.
+
+### Opção B (alternativa): port proxy + regra de firewall
+
+Use esta opção se o modo mirrored não estiver disponível na sua versão do
+Windows/WSL.
+
+1. Dentro do **WSL**, descubra o IP interno da distro:
+   ```bash
+   hostname -I
+   ```
+   Isso retorna algo como `172.24.248.190`. **Atenção:** esse IP muda toda
+   vez que o WSL reinicia, então os passos abaixo precisam ser refeitos após
+   cada reboot (ou automatizados — veja a nota no fim desta seção).
+
+2. No **Windows**, abra o PowerShell **como Administrador** e crie o
+   redirecionamento de porta (troque `<IP-DO-WSL>` pelo IP do passo 1):
+   ```powershell
+   netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=3000 connectaddress=<IP-DO-WSL> connectport=3000
+   ```
+
+3. Libere a porta no Firewall do Windows (rede privada):
+   ```powershell
+   New-NetFirewallRule -DisplayName "Stream Deck Web" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow -Profile Private
+   ```
+
+4. No navegador do tablet, acesse `http://<IP-do-Windows-na-LAN>:3000`
+   (o mesmo IP que você usaria no navegador do próprio PC de fora, obtido via
+   `ipconfig`).
+
+5. Para desfazer o redirecionamento (ex.: antes de recriar com um IP novo):
+   ```powershell
+   netsh interface portproxy delete v4tov4 listenaddress=0.0.0.0 listenport=3000
+   ```
+
+> Como o IP do WSL muda a cada reinício, a Opção A (mirrored) é bem mais
+> prática no dia a dia. A Opção B é útil como fallback ou em versões mais
+> antigas do Windows.
+
+### Confirmar que está acessível
+
+- No PC: abra `http://localhost:3000` — deve mostrar a grade de botões.
+- No tablet: abra `http://<IP>:3000` no Chrome. Se a grade aparecer e os
+  botões responderem ao toque, a rede está OK.
+- No Chrome do tablet, use o menu → **"Adicionar à tela inicial"** (ou o
+  banner de instalação) para instalar como PWA — ele abre em tela cheia,
+  sem barra de endereço, como um app nativo.
+
+## Controle de mídia (Windows via WSL2)
+
+A integração `media` (play/pause, próxima/anterior faixa, mute, volume)
+precisa executar ações no **Windows**, mesmo rodando o servidor dentro do
+WSL2. Isso é feito via **interop do WSL2**: o Node chama o `powershell.exe`
+do Windows (disponível automaticamente dentro do WSL, sem instalar nada) e
+esse PowerShell manipula o volume master e envia teclas de mídia virtuais
+usando a API do próprio Windows — sem depender de utilitários externos como
+o `nircmd`.
+
+O script fica em `scripts/windows-media.ps1`. O caminho é convertido
+automaticamente de caminho WSL para caminho Windows (`wslpath -w`) antes de
+chamar o PowerShell.
+
+A abstração está em `server/integrations/media/`:
+- `windows.js` sabe *como* chamar o `powershell.exe`, em dois modos:
+  - `wsl` — servidor rodando dentro do WSL2, chama o Windows via interop.
+  - `nativo` — servidor rodando direto no Windows, chama o PowerShell local.
+- `index.js` decide qual modo usar (variável `MEDIA_BACKEND` no `.env`,
+  padrão `auto`: detecta `win32` → nativo, ou `WSL_DISTRO_NAME` definida →
+  wsl).
+
+Se um dia você rodar o servidor nativamente no Windows (fora do WSL), não
+precisa mudar nada além de garantir `MEDIA_BACKEND=auto` (ou `windows`) — a
+mesma abstração cuida da diferença.
+
+## Habilitar o OBS
+
+1. No OBS Studio (28+), vá em **Ferramentas → WebSocket Server Settings**.
+2. Marque **Enable WebSocket server**, defina uma senha (recomendado) e
+   confira a porta (padrão `4455`).
+3. No `.env`, preencha:
+   ```
+   OBS_WEBSOCKET_HOST=localhost
+   OBS_WEBSOCKET_PORT=4455
+   OBS_WEBSOCKET_PASSWORD=sua_senha
+   ```
+4. Em `config/pages.config.js`, ajuste os botões da página "OBS":
+   - `parametros.cena` de cada botão de cena deve bater **exatamente** com
+     o nome da cena no seu OBS.
+   - `parametros.entrada` do botão de mic deve bater com o nome da fonte de
+     áudio (ex.: "Mic/Aux"). Alternativamente, defina
+     `OBS_MIC_INPUT_NAME=NomeDaSuaEntrada` no `.env` — é o nome usado para
+     decidir qual mudança de mute reflete no botão de mic.
+5. Reinicie o servidor. A cena ativa fica destacada, o botão de mic fica
+   vermelho quando mutado, e o botão de gravação pulsa em vermelho enquanto
+   grava — tudo isso chega em tempo real pelo WebSocket, então funciona
+   mesmo se você trocar de cena pelo próprio OBS (não só pelo tablet).
+
+## Habilitar o Spotify (ainda não conectado)
+
+O módulo já está todo estruturado em `server/integrations/spotify/index.js`
+(ações, estado, tratamento de erro), mas as chamadas HTTP reais ficam como
+`TODO` — não temos suas credenciais, então não há nada para configurar
+"às cegas". Para habilitar:
+
+1. Crie um app em <https://developer.spotify.com/dashboard>.
+2. Nas configurações do app, adicione um **Redirect URI**, por exemplo
+   `http://localhost:3000/spotify/callback`.
+3. Copie o **Client ID** e o **Client Secret** para o `.env`
+   (`SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`).
+4. Faça o fluxo OAuth "Authorization Code" **uma vez** (manualmente ou
+   implementando a rota de callback) para obter um **refresh token** — veja
+   o guia oficial:
+   <https://developer.spotify.com/documentation/web-api/tutorials/code-flow>.
+5. Preencha `SPOTIFY_REFRESH_TOKEN` no `.env`.
+6. Implemente os `TODO`s em `server/integrations/spotify/index.js`
+   (renovar o access token e chamar `GET/PUT/POST /v1/me/player/*` da Web
+   API do Spotify).
+
+Enquanto isso, os botões de Spotify na página "Casa" respondem com um erro
+amigável ("ainda não configurada") em vez de quebrar o app.
+
+## Habilitar o Hue (ainda não conectado)
+
+Mesma ideia: módulo estruturado em `server/integrations/hue/index.js`,
+faltando só suas credenciais e a implementação das chamadas HTTP.
+
+1. Descubra o IP da sua bridge Hue (app oficial Philips Hue, ou
+   <https://discovery.meethue.com/>).
+2. Aperte o **botão físico** da bridge e, nos 30s seguintes, gere uma
+   *application key* fazendo um `POST` para `https://<IP-da-bridge>/api`
+   com corpo `{"devicetype":"stream-deck-web"}`.
+3. Preencha `HUE_BRIDGE_IP` e `HUE_APPLICATION_KEY` no `.env`.
+4. Implemente os `TODO`s em `server/integrations/hue/index.js` usando a
+   CLIP API v2 (`https://<bridge>/clip/v2/resource/grouped_light/...`).
+
+## Editar páginas e botões
+
+Tudo em `config/pages.config.js`. Cada página tem um `id`, `titulo`, `icone`
+e uma lista de `botoes`. Cada botão referencia uma integração (`media`,
+`obs`, `spotify` ou `hue`) e o nome de uma ação exposta por ela — veja os
+comentários no topo do arquivo para a lista completa de campos (`estadoChave`
+para refletir estado ao vivo, `tipo: 'slider'` para controles deslizantes,
+etc). Depois de editar, é só salvar — se estiver com `npm run dev`, o
+servidor recarrega sozinho.
+
+## Estrutura de pastas
+
+```
+stream-deck-web/
+├── config/
+│   └── pages.config.js       # páginas e botões — edite aqui para customizar
+├── scripts/
+│   └── windows-media.ps1     # controla volume/mídia do Windows (P/Invoke)
+├── server/
+│   ├── index.js               # bootstrap: Express + WebSocket + integrações
+│   ├── config-loader.js       # lê e indexa config/pages.config.js
+│   ├── routes/
+│   │   └── actions.js         # POST /action/:id — dispatcher genérico
+│   └── integrations/
+│       ├── media/             # play/pause, faixas, mute, volume (Windows)
+│       ├── obs/                # cenas, mic, gravação (obs-websocket-js)
+│       ├── spotify/            # estruturado, aguardando credenciais
+│       └── hue/                 # estruturado, aguardando credenciais
+├── public/                     # frontend estático (PWA)
+│   ├── index.html
+│   ├── manifest.json
+│   ├── sw.js                   # service worker (instalação/offline do shell)
+│   ├── css/style.css
+│   ├── js/app.js               # renderiza a grade, dispara ações, aplica estado
+│   ├── js/ws-client.js         # conexão WebSocket com reconexão automática
+│   └── icons/
+├── .env.example                 # copie para .env e preencha
+└── package.json
+```
+
+## Scripts npm
+
+| Comando         | O que faz                                            |
+|-----------------|-------------------------------------------------------|
+| `npm start`     | Sobe o servidor uma vez (produção)                    |
+| `npm run dev`   | Sobe com `nodemon`, reiniciando a cada alteração      |
+
+## Solução de problemas
+
+- **Botões de mídia não fazem nada / erro no console do servidor**
+  Confirme que `powershell.exe` está acessível de dentro do WSL:
+  `which powershell.exe` deve apontar para algo em `/mnt/c/...`. Isso exige
+  que o **interop do WSL** esteja habilitado (é o padrão).
+
+- **OBS não conecta**
+  Confira se o WebSocket Server está habilitado no OBS (Ferramentas →
+  WebSocket Server Settings), se a porta/senha no `.env` batem, e se o OBS
+  está aberto antes de iniciar o servidor (a integração tenta reconectar
+  sozinha a cada 5s, então basta abrir o OBS depois — não precisa reiniciar
+  o servidor).
+
+- **Tablet não consegue abrir a página**
+  Revise a seção [Acessar do tablet](#acessar-do-tablet-rede--importante-no-wsl2).
+  Confirme que tablet e PC estão na mesma rede Wi-Fi (não em redes de
+  convidados isoladas) e que o Firewall do Windows não está bloqueando a
+  porta.
+
+- **Quero mudar a porta**
+  Edite `PORT` no `.env`. Lembre de ajustar as regras de portproxy/firewall
+  (Opção B) se estiver usando esse modo.
