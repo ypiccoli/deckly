@@ -6,6 +6,12 @@ class ClienteWs {
     this.socket = null;
     this.ouvintes = new Set();
     this.ouvintesConexao = new Set();
+    // Guarda o último estado conhecido para "repetir" a quem se inscrever
+    // depois que ele já aconteceu — sem isso, se o WS conectar (ou mandar o
+    // estado_completo) antes do app.js terminar de buscar /api/config e se
+    // inscrever, a notificação se perde e a UI fica presa em "conectando…".
+    this.conectado = false;
+    this.ultimaMensagemCompleta = null;
     this._conectar();
   }
 
@@ -19,6 +25,9 @@ class ClienteWs {
     this.socket.addEventListener('message', (evento) => {
       try {
         const mensagem = JSON.parse(evento.data);
+        if (mensagem.tipo === 'estado_completo') {
+          this.ultimaMensagemCompleta = mensagem;
+        }
         this.ouvintes.forEach((fn) => fn(mensagem));
       } catch (erro) {
         console.error('WS: mensagem inválida recebida', erro);
@@ -36,15 +45,18 @@ class ClienteWs {
   }
 
   _notificarConexao(conectado) {
+    this.conectado = conectado;
     this.ouvintesConexao.forEach((fn) => fn(conectado));
   }
 
   aoReceberMensagem(fn) {
     this.ouvintes.add(fn);
+    if (this.ultimaMensagemCompleta) fn(this.ultimaMensagemCompleta);
   }
 
   aoMudarConexao(fn) {
     this.ouvintesConexao.add(fn);
+    fn(this.conectado);
   }
 }
 

@@ -189,6 +189,13 @@
       navigator.serviceWorker.register('sw.js').catch((erro) => console.warn('SW: falha ao registrar', erro));
     }
 
+    // Inscreve nos eventos do WS antes de esperar o fetch: se a conexão (ou
+    // a primeira mensagem de estado) chegar durante o await abaixo, ainda
+    // captura — window.clienteWs também repete o último estado conhecido
+    // para quem se inscrever atrasado, então isso é defesa em profundidade.
+    window.clienteWs.aoReceberMensagem(tratarMensagemWs);
+    window.clienteWs.aoMudarConexao(tratarMudancaConexao);
+
     const resposta = await fetch('/api/config');
     const dados = await resposta.json();
     paginas = dados.paginas || [];
@@ -196,9 +203,6 @@
 
     renderizarAbas();
     renderizarGrade();
-
-    window.clienteWs.aoReceberMensagem(tratarMensagemWs);
-    window.clienteWs.aoMudarConexao(tratarMudancaConexao);
   }
 
   iniciar();
