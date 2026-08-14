@@ -4,9 +4,26 @@
 // integração e a ação correspondentes e as executa. Os parâmetros do corpo
 // da requisição (ex.: valor do slider de volume) são mesclados por cima dos
 // parâmetros estáticos definidos no config.
+//
+// Um botão pode ser:
+//   - simples: tem "integracao" + "acao" no próprio botão;
+//   - macro:   tem "acoes", uma lista de { integracao, acao, parametros }
+//              executada em sequência (ex.: abrir o jogo e o overlay juntos).
 
 const express = require('express');
 const { encontrarBotao } = require('../config-loader');
+
+function resolverAcao(integracoes, passo) {
+  const integracao = integracoes[passo.integracao];
+  if (!integracao) {
+    throw new Error(`Integração "${passo.integracao}" não existe.`);
+  }
+  const acao = integracao.acoes[passo.acao];
+  if (!acao) {
+    throw new Error(`Ação "${passo.acao}" não existe na integração "${passo.integracao}".`);
+  }
+  return acao;
+}
 
 module.exports = function criarRotaAcoes(integracoes) {
   const router = express.Router();
@@ -18,22 +35,19 @@ module.exports = function criarRotaAcoes(integracoes) {
       return;
     }
 
-    const integracao = integracoes[botao.integracao];
-    if (!integracao) {
-      res.status(500).json({ ok: false, erro: `Integração "${botao.integracao}" não existe.` });
-      return;
-    }
-
-    const acao = integracao.acoes[botao.acao];
-    if (!acao) {
-      res.status(500).json({ ok: false, erro: `Ação "${botao.acao}" não existe na integração "${botao.integracao}".` });
-      return;
-    }
-
-    const parametros = { ...(botao.parametros || {}), ...(req.body || {}) };
+    // Normaliza os dois formatos (simples e macro) para uma lista de passos.
+    const passos = botao.acoes || [{ integracao: botao.integracao, acao: botao.acao, parametros: botao.parametros }];
 
     try {
-      const estado = await acao(parametros);
+      let estado = null;
+      for (const passo of passos) {
+        const acao = resolverAcao(integracoes, passo);
+        // O corpo da requisição (ex.: valor do slider, escolha do seletor)
+        // vale para todos os passos — na prática só macros de um passo só
+        // recebem corpo, mas manter uniforme evita surpresa.
+        const parametros = { ...(passo.parametros || {}), ...(req.body || {}) };
+        estado = await acao(parametros);
+      }
       res.json({ ok: true, estado });
     } catch (erro) {
       console.error(`[action] Erro ao executar "${req.params.id}": ${erro.message}`);

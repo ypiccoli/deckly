@@ -46,7 +46,9 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
   servidor retransmite pelo WebSocket. Adicionar uma integração nova não
   exige tocar nas outras.
 - O layout dos botões fica em `config/pages.config.js` — edite esse arquivo
-  para adicionar/remover/reordenar botões sem mexer no código.
+  para adicionar/remover/reordenar botões sem mexer no código. Ele é pessoal
+  e **não vai para o Git**; o repositório traz o
+  `config/pages.config.example.js` como ponto de partida.
 
 ## Pré-requisitos
 
@@ -65,10 +67,15 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
 cd ~/projetos/stream-deck-web
 npm install
 cp .env.example .env
+cp config/pages.config.example.js config/pages.config.js
 ```
 
 Abra o `.env` e ajuste o que precisar (a porta padrão já funciona sem
 alterar nada; OBS/Spotify/Hue são opcionais — veja as seções abaixo).
+
+O `config/pages.config.js` é o seu layout de botões: ajuste os caminhos de
+programas, IPs e nomes de cena para os da sua máquina. Os dois arquivos
+copiados acima são ignorados pelo Git, então seus dados ficam só aí.
 
 ## Como rodar
 
@@ -120,7 +127,7 @@ acessível pelo mesmo IP que o próprio Windows usa na LAN.
 4. Abra o terminal do WSL de novo e inicie o servidor (`npm start`).
 5. Descubra o IP do seu PC na rede Wi-Fi/Ethernet: no Windows, rode
    `ipconfig` e procure o adaptador da sua rede (ex.: "Ethernet" ou
-   "Wi-Fi"), campo `Endereço IPv4` (algo como `192.168.68.115`).
+   "Wi-Fi"), campo `Endereço IPv4` (algo como `192.168.1.20`).
 6. No navegador do tablet, acesse `http://<esse-IP>:3000`.
 
 Se o `.wslconfig` não existir ainda ou você não tiver certeza da versão do
@@ -323,20 +330,57 @@ faltando só suas credenciais e a implementação das chamadas HTTP.
 
 ## Editar páginas e botões
 
-Tudo em `config/pages.config.js`. Cada página tem um `id`, `titulo`, `icone`
-e uma lista de `botoes`. Cada botão referencia uma integração (`media`,
-`obs`, `spotify` ou `hue`) e o nome de uma ação exposta por ela — veja os
-comentários no topo do arquivo para a lista completa de campos (`estadoChave`
-para refletir estado ao vivo, `tipo: 'slider'` para controles deslizantes,
-etc). Depois de editar, é só salvar — se estiver com `npm run dev`, o
-servidor recarrega sozinho.
+O layout fica em **dois arquivos**, no mesmo esquema do `.env`/`.env.example`:
+
+| Arquivo | Vai pro Git? | O que é |
+|---------|--------------|---------|
+| `config/pages.config.example.js` | ✅ sim | Exemplo com placeholders — ponto de partida e referência |
+| `config/pages.config.js` | ❌ não | O **seu** layout real (caminhos da máquina, IPs da LAN, nomes de cena) |
+
+Na primeira vez:
+
+```bash
+cp config/pages.config.example.js config/pages.config.js
+```
+
+Depois edite só o `pages.config.js`. O servidor usa ele quando existe e cai
+no exemplo quando não — então um clone novo do repositório já sobe
+funcionando, sem configurar nada.
+
+
+Cada página tem um `id`, `titulo`, `icone` e uma lista de `botoes`. Cada
+botão referencia uma integração (`media`, `atalhos`, `obs`, `spotify` ou
+`hue`) e o nome de uma ação exposta por ela — veja os comentários no topo do
+arquivo para a lista completa de campos (`estadoChave` para refletir estado
+ao vivo, `tipo: 'slider'` para controles deslizantes, `tipo: 'lista'` para
+seletores, etc).
+
+Um botão também pode ser uma **macro**: em vez de `integracao`/`acao`, use
+`acoes` com uma lista de passos executados em sequência num toque só —
+por exemplo, abrir o jogo e o overlay juntos:
+
+```js
+{
+  id: 'atalhos.lol',
+  titulo: 'LoL + Blitz',
+  icone: '🎮',
+  acoes: [
+    { integracao: 'atalhos', acao: 'abrirApp', parametros: { caminho: '...League of Legends.lnk' } },
+    { integracao: 'atalhos', acao: 'abrirApp', parametros: { caminho: '...Blitz.lnk' } },
+  ],
+}
+```
+
+Depois de editar, é só salvar — se estiver com `npm run dev`, o servidor
+recarrega sozinho.
 
 ## Estrutura de pastas
 
 ```
 stream-deck-web/
 ├── config/
-│   └── pages.config.js       # páginas e botões — edite aqui para customizar
+│   ├── pages.config.example.js  # exemplo versionado (placeholders)
+│   └── pages.config.js          # SEU layout real — gitignored, edite aqui
 ├── scripts/
 │   ├── windows-media.ps1     # volume e mute do Windows (P/Invoke)
 │   └── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam

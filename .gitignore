@@ -5,3 +5,7 @@ scripts/*.dll
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# Configuração pessoal de páginas/botões: tem caminhos da máquina, IPs da
+# LAN e nomes de cena reais. O que vai para o Git é o pages.config.example.js.
+config/pages.config.js

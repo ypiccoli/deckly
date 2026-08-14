@@ -1,8 +1,18 @@
 // -----------------------------------------------------------------------------
-// Configuração das páginas e botões do Stream Deck.
+// EXEMPLO da configuração das páginas e botões do Stream Deck.
 //
-// Edite este arquivo para adicionar, remover ou reorganizar botões — não é
-// necessário mexer no código do servidor (server/) nem do frontend (public/).
+// Este arquivo é versionado no Git e serve de ponto de partida e referência.
+// Copie para `config/pages.config.js` (que é ignorado pelo Git) e ajuste com
+// os seus caminhos, IPs e nomes de cena — é esse arquivo pessoal que o
+// servidor usa quando existe:
+//
+//     cp config/pages.config.example.js config/pages.config.js
+//
+// Os valores marcados como SEU_USUARIO, IP-DO-SEU-SERVIDOR e
+// portal.suafaculdade.edu.br são placeholders: troque pelos seus.
+//
+// Edite para adicionar, remover ou reorganizar botões — não é necessário
+// mexer no código do servidor (server/) nem do frontend (public/).
 //
 // Cada botão tem:
 //   id           identificador único, usado em POST /action/:id
@@ -20,9 +30,12 @@
 //   iconeItem / mensagemVazia
 //                usados apenas em botões do tipo "lista": ícone padrão de cada
 //                item do seletor e texto mostrado quando a lista vem vazia
-//   integracao   nome da pasta em server/integrations (media | obs | spotify | hue)
+//   integracao   nome da pasta em server/integrations (media | atalhos | obs | spotify | hue)
 //   acao         nome do método exposto pela integração (veja server/integrations/*/index.js)
 //   parametros   objeto opcional repassado como argumento para a ação
+//   acoes        alternativa a integracao/acao/parametros: lista de passos
+//                { integracao, acao, parametros } executados em sequência num
+//                toque só (macro). Ex.: abrir o jogo e o overlay juntos.
 //   estadoChave  caminho (dot notation) dentro do estado ao vivo usado para destacar
 //                o botão (ex.: cena ativa, mic mutado, gravando, volume atual)
 //   estiloEstado dica visual de como reagir ao estado: "destaque" | "perigo" | "gravando"
@@ -190,24 +203,27 @@ module.exports = {
 
         // --- Jogos -------------------------------------------------------
         {
+          // Macro: um toque abre o jogo e o overlay juntos. Ver "acoes" (no
+          // plural) nos comentários do topo deste arquivo.
           id: 'atalhos.lol',
-          titulo: 'League of Legends',
+          titulo: 'LoL + Blitz',
           icone: '🎮',
-          integracao: 'atalhos',
-          acao: 'abrirApp',
-          parametros: {
-            caminho: 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Riot Games\\League of Legends.lnk',
-          },
-        },
-        {
-          id: 'atalhos.blitz',
-          titulo: 'Blitz',
-          icone: '⚡',
-          integracao: 'atalhos',
-          acao: 'abrirApp',
-          parametros: {
-            caminho: 'C:\\Users\\SEU_USUARIO\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Blitz.lnk',
-          },
+          acoes: [
+            {
+              integracao: 'atalhos',
+              acao: 'abrirApp',
+              parametros: {
+                caminho: 'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Riot Games\\League of Legends.lnk',
+              },
+            },
+            {
+              integracao: 'atalhos',
+              acao: 'abrirApp',
+              parametros: {
+                caminho: 'C:\\Users\\SEU_USUARIO\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Blitz.lnk',
+              },
+            },
+          ],
         },
         {
           id: 'atalhos.steam',

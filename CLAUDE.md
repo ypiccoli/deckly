@@ -56,6 +56,17 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
                           public/js/ws-client.js --> app.js atualiza a grade
 ```
 
+- **Dois arquivos de config, mesmo padrão do `.env`/`.env.example`:**
+  `config/pages.config.js` é o pessoal (**gitignored** — tem caminhos da
+  máquina, IPs da LAN e nomes de cena reais) e
+  `config/pages.config.example.js` é o exemplo versionado, com placeholders
+  (`SEU_USUARIO`, `IP-DO-SEU-SERVIDOR`). O `config-loader.js` usa o pessoal
+  quando existe e cai no exemplo quando não. **Ao mexer no layout, mantenha
+  os dois em sincronia** — o exemplo é o que outras pessoas veem no GitHub.
+- Um botão pode ser **simples** (`integracao` + `acao` + `parametros`) ou
+  **macro** (`acoes`: lista de `{ integracao, acao, parametros }` executada
+  em sequência num toque só). O `routes/actions.js` normaliza os dois para
+  uma lista de passos.
 - `config/pages.config.js` é a **única fonte de verdade** do layout de
   botões (páginas, ícones, rótulos, qual integração/ação cada botão chama,
   e `estadoChave`/`estadoComparar` para saber quando destacar o botão como
