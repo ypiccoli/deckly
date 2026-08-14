@@ -199,6 +199,30 @@ O build também é o único jeito prático de exercitar o caminho `nativo` do
 gerado pode ser executado direto do WSL via interop, e aí reporta
 `platform: win32`; foi assim que o modo nativo foi validado.
 
+## Tela de boas-vindas (`/bemvindo/`)
+
+Primeira coisa que a pessoa vê ao rodar o programa: status, token grande com
+botão de copiar, QR para parear o tablet e atalhos para o deck e a
+configuração. Abre sozinha no navegador **na primeira execução** (quando o
+token acabou de ser gerado) — nas seguintes fica quieta, para não abrir uma
+aba a cada boot. `ABRIR_NAVEGADOR` no `.env` força `sempre`/`nunca`.
+
+Duas coisas importantes aqui:
+
+- **`GET /api/bemvindo` é a única rota que não exige token** — não poderia
+  exigir, é onde o token é revelado. Ela se protege por `exigirLocal`. Por
+  isso é montada **antes** do `app.use('/api', exigirToken, …)` em
+  `server/index.js`: como o router só trata `/bemvindo`, o resto de `/api`
+  segue para o middleware de token.
+- **O QR em SVG não trouxe dependência nova.** `server/lib/qr.js` reaproveita
+  a implementação de QR que já vem dentro do `qrcode-terminal` (usado para
+  desenhar no console): de lá dá para pegar a matriz de módulos
+  (`getModuleCount()` / `isDark()`) e renderizar como `<rect>`. Não esqueça
+  a zona de silêncio de 4 módulos — sem ela muitos leitores não reconhecem.
+
+`server/lib/rede.js` (descobrir o IP da LAN) é compartilhado entre o console
+e esta tela justamente para os dois concordarem no endereço mostrado.
+
 ## Acesso (token e restrição local)
 
 `server/lib/token.js` + `server/lib/auth.js`. Duas travas com propósitos

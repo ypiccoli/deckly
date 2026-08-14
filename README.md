@@ -465,8 +465,23 @@ embutido). O build roda tanto do WSL quanto do Windows: ele baixa o
 
 ### Como usar o executável
 
-Copie o `.exe` para uma pasta onde você possa gravar (a Área de Trabalho
-serve) e execute. Na primeira vez ele cria ao lado uma pasta `dados/`:
+Copie o `.exe` para uma pasta onde você possa gravar e execute. **Na
+primeira vez, ele abre sozinho no navegador uma tela de boas-vindas** com:
+
+- confirmação de que está rodando;
+- o **QR code** para parear o tablet (aponta a câmera e pronto);
+- o **token** em letras grandes, com botão de copiar, caso não dê para escanear;
+- atalhos para abrir o deck e a tela de configuração.
+
+Essa tela fica sempre em **`http://127.0.0.1:3000/bemvindo/`** — abra quando
+precisar do token de novo. Ela só responde no próprio PC: como mostra o
+token, não pode ficar acessível pela rede.
+
+Nas execuções seguintes ela não abre sozinha (senão apareceria uma aba a
+cada vez que você liga o PC). Para mudar isso, use `ABRIR_NAVEGADOR` no
+`.env`: `primeira` (padrão), `sempre` ou `nunca`.
+
+Junto do `.exe` é criada uma pasta `dados/`:
 
 ```
 stream-deck-web.exe
@@ -511,6 +526,8 @@ stream-deck-web/
 │   ├── config-store.js        # lê, valida, grava e recarrega o config
 │   ├── lib/
 │   │   ├── caminhos.js       # resolve caminhos (código-fonte vs empacotado)
+│   │   ├── qr.js             # QR em SVG para a tela de boas-vindas
+│   │   ├── rede.js           # descobre o IP da máquina na LAN
 │   │   ├── token.js          # token de acesso
 │   │   ├── auth.js           # middlewares de token e restrição local
 │   │   └── powershell-interop.js  # chama powershell.exe (WSL2 ou nativo), compartilhado
@@ -532,6 +549,7 @@ stream-deck-web/
 │   ├── js/app.js               # renderiza a grade, dispara ações, aplica estado
 │   ├── js/ws-client.js         # conexão WebSocket com reconexão automática
 │   ├── config/                 # tela de configuração (editor de páginas/botões)
+│   ├── bemvindo/               # tela de boas-vindas (status, token, QR)
 │   └── icons/
 ├── .env.example                 # copie para .env e preencha
 └── package.json

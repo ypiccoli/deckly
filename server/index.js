@@ -17,9 +17,13 @@ const criarRotaAcoes = require('./routes/actions');
 const criarRotaConfig = require('./routes/config');
 const criarRotaSpotifyAuth = require('./routes/spotify-auth');
 const criarRotaAtalhos = require('./routes/atalhos');
+const criarRotaBemVindo = require('./routes/bemvindo');
 const { exigirToken } = require('./lib/auth');
-const { conferir: conferirToken } = require('./lib/token');
+const { conferir: conferirToken, ORIGEM: ORIGEM_TOKEN } = require('./lib/token');
 const mostrarBoasVindas = require('./lib/boas-vindas');
+const abrirNoNavegador = require('./lib/abrir-navegador');
+
+const PORTA = process.env.PORT || 3000;
 
 const media = require('./integrations/media');
 const obs = require('./integrations/obs');
@@ -41,6 +45,11 @@ app.use(express.static(caminhos.publico));
 // a rota de config precisa avisar os clientes quando o layout muda.
 let avisarConfigAtualizada = () => {};
 
+// Antes do /api protegido: a tela de boas-vindas é onde o token é revelado,
+// então ela não pode exigir token. Ela se protege por só responder no
+// próprio PC. Como este router só trata /bemvindo, o resto de /api segue
+// para o middleware de token logo abaixo.
+app.use('/api', criarRotaBemVindo(PORTA));
 app.use('/api', exigirToken, criarRotaConfig(integracoes, () => avisarConfigAtualizada()));
 app.use('/action', exigirToken, criarRotaAcoes(integracoes));
 app.use('/atalhos', exigirToken, criarRotaAtalhos());
@@ -89,7 +98,6 @@ avisarConfigAtualizada = () => {
   transmitir({ tipo: 'config_atualizado' });
 };
 
-const PORTA = process.env.PORT || 3000;
 
 // A porta HTTP sobe imediatamente — não espera as integrações. Cada
 // integração inicializa em segundo plano e só reflete no app quando estiver
@@ -98,7 +106,18 @@ const PORTA = process.env.PORT || 3000;
 // conexão pode demorar bem mais que o normal para dar timeout dependendo da
 // rede) trave a subida do servidor inteiro.
 servidorHttp.listen(PORTA, '0.0.0.0', () => {
-  mostrarBoasVindas(PORTA);
+  const { urlLocal } = mostrarBoasVindas(PORTA);
+
+  // Abre a tela de boas-vindas sozinha quando é a PRIMEIRA execução (o
+  // token acabou de ser gerado) — é o momento em que a pessoa precisa ver o
+  // token e o QR, e é o caso de quem acabou de receber o programa. Nas
+  // vezes seguintes fica quieto, para não abrir uma aba a cada boot do PC.
+  // ABRIR_NAVEGADOR no .env força "sempre" ou "nunca".
+  const preferencia = (process.env.ABRIR_NAVEGADOR || 'primeira').toLowerCase();
+  const primeiraVez = ORIGEM_TOKEN === 'gerado agora';
+  if (preferencia === 'sempre' || (preferencia === 'primeira' && primeiraVez)) {
+    abrirNoNavegador(`${urlLocal}/bemvindo/`);
+  }
 });
 
 for (const integracao of Object.values(integracoes)) {

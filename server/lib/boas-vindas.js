@@ -1,30 +1,15 @@
-// Mensagem de subida: mostra os endereços, o token e um QR para parear o
+// Mensagem de subida no console: endereços, token e um QR para parear o
 // tablet sem precisar digitar nada.
 //
-// Descobrir o IP da LAN aqui evita o "http://<IP-do-PC-na-rede>:3000" que a
-// mensagem antiga pedia para a pessoa resolver sozinha.
+// O console não é o canal principal — quando o programa sobe junto com o
+// Windows, a janela fica minimizada e ninguém lê. Por isso a mesma
+// informação vive também na tela de boas-vindas (`/bemvindo/`), que abre
+// sozinha na primeira execução. Aqui fica a versão para quem está de olho
+// no terminal.
 
-const os = require('os');
 const qrcode = require('qrcode-terminal');
 const { TOKEN, ORIGEM } = require('./token');
-
-// Melhor palpite para "o endereço pelo qual o tablet enxerga este PC":
-// primeiro IPv4 não interno de uma interface ativa.
-function descobrirIpLan() {
-  const interfaces = os.networkInterfaces();
-  const candidatos = [];
-  for (const [nome, enderecos] of Object.entries(interfaces)) {
-    for (const endereco of enderecos || []) {
-      if (endereco.family !== 'IPv4' || endereco.internal) continue;
-      // Interfaces virtuais (Docker, WSL em modo NAT) costumam atrapalhar
-      // mais do que ajudar aqui, então ficam por último.
-      const suspeita = /^(docker|br-|veth|vEthernet)/i.test(nome);
-      candidatos.push({ endereco: endereco.address, suspeita });
-    }
-  }
-  candidatos.sort((a, b) => Number(a.suspeita) - Number(b.suspeita));
-  return candidatos.length ? candidatos[0].endereco : null;
-}
+const { descobrirIpLan } = require('./rede');
 
 module.exports = function mostrarBoasVindas(porta) {
   const ip = descobrirIpLan();
@@ -35,11 +20,12 @@ module.exports = function mostrarBoasVindas(porta) {
   console.log('');
   console.log(`Stream Deck Web rodando na porta ${porta}`);
   console.log('');
-  console.log(`  Neste PC          ${urlLocal}`);
-  console.log(`  Configurar        ${urlLocal}/config/`);
-  if (urlLan) console.log(`  No tablet (LAN)   ${urlLan}`);
+  console.log(`  Esta tela, no navegador   ${urlLocal}/bemvindo/`);
+  console.log(`  Abrir o deck              ${urlLocal}`);
+  console.log(`  Configurar botões         ${urlLocal}/config/`);
+  if (urlLan) console.log(`  No tablet (rede local)    ${urlLan}`);
   console.log('');
-  console.log(`  Token de acesso   ${TOKEN}   (${ORIGEM})`);
+  console.log(`  Token de acesso           ${TOKEN}   (${ORIGEM})`);
   console.log('');
 
   if (urlPareamento) {
@@ -47,17 +33,14 @@ module.exports = function mostrarBoasVindas(porta) {
     console.log(`  ${urlPareamento}`);
     console.log('');
     qrcode.generate(urlPareamento, { small: true }, (qr) => {
-      console.log(
-        qr
-          .split('\n')
-          .map((linha) => '  ' + linha)
-          .join('\n'),
-      );
+      console.log(qr.split('\n').map((linha) => '  ' + linha).join('\n'));
       console.log('');
     });
   } else {
     console.log('  Não consegui descobrir o IP desta máquina na rede.');
-    console.log('  Veja o IP com "ipconfig" (Windows) e acesse http://<IP>:' + porta + '/?token=' + TOKEN);
+    console.log(`  Veja o IP com "ipconfig" e acesse http://<IP>:${porta}/?token=${TOKEN}`);
     console.log('');
   }
+
+  return { urlLocal, urlLan, urlPareamento };
 };

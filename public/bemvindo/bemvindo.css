@@ -1,0 +1,197 @@
+/* Tela de boas-vindas: a primeira coisa que aparece ao rodar o programa.
+   O trabalho dela é responder três perguntas em um olhar — está rodando?
+   como levo isso para o tablet? e o que faço aqui no PC? */
+
+:root {
+  --fundo: #0f1115;
+  --cartao: #1b1e27;
+  --cartao-2: #14161d;
+  --borda: #2a2e3a;
+  --texto: #eef0f4;
+  --texto-fraco: #8a8f9c;
+  --acento-1: #6c5ce7;
+  --acento-2: #00d1b2;
+  --ok: #2ed573;
+  --raio: 18px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--fundo);
+}
+
+body {
+  color: var(--texto);
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  background:
+    radial-gradient(760px 420px at 10% -10%, rgba(108, 92, 231, 0.14), transparent 60%),
+    radial-gradient(700px 400px at 95% 0%, rgba(0, 209, 178, 0.12), transparent 60%),
+    var(--fundo);
+  min-height: 100vh;
+}
+
+.pagina {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 40px 24px 56px;
+}
+
+.carregando { color: var(--texto-fraco); }
+
+/* ---------- cabeçalho ---------- */
+.cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.sinal {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 12px var(--ok);
+  flex-shrink: 0;
+  animation: pulsar 2.4s ease-in-out infinite;
+}
+@keyframes pulsar { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .sinal { animation: none; } }
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.sub {
+  margin: 3px 0 0;
+  color: var(--texto-fraco);
+  font-size: 0.9rem;
+}
+
+/* ---------- cartões ---------- */
+.cartoes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .cartoes { grid-template-columns: 1fr; }
+}
+
+.cartao {
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 22px;
+}
+.cartao h2 {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--texto-fraco);
+  font-weight: 700;
+}
+.cartao-parear { text-align: center; }
+
+.dica {
+  margin: 0 0 12px;
+  color: var(--texto-fraco);
+  font-size: 0.88rem;
+}
+.dica-alternativa { margin-top: 18px; }
+.dica strong { color: var(--texto); font-weight: 600; }
+
+/* ---------- QR ---------- */
+.qr {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  width: min(240px, 100%);
+  margin: 0 auto;
+}
+.qr svg { display: block; width: 100%; height: auto; }
+
+/* ---------- token ---------- */
+.token {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--acento-2);
+  background: var(--cartao-2);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 0 0 12px;
+  user-select: all;
+  word-break: break-all;
+}
+
+.btn-copiar {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--borda);
+  background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+}
+.btn-copiar:hover { color: var(--texto); border-color: var(--texto-fraco); }
+.btn-copiar.copiado { color: var(--ok); border-color: var(--ok); }
+
+/* ---------- atalhos ---------- */
+.atalhos { display: flex; flex-direction: column; gap: 10px; }
+.atalho {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--borda);
+  background: var(--cartao-2);
+  color: var(--texto);
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.08s;
+}
+.atalho:hover { border-color: var(--acento-2); }
+.atalho:active { transform: scale(0.99); }
+.atalho-icone { font-size: 1.6rem; flex-shrink: 0; }
+.atalho strong { display: block; font-size: 0.98rem; }
+.atalho small { color: var(--texto-fraco); font-size: 0.82rem; }
+
+.rodape-cartao {
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  color: var(--texto-fraco);
+  line-height: 1.5;
+}
+.rodape-cartao strong {
+  color: var(--texto);
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 600;
+}
+
+.rodape {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--texto-fraco);
+}
+
+.erro {
+  background: rgba(255, 77, 94, 0.08);
+  border: 1px solid rgba(255, 77, 94, 0.4);
+  color: #ffc0cd;
+  border-radius: var(--raio);
+  padding: 20px;
+}

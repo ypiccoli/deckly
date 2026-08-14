@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stream Deck Web — está rodando</title>
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="bemvindo.css" />
+</head>
+<body>
+  <main class="pagina" id="pagina">
+    <p class="carregando">carregando…</p>
+  </main>
+
+  <template id="modelo">
+    <header class="cabecalho">
+      <span class="sinal"></span>
+      <div>
+        <h1>Stream Deck Web está rodando</h1>
+        <p class="sub" id="sub"></p>
+      </div>
+    </header>
+
+    <section class="cartoes">
+      <div class="cartao cartao-parear">
+        <h2>1. Parear o tablet</h2>
+        <p class="dica">Aponte a câmera do tablet para o código:</p>
+        <div class="qr" id="qr"></div>
+        <p class="dica dica-alternativa">
+          Sem câmera? Abra <strong id="url-lan"></strong> no tablet e digite o token:
+        </p>
+        <p class="token" id="token"></p>
+        <button type="button" class="btn-copiar" id="copiar">Copiar token</button>
+      </div>
+
+      <div class="cartao">
+        <h2>2. Usar aqui no PC</h2>
+        <div class="atalhos">
+          <a class="atalho" id="link-deck" href="#">
+            <span class="atalho-icone">🕹️</span>
+            <span>
+              <strong>Abrir o deck</strong>
+              <small>a mesma grade de botões do tablet</small>
+            </span>
+          </a>
+          <a class="atalho" id="link-config" href="#">
+            <span class="atalho-icone">⚙️</span>
+            <span>
+              <strong>Configurar botões</strong>
+              <small>criar e editar páginas e botões</small>
+            </span>
+          </a>
+        </div>
+        <p class="rodape-cartao">
+          Esta tela fica em <strong id="url-bemvindo"></strong> — abra quando
+          precisar do token de novo. Ela só responde neste PC.
+        </p>
+      </div>
+    </section>
+
+    <footer class="rodape">
+      Enquanto esta janela do servidor estiver aberta, o deck funciona. Fechá-la
+      derruba o servidor.
+    </footer>
+  </template>
+
+  <script src="bemvindo.js"></script>
+</body>
+</html>
