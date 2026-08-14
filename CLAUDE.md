@@ -41,7 +41,7 @@ dispositivos da rede sem `networkingMode=mirrored` (`.wslconfig`) ou um
 ## Arquitetura / fluxo de dados
 
 ```
-public/js/app.js  --GET /api/config-->  server/config-loader.js (lê config/pages.config.js)
+public/js/app.js  --GET /api/config-->  server/config-store.js (lê config/pages.config.json)
 public/js/app.js  --POST /action/:id--> server/routes/actions.js
                                               |
                                               v
@@ -57,17 +57,26 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
 ```
 
 - **Dois arquivos de config, mesmo padrão do `.env`/`.env.example`:**
-  `config/pages.config.js` é o pessoal (**gitignored** — tem caminhos da
+  `config/pages.config.json` é o pessoal (**gitignored** — tem caminhos da
   máquina, IPs da LAN e nomes de cena reais) e
-  `config/pages.config.example.js` é o exemplo versionado, com placeholders
-  (`SEU_USUARIO`, `IP-DO-SEU-SERVIDOR`). O `config-loader.js` usa o pessoal
+  `config/pages.config.example.json` é o exemplo versionado, com placeholders
+  (`SEU_USUARIO`, `IP-DO-SEU-SERVIDOR`). O `config-store.js` usa o pessoal
   quando existe e cai no exemplo quando não. **Ao mexer no layout, mantenha
   os dois em sincronia** — o exemplo é o que outras pessoas veem no GitHub.
+- O formato é **JSON**, não mais um módulo JS: precisa ser reescrito
+  programaticamente pela tela de configuração sem perder nada. Como JSON não
+  tem comentários, páginas e botões aceitam um campo opcional `_nota`, que
+  sobrevive a idas e voltas pelo editor.
+- **Salvar não exige reiniciar.** `PUT /api/config` valida, grava de forma
+  atômica (temporário + rename, com backup da versão anterior em
+  `pages.config.backup.json`) e dispara `{ tipo: 'config_atualizado' }` no
+  WebSocket; o `app.js` rebusca `/api/config` e re-renderiza sozinho,
+  mantendo a aba aberta se ela ainda existir.
 - Um botão pode ser **simples** (`integracao` + `acao` + `parametros`) ou
   **macro** (`acoes`: lista de `{ integracao, acao, parametros }` executada
   em sequência num toque só). O `routes/actions.js` normaliza os dois para
   uma lista de passos.
-- `config/pages.config.js` é a **única fonte de verdade** do layout de
+- `config/pages.config.json` é a **única fonte de verdade** do layout de
   botões (páginas, ícones, rótulos, qual integração/ação cada botão chama,
   e `estadoChave`/`estadoComparar` para saber quando destacar o botão como
   "ativo"). Adicionar um botão não deve exigir tocar em `server/` nem em
@@ -77,7 +86,7 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
   - estende `EventEmitter` e emite `'estado'` com o novo estado sempre que
     algo muda;
   - expõe `.estado` (objeto atual) e `.acoes` (mapa de funções async, uma
-    por ação usada em `config/pages.config.js`);
+    por ação usada em `config/pages.config.json`);
   - opcionalmente expõe `async inicializar()`, chamado uma vez na subida do
     servidor (`server/index.js`).
 - `server/routes/actions.js` é um dispatcher genérico: `POST /action/:id`
@@ -162,15 +171,47 @@ O botão "Janelas" substituiu um Alt+Tab simulado: o seletor nativo do
 Windows não dá para navegar por toque (ficava aberto esperando o teclado),
 então listar as janelas e focar a escolhida funciona muito melhor no tablet.
 
+## Schema do config (campos de um botão)
+
+Antes ficava nos comentários do `pages.config.js`; JSON não tem comentários,
+então mora aqui. O mesmo conteúdo é servido em `GET /api/catalogo` de forma
+estruturada, que é como a tela de configuração monta os formulários.
+
+| Campo | Vale para | O que é |
+|-------|-----------|---------|
+| `id` | todos | Identificador único **no app inteiro**, usado em `POST /action/:id` |
+| `titulo` | todos | Rótulo curto do botão |
+| `icone` | todos | Emoji. **Use emoji de verdade** — pictogramas sem apresentação emoji (`U+1F5A7`, `U+1F5B5`) não têm glifo na fonte do Android e aparecem quebrados |
+| `iconeAtivo` / `tituloAtivo` | todos | Alternativa mostrada quando `estadoChave` é truthy (ex.: play ↔ pause) |
+| `tipo` | todos | `botao` (padrão), `slider`, `info` (só mostra), `lista` (seletor) |
+| `integracao` + `acao` | exceto `info` | Qual integração e qual ação disparar |
+| `parametros` | exceto `info` | Objeto repassado para a ação |
+| `acoes` | exceto `info` | **Macro**: lista de `{ integracao, acao, parametros }` em sequência. Alternativa a `integracao`/`acao`/`parametros` |
+| `estadoChave` | todos | Dot-path no estado ao vivo (ex.: `obs.cenaAtual`) que acende o botão |
+| `estadoComparar` | `botao` | Compara `estadoChave` com `parametros[<valor>]` — é como vários botões de cena do OBS compartilham a mesma chave e só um acende |
+| `estiloEstado` | todos | `destaque` \| `perigo` \| `gravando` |
+| `min` / `max` | `slider` | Faixa numérica (obrigatórios) |
+| `fonte` | `lista` | Endpoint GET que devolve `{ ok, opcoes: [...] }` (obrigatório) |
+| `iconeItem` / `mensagemVazia` | `lista` | Ícone padrão dos itens e texto de lista vazia |
+| `estadoTexto` / `…Secundario` / `…Terciario` | `info` | Dot-paths das linhas de texto exibidas |
+| `_nota` | todos | Comentário livre — substitui os comentários que o JSON não tem |
+
+A validação em `server/config-store.js` (`validar()`) cobre tudo isso e
+devolve erros já legíveis, apontando página e botão.
+
 ## Adicionando uma nova integração
 
 1. Crie `server/integrations/<nome>/index.js` exportando uma instância que
    estende `EventEmitter`, com `.estado`, `.acoes` e (se precisar de setup
    assíncrono) `async inicializar()`.
 2. Registre em `server/index.js` (`const integracoes = { ..., <nome> }`).
-3. Adicione botões em `config/pages.config.js` referenciando
+3. Exponha também um getter `catalogo` (`rotulo`, `disponivel`,
+   `motivoIndisponivel`, `estados`, `acoes` com rótulo e parâmetros) — é o
+   que faz a integração aparecer na tela de configuração. Sem ele, ela
+   funciona mas fica invisível para quem for montar botões pela UI.
+4. Adicione botões em `config/pages.config.json` referenciando
    `integracao: '<nome>'` e `acao: '<nomeDaAcao>'`.
-4. Se a ação tiver estado ao vivo, emita `this.emit('estado', this.estado)`
+5. Se a ação tiver estado ao vivo, emita `this.emit('estado', this.estado)`
    sempre que algo mudar (por ação do próprio botão OU por evento externo,
    como o OBS faz com `CurrentProgramSceneChanged`).
 
@@ -178,6 +219,9 @@ então listar as janelas e focar a escolhida funciona muito melhor no tablet.
 
 ```bash
 curl -s http://localhost:3000/api/config | jq .
+curl -s http://localhost:3000/api/catalogo | jq '.integracoes | keys'
+# Salvar layout (valida antes; erro => 400 e arquivo intacto):
+curl -s -X PUT http://localhost:3000/api/config -H "Content-Type: application/json" -d @config/pages.config.json | jq .
 curl -s -X POST http://localhost:3000/action/midia.play_pause
 curl -s -X POST http://localhost:3000/action/midia.volume_slider -H "Content-Type: application/json" -d '{"valor":30}'
 ```

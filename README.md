@@ -45,10 +45,10 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
   `acoes` (as funções que os botões chamam) e emite eventos `estado` que o
   servidor retransmite pelo WebSocket. Adicionar uma integração nova não
   exige tocar nas outras.
-- O layout dos botões fica em `config/pages.config.js` — edite esse arquivo
+- O layout dos botões fica em `config/pages.config.json` — edite esse arquivo
   para adicionar/remover/reordenar botões sem mexer no código. Ele é pessoal
   e **não vai para o Git**; o repositório traz o
-  `config/pages.config.example.js` como ponto de partida.
+  `config/pages.config.example.json` como ponto de partida.
 
 ## Pré-requisitos
 
@@ -67,13 +67,13 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
 cd ~/projetos/stream-deck-web
 npm install
 cp .env.example .env
-cp config/pages.config.example.js config/pages.config.js
+cp config/pages.config.example.json config/pages.config.json
 ```
 
 Abra o `.env` e ajuste o que precisar (a porta padrão já funciona sem
 alterar nada; OBS/Spotify/Hue são opcionais — veja as seções abaixo).
 
-O `config/pages.config.js` é o seu layout de botões: ajuste os caminhos de
+O `config/pages.config.json` é o seu layout de botões: ajuste os caminhos de
 programas, IPs e nomes de cena para os da sua máquina. Os dois arquivos
 copiados acima são ignorados pelo Git, então seus dados ficam só aí.
 
@@ -255,7 +255,7 @@ Dicas para montar os seus:
    OBS_WEBSOCKET_PORT=4455
    OBS_WEBSOCKET_PASSWORD=sua_senha
    ```
-4. Em `config/pages.config.js`, ajuste os botões da página "OBS":
+4. Em `config/pages.config.json`, ajuste os botões da página "OBS":
    - `parametros.cena` de cada botão de cena deve bater **exatamente** com
      o nome da cena no seu OBS.
    - `parametros.entrada` do botão de mic deve bater com o nome da fonte de
@@ -334,16 +334,16 @@ O layout fica em **dois arquivos**, no mesmo esquema do `.env`/`.env.example`:
 
 | Arquivo | Vai pro Git? | O que é |
 |---------|--------------|---------|
-| `config/pages.config.example.js` | ✅ sim | Exemplo com placeholders — ponto de partida e referência |
-| `config/pages.config.js` | ❌ não | O **seu** layout real (caminhos da máquina, IPs da LAN, nomes de cena) |
+| `config/pages.config.example.json` | ✅ sim | Exemplo com placeholders — ponto de partida e referência |
+| `config/pages.config.json` | ❌ não | O **seu** layout real (caminhos da máquina, IPs da LAN, nomes de cena) |
 
 Na primeira vez:
 
 ```bash
-cp config/pages.config.example.js config/pages.config.js
+cp config/pages.config.example.json config/pages.config.json
 ```
 
-Depois edite só o `pages.config.js`. O servidor usa ele quando existe e cai
+Depois edite só o `pages.config.json`. O servidor usa ele quando existe e cai
 no exemplo quando não — então um clone novo do repositório já sobe
 funcionando, sem configurar nada.
 
@@ -379,14 +379,14 @@ recarrega sozinho.
 ```
 stream-deck-web/
 ├── config/
-│   ├── pages.config.example.js  # exemplo versionado (placeholders)
-│   └── pages.config.js          # SEU layout real — gitignored, edite aqui
+│   ├── pages.config.example.json  # exemplo versionado (placeholders)
+│   └── pages.config.json          # SEU layout real — gitignored, edite aqui
 ├── scripts/
 │   ├── windows-media.ps1     # volume e mute do Windows (P/Invoke)
 │   └── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam
 ├── server/
 │   ├── index.js               # bootstrap: Express + WebSocket + integrações
-│   ├── config-loader.js       # lê e indexa config/pages.config.js
+│   ├── config-store.js        # lê, valida, grava e recarrega o config
 │   ├── lib/
 │   │   └── powershell-interop.js  # chama powershell.exe (WSL2 ou nativo), compartilhado
 │   ├── routes/

@@ -94,6 +94,54 @@ class IntegracaoObs extends EventEmitter {
     }
   }
 
+  // Descreve o que esta integração oferece, para a tela de configuração
+  // conseguir montar os formulários sozinha (veja GET /api/catalogo).
+  get catalogo() {
+    return {
+      rotulo: 'OBS Studio',
+      disponivel: this.estado.conectado,
+      motivoIndisponivel: this.estado.conectado
+        ? null
+        : 'OBS não conectado — abra o OBS com o WebSocket Server ligado (ele reconecta sozinho).',
+      estados: [
+        { chave: 'obs.cenaAtual', rotulo: 'Cena ativa', tipo: 'texto' },
+        { chave: 'obs.micMudo', rotulo: 'Microfone mudo', tipo: 'booleano' },
+        { chave: 'obs.gravando', rotulo: 'Gravando', tipo: 'booleano' },
+        { chave: 'obs.conectado', rotulo: 'OBS conectado', tipo: 'booleano' },
+      ],
+      acoes: {
+        trocarCena: {
+          rotulo: 'Trocar de cena',
+          parametros: [
+            {
+              nome: 'cena',
+              rotulo: 'Nome da cena',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'Precisa bater exatamente com o nome da cena no OBS.',
+            },
+          ],
+          // Vários botões de cena compartilham estadoChave "obs.cenaAtual" e
+          // cada um só acende quando a cena bate com o seu próprio parâmetro.
+          comparaEstado: 'cena',
+        },
+        alternarMicMudo: {
+          rotulo: 'Alternar mudo do microfone',
+          parametros: [
+            {
+              nome: 'entrada',
+              rotulo: 'Nome da fonte de áudio',
+              tipo: 'texto',
+              obrigatorio: false,
+              ajuda: 'Em branco usa OBS_MIC_INPUT_NAME do .env (padrão: Mic/Aux).',
+            },
+          ],
+        },
+        alternarGravacao: { rotulo: 'Iniciar / parar gravação', parametros: [] },
+      },
+    };
+  }
+
   get acoes() {
     return {
       trocarCena: async (parametros = {}) => {

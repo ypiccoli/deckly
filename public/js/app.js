@@ -294,7 +294,25 @@
     } else if (mensagem.tipo === 'estado') {
       estadoGlobal = { ...estadoGlobal, [mensagem.integracao]: mensagem.dados };
       atualizarEstadosNaGrade();
+    } else if (mensagem.tipo === 'config_atualizado') {
+      // O layout mudou (alguém salvou na tela de configuração): rebusca e
+      // re-renderiza sem reiniciar nada nem recarregar a página.
+      carregarConfig();
     }
+  }
+
+  async function carregarConfig() {
+    const resposta = await fetch('/api/config');
+    const dados = await resposta.json();
+    paginas = dados.paginas || [];
+
+    // Mantém a aba aberta se ela ainda existir depois da mudança.
+    if (!paginas.some((p) => p.id === paginaAtivaId)) {
+      paginaAtivaId = paginas[0]?.id || null;
+    }
+
+    renderizarAbas();
+    renderizarGrade();
   }
 
   function tratarMudancaConexao(conectado) {
@@ -327,13 +345,7 @@
     window.clienteWs.aoReceberMensagem(tratarMensagemWs);
     window.clienteWs.aoMudarConexao(tratarMudancaConexao);
 
-    const resposta = await fetch('/api/config');
-    const dados = await resposta.json();
-    paginas = dados.paginas || [];
-    paginaAtivaId = paginas[0]?.id || null;
-
-    renderizarAbas();
-    renderizarGrade();
+    await carregarConfig();
   }
 
   iniciar();

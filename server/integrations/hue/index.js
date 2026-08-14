@@ -35,6 +35,27 @@ class IntegracaoHue extends EventEmitter {
     }
   }
 
+  // Descreve o que esta integração oferece, para a tela de configuração
+  // conseguir montar os formulários sozinha (veja GET /api/catalogo).
+  get catalogo() {
+    return {
+      rotulo: 'Philips Hue',
+      disponivel: this.habilitado,
+      motivoIndisponivel: this.habilitado
+        ? null
+        : 'Falta configurar HUE_BRIDGE_IP e HUE_APPLICATION_KEY no .env — veja o README.',
+      // O estado só ganha forma depois de conectar na bridge: as chaves saem
+      // dos nomes dos grupos (ex.: hue.sala.ligada).
+      estados: [],
+      acoes: {
+        alternarLuz: {
+          rotulo: 'Acender / apagar luz',
+          parametros: [{ nome: 'grupo', rotulo: 'Nome do grupo de luzes', tipo: 'texto', obrigatorio: true }],
+        },
+      },
+    };
+  }
+
   get acoes() {
     return {
       alternarLuz: async (parametros = {}) => {

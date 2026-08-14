@@ -11,7 +11,7 @@
 //              executada em sequência (ex.: abrir o jogo e o overlay juntos).
 
 const express = require('express');
-const { encontrarBotao } = require('../config-loader');
+const { encontrarBotao } = require('../config-store');
 
 function resolverAcao(integracoes, passo) {
   const integracao = integracoes[passo.integracao];

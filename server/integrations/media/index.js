@@ -47,6 +47,33 @@ class IntegracaoMedia extends EventEmitter {
     }
   }
 
+  // Descreve o que esta integração oferece, para a tela de configuração
+  // conseguir montar os formulários sozinha (veja GET /api/catalogo).
+  get catalogo() {
+    return {
+      rotulo: 'Mídia do Windows',
+      disponivel: Boolean(this.controlador),
+      motivoIndisponivel: this.controlador ? null : 'Só funciona no Windows ou no WSL2.',
+      estados: [
+        { chave: 'media.volume', rotulo: 'Volume do Windows (0–100)', tipo: 'numero' },
+        { chave: 'media.mudo', rotulo: 'Windows está mudo', tipo: 'booleano' },
+      ],
+      acoes: {
+        playPause: { rotulo: 'Play / Pause', parametros: [] },
+        faixaAnterior: { rotulo: 'Faixa anterior', parametros: [] },
+        proximaFaixa: { rotulo: 'Próxima faixa', parametros: [] },
+        alternarMudo: { rotulo: 'Alternar mudo', parametros: [] },
+        aumentarVolume: { rotulo: 'Aumentar volume', parametros: [] },
+        diminuirVolume: { rotulo: 'Diminuir volume', parametros: [] },
+        definirVolume: {
+          rotulo: 'Definir volume',
+          paraSlider: true,
+          parametros: [{ nome: 'valor', rotulo: 'Volume (0–100)', tipo: 'numero', obrigatorio: false }],
+        },
+      },
+    };
+  }
+
   get acoes() {
     return {
       playPause: () => this._executarEAtualizar(this.controlador.playPause()),

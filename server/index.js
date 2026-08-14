@@ -7,8 +7,8 @@ const http = require('http');
 const express = require('express');
 const WebSocket = require('ws');
 
-const { obterPaginas } = require('./config-loader');
 const criarRotaAcoes = require('./routes/actions');
+const criarRotaConfig = require('./routes/config');
 const criarRotaSpotifyAuth = require('./routes/spotify-auth');
 const criarRotaAtalhos = require('./routes/atalhos');
 
@@ -24,10 +24,11 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.get('/api/config', (req, res) => {
-  res.json({ paginas: obterPaginas() });
-});
+// Declarada aqui e definida mais abaixo (depois que o WebSocket existe):
+// a rota de config precisa avisar os clientes quando o layout muda.
+let avisarConfigAtualizada = () => {};
 
+app.use('/api', criarRotaConfig(integracoes, () => avisarConfigAtualizada()));
 app.use('/action', criarRotaAcoes(integracoes));
 app.use('/spotify', criarRotaSpotifyAuth());
 app.use('/atalhos', criarRotaAtalhos());
@@ -56,6 +57,12 @@ function transmitir(mensagem) {
 wss.on('connection', (socket) => {
   socket.send(JSON.stringify({ tipo: 'estado_completo', dados: estadoGlobal }));
 });
+
+// Chamada pela rota PUT /api/config depois de gravar: cada cliente rebusca
+// /api/config e se re-renderiza, sem precisar reiniciar o servidor.
+avisarConfigAtualizada = () => {
+  transmitir({ tipo: 'config_atualizado' });
+};
 
 const PORTA = process.env.PORT || 3000;
 

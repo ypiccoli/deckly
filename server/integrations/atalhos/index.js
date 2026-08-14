@@ -44,6 +44,79 @@ class IntegracaoAtalhos extends EventEmitter {
     return this.controlador.listarJogos();
   }
 
+  // Descreve o que esta integração oferece, para a tela de configuração
+  // conseguir montar os formulários sozinha (veja GET /api/catalogo).
+  get catalogo() {
+    const semParametros = (rotulo) => ({ rotulo, parametros: [] });
+    return {
+      rotulo: 'Atalhos e programas do Windows',
+      disponivel: Boolean(this.controlador),
+      motivoIndisponivel: this.controlador ? null : 'Só funciona no Windows ou no WSL2.',
+      estados: [],
+      listas: [
+        { fonte: '/atalhos/janelas', rotulo: 'Janelas abertas agora', acaoSugerida: 'focarJanela' },
+        { fonte: '/atalhos/jogos', rotulo: 'Jogos instalados na Steam', acaoSugerida: 'abrirJogo' },
+      ],
+      acoes: {
+        print: semParametros('Captura de tela (Win+Shift+S)'),
+        bloquear: semParametros('Bloquear o PC'),
+        areaTrabalho: semParametros('Mostrar área de trabalho'),
+        snapEsquerda: semParametros('Encaixar janela à esquerda'),
+        snapDireita: semParametros('Encaixar janela à direita'),
+        areaTransferencia: semParametros('Área de transferência (Win+V)'),
+        moverMonitorEsquerda: semParametros('Mover janela para o monitor da esquerda'),
+        moverMonitorDireita: semParametros('Mover janela para o monitor da direita'),
+        abrirApp: {
+          rotulo: 'Abrir programa',
+          parametros: [
+            {
+              nome: 'caminho',
+              rotulo: 'Caminho, comando ou atalho .lnk',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt).',
+            },
+          ],
+        },
+        abrirUwp: {
+          rotulo: 'Abrir app da Store (MSIX)',
+          parametros: [
+            {
+              nome: 'appId',
+              rotulo: 'AppUserModelID',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'Descubra com: Get-StartApps | Where-Object { $_.Name -like \'*Nome*\' }',
+            },
+          ],
+        },
+        abrirUrl: {
+          rotulo: 'Abrir site',
+          parametros: [
+            { nome: 'url', rotulo: 'Endereço', tipo: 'texto', obrigatorio: true },
+            {
+              nome: 'navegador',
+              rotulo: 'Navegador específico (opcional)',
+              tipo: 'texto',
+              obrigatorio: false,
+              ajuda: 'Caminho do .exe. Em branco, abre no navegador padrão do Windows.',
+            },
+          ],
+        },
+        abrirJogo: {
+          rotulo: 'Abrir jogo da Steam',
+          parametros: [{ nome: 'appId', rotulo: 'AppID na Steam', tipo: 'texto', obrigatorio: false }],
+          aceitaLista: true,
+        },
+        focarJanela: {
+          rotulo: 'Ir para uma janela',
+          parametros: [{ nome: 'handle', rotulo: 'Identificador da janela', tipo: 'texto', obrigatorio: false }],
+          aceitaLista: true,
+        },
+      },
+    };
+  }
+
   get acoes() {
     return {
       print: () => { this._garantirDisponivel(); return this.controlador.print(); },

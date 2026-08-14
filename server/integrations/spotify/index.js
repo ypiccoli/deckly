@@ -172,6 +172,44 @@ class IntegracaoSpotify extends EventEmitter {
     }
   }
 
+  // Descreve o que esta integração oferece, para a tela de configuração
+  // conseguir montar os formulários sozinha (veja GET /api/catalogo).
+  get catalogo() {
+    return {
+      rotulo: 'Spotify',
+      disponivel: this.habilitado,
+      motivoIndisponivel: this.habilitado
+        ? null
+        : 'Falta configurar SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET e SPOTIFY_REFRESH_TOKEN no .env — veja o README.',
+      estados: [
+        { chave: 'spotify.tocando', rotulo: 'Está tocando', tipo: 'booleano' },
+        { chave: 'spotify.musica', rotulo: 'Música atual', tipo: 'texto' },
+        { chave: 'spotify.artista', rotulo: 'Artista atual', tipo: 'texto' },
+        { chave: 'spotify.dispositivo', rotulo: 'Dispositivo tocando', tipo: 'texto' },
+        { chave: 'spotify.volume', rotulo: 'Volume do Spotify (0–100)', tipo: 'numero' },
+        { chave: 'spotify.conectado', rotulo: 'Spotify conectado', tipo: 'booleano' },
+      ],
+      listas: [
+        { fonte: '/spotify/dispositivos', rotulo: 'Dispositivos do Spotify', acaoSugerida: 'transferirReproducao' },
+      ],
+      acoes: {
+        playPause: { rotulo: 'Play / Pause', parametros: [] },
+        proximaFaixa: { rotulo: 'Próxima faixa', parametros: [] },
+        faixaAnterior: { rotulo: 'Faixa anterior', parametros: [] },
+        definirVolume: {
+          rotulo: 'Definir volume do Spotify',
+          paraSlider: true,
+          parametros: [{ nome: 'valor', rotulo: 'Volume (0–100)', tipo: 'numero', obrigatorio: false }],
+        },
+        transferirReproducao: {
+          rotulo: 'Tocar em outro dispositivo',
+          parametros: [{ nome: 'dispositivoId', rotulo: 'ID do dispositivo', tipo: 'texto', obrigatorio: false }],
+          aceitaLista: true,
+        },
+      },
+    };
+  }
+
   get acoes() {
     return {
       playPause: async () => {
