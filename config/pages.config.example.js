@@ -17,7 +17,9 @@
 // Cada botão tem:
 //   id           identificador único, usado em POST /action/:id
 //   titulo       rótulo curto mostrado no botão
-//   icone        emoji (ou texto curto) mostrado no botão
+//   icone        emoji (ou texto curto) mostrado no botão. Use emoji de verdade:
+//                pictogramas sem apresentação emoji (ex.: U+1F5A7 🖧, U+1F5B5 🖵)
+//                não têm glifo colorido na fonte do Android e aparecem quebrados.
 //   iconeAtivo / tituloAtivo
 //                emoji/texto alternativo mostrado quando estadoChave é truthy
 //                (ex.: play/pause do Spotify troca o texto conforme está tocando ou não,
@@ -177,7 +179,7 @@ module.exports = {
         {
           id: 'atalhos.mobaxterm',
           titulo: 'MobaXterm',
-          icone: '🖧',
+          icone: '🔌',
           integracao: 'atalhos',
           acao: 'abrirApp',
           parametros: {
@@ -352,14 +354,14 @@ module.exports = {
         // {
         //   id: 'sistema.mover_monitor_esquerda',
         //   titulo: 'Monitor ⬅',
-        //   icone: '🖵',
+        //   icone: '🖥️',
         //   integracao: 'atalhos',
         //   acao: 'moverMonitorEsquerda',
         // },
         // {
         //   id: 'sistema.mover_monitor_direita',
         //   titulo: 'Monitor ➡',
-        //   icone: '🖵',
+        //   icone: '🖥️',
         //   integracao: 'atalhos',
         //   acao: 'moverMonitorDireita',
         // },
