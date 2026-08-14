@@ -11,6 +11,9 @@ const criarRotaAcoes = require('./routes/actions');
 const criarRotaConfig = require('./routes/config');
 const criarRotaSpotifyAuth = require('./routes/spotify-auth');
 const criarRotaAtalhos = require('./routes/atalhos');
+const { exigirToken } = require('./lib/auth');
+const { conferir: conferirToken } = require('./lib/token');
+const mostrarBoasVindas = require('./lib/boas-vindas');
 
 const media = require('./integrations/media');
 const obs = require('./integrations/obs');
@@ -22,16 +25,24 @@ const integracoes = { media, obs, spotify, hue, atalhos };
 
 const app = express();
 app.use(express.json());
+
+// Os arquivos estáticos ficam abertos de propósito: HTML, CSS e JS não têm
+// segredo nenhum, e a página precisa carregar para poder pedir o token a
+// quem ainda não pareou. O que é protegido é a API abaixo.
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Declarada aqui e definida mais abaixo (depois que o WebSocket existe):
 // a rota de config precisa avisar os clientes quando o layout muda.
 let avisarConfigAtualizada = () => {};
 
-app.use('/api', criarRotaConfig(integracoes, () => avisarConfigAtualizada()));
-app.use('/action', criarRotaAcoes(integracoes));
+app.use('/api', exigirToken, criarRotaConfig(integracoes, () => avisarConfigAtualizada()));
+app.use('/action', exigirToken, criarRotaAcoes(integracoes));
+app.use('/atalhos', exigirToken, criarRotaAtalhos());
+// O /spotify tem uma particularidade: as rotas de OAuth não podem exigir
+// token, porque o Spotify redireciona o navegador de volta para /callback
+// sem ele. Elas se protegem por outro caminho (só respondem no próprio PC),
+// tratado dentro da própria rota.
 app.use('/spotify', criarRotaSpotifyAuth());
-app.use('/atalhos', criarRotaAtalhos());
 
 const servidorHttp = http.createServer(app);
 const wss = new WebSocket.Server({ server: servidorHttp, path: '/ws' });
@@ -54,7 +65,15 @@ function transmitir(mensagem) {
   });
 }
 
-wss.on('connection', (socket) => {
+// O WebSocket carrega o estado ao vivo (o que está tocando, cena do OBS,
+// volume), então também precisa de token. Um navegador não consegue mandar
+// header no handshake de WebSocket — por isso ele vai na query string.
+wss.on('connection', (socket, req) => {
+  const url = new URL(req.url, 'http://localhost');
+  if (!conferirToken(url.searchParams.get('token'))) {
+    socket.close(4001, 'Token de acesso inválido');
+    return;
+  }
   socket.send(JSON.stringify({ tipo: 'estado_completo', dados: estadoGlobal }));
 });
 
@@ -73,11 +92,7 @@ const PORTA = process.env.PORT || 3000;
 // conexão pode demorar bem mais que o normal para dar timeout dependendo da
 // rede) trave a subida do servidor inteiro.
 servidorHttp.listen(PORTA, '0.0.0.0', () => {
-  console.log('');
-  console.log(`Stream Deck Web rodando na porta ${PORTA}`);
-  console.log(`  -> Neste PC:        http://localhost:${PORTA}`);
-  console.log(`  -> No tablet (LAN): http://<IP-do-PC-na-rede>:${PORTA}`);
-  console.log('');
+  mostrarBoasVindas(PORTA);
 });
 
 for (const integracao of Object.values(integracoes)) {

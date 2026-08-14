@@ -12,15 +12,21 @@
 
 const express = require('express');
 const configStore = require('../config-store');
+const { exigirLocal } = require('../lib/auth');
 
 module.exports = function criarRotaConfig(integracoes, aoAtualizarConfig) {
   const router = express.Router();
 
+  // Leitura do layout: qualquer aparelho pareado precisa disso para desenhar
+  // o deck.
   router.get('/config', (req, res) => {
     res.json({ paginas: configStore.obterPaginas() });
   });
 
-  router.put('/config', (req, res) => {
+  // Gravar o layout é outra história: um botão pode mandar abrir qualquer
+  // programa, então reconfigurar o deck vale tanto quanto executar código
+  // aqui. Por isso, além do token, por padrão só do próprio PC.
+  router.put('/config', exigirLocal, (req, res) => {
     const novoConfig = req.body;
 
     const erros = configStore.validar(novoConfig, integracoes);
@@ -42,7 +48,8 @@ module.exports = function criarRotaConfig(integracoes, aoAtualizarConfig) {
     res.json({ ok: true, paginas: configStore.obterPaginas() });
   });
 
-  router.get('/catalogo', (req, res) => {
+  // Só a tela de configuração usa o catálogo, então segue a mesma regra dela.
+  router.get('/catalogo', exigirLocal, (req, res) => {
     const catalogo = {};
     for (const [nome, integracao] of Object.entries(integracoes)) {
       if (!integracao.catalogo) continue;

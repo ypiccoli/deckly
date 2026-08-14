@@ -676,7 +676,7 @@
     el.btnSalvar.disabled = true;
 
     try {
-      var resposta = await fetch('/api/config', {
+      var resposta = await window.acesso.buscar('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(estado.config),
@@ -754,13 +754,34 @@
     ev.returnValue = '';
   });
 
-  (async function iniciar() {
+  async function iniciar() {
     montarGradeEmoji();
     try {
-      var [cfg, cat] = await Promise.all([
-        fetch('/api/config').then(function (r) { return r.json(); }),
-        fetch('/api/catalogo').then(function (r) { return r.json(); }),
+      var [rCfg, rCat] = await Promise.all([
+        window.acesso.buscar('/api/config'),
+        window.acesso.buscar('/api/catalogo'),
       ]);
+
+      if (rCfg.status === 401 || rCat.status === 401) {
+        window.acesso.esquecer();
+        window.acesso.pedirToken();
+        return;
+      }
+      // O catálogo (e gravar o layout) só respondem no próprio PC, salvo se
+      // CONFIG_REMOTO estiver ligado. Vindo daqui, quem abriu a tela está em
+      // outro aparelho.
+      if (rCat.status === 403) {
+        var motivo = await rCat.json().catch(function () { return {}; });
+        el.subtitulo.textContent = 'acesso bloqueado';
+        el.erros.innerHTML =
+          '<h3>Esta tela só abre no PC onde o servidor roda</h3><ul><li>' +
+          esc(motivo.erro || 'Acesso remoto desativado.') + '</li></ul>';
+        el.erros.hidden = false;
+        return;
+      }
+
+      var cfg = await rCfg.json();
+      var cat = await rCat.json();
       estado.config = cfg;
       estado.catalogo = cat.integracoes;
       estado.tipos = cat.tipos;
@@ -779,5 +800,8 @@
       el.erros.innerHTML = '<h3>Não deu para carregar a configuração</h3><ul><li>' + esc(erro.message) + '</li></ul>';
       el.erros.hidden = false;
     }
-  })();
+  }
+
+  // Só começa depois que houver token — sem ele, toda chamada volta 401.
+  window.acesso.garantir(iniciar);
 })();

@@ -171,6 +171,40 @@ O botão "Janelas" substituiu um Alt+Tab simulado: o seletor nativo do
 Windows não dá para navegar por toque (ficava aberto esperando o teclado),
 então listar as janelas e focar a escolhida funciona muito melhor no tablet.
 
+## Acesso (token e restrição local)
+
+`server/lib/token.js` + `server/lib/auth.js`. Duas travas com propósitos
+diferentes:
+
+- **`exigirToken`** — tudo que dispara ação ou lê estado (`/action`,
+  `/atalhos`, `/api`, `/spotify/dispositivos`, e o WebSocket). Sem isso,
+  qualquer aparelho da rede mandaria o PC abrir programas.
+- **`exigirLocal`** — camada extra no que *reconfigura* o app (`PUT
+  /api/config`, `GET /api/catalogo`, OAuth do Spotify): por padrão só
+  responde de 127.0.0.1, liberável com `CONFIG_REMOTO=true`.
+
+Detalhes que importam ao mexer aqui:
+
+- **Os estáticos ficam abertos de propósito.** HTML/CSS/JS não têm segredo, e
+  a página precisa carregar para poder pedir o token a quem ainda não pareou.
+- **WebSocket recebe o token pela query string**, não por header — o
+  handshake do navegador não permite header. Conexão sem token fecha com o
+  código 4001.
+- **OAuth do Spotify não pode exigir token**: o Spotify redireciona o
+  navegador para `/spotify/callback` sem ele. Por isso `/login` e
+  `/callback` usam `exigirLocal` em vez de `exigirToken`.
+- Comparação do token é `timingSafeEqual`, e normaliza hífen/caixa antes —
+  quem digita não deve ser barrado por formatação.
+- O token vai para `config/token.json` (gitignored) ou vem de
+  `STREAM_DECK_TOKEN`. Formato pensado para ser digitado num tablet:
+  alfabeto sem caracteres ambíguos, agrupado de 4 em 4.
+
+No frontend, `public/js/token.js` é compartilhado pelo deck e pelo editor:
+lê o token de `?token=` (link/QR de pareamento) ou do `localStorage`, tira
+da URL depois de guardar, injeta o header nas chamadas e mostra a tela de
+pareamento quando falta. Por isso `ws-client.js` **não** conecta sozinho no
+construtor — quem chama `conectar()` é o `app.js`, depois de garantir token.
+
 ## Tela de configuração (`public/config/`)
 
 Editor de páginas e botões servido em `/config/` (link ⚙️ no cabeçalho do
@@ -233,13 +267,21 @@ devolve erros já legíveis, apontando página e botão.
 
 ## Testes manuais úteis
 
+Tudo exige token — pegue o atual e exporte antes:
+
 ```bash
-curl -s http://localhost:3000/api/config | jq .
-curl -s http://localhost:3000/api/catalogo | jq '.integracoes | keys'
-# Salvar layout (valida antes; erro => 400 e arquivo intacto):
-curl -s -X PUT http://localhost:3000/api/config -H "Content-Type: application/json" -d @config/pages.config.json | jq .
-curl -s -X POST http://localhost:3000/action/midia.play_pause
-curl -s -X POST http://localhost:3000/action/midia.volume_slider -H "Content-Type: application/json" -d '{"valor":30}'
+export TOKEN=$(node -e "console.log(require('./config/token.json').token)")
+
+curl -s -H "X-Token: $TOKEN" http://localhost:3000/api/config | jq .
+curl -s -H "X-Token: $TOKEN" http://localhost:3000/api/catalogo | jq '.integracoes | keys'
+curl -s -H "X-Token: $TOKEN" -X POST http://localhost:3000/action/midia.play_pause
+curl -s -H "X-Token: $TOKEN" -X POST http://localhost:3000/action/midia.volume_slider \
+  -H "Content-Type: application/json" -d '{"valor":30}'
+
+# Salvar layout (valida antes; erro => 400 e arquivo intacto). Precisa vir de
+# 127.0.0.1, senão dá 403 — veja CONFIG_REMOTO:
+curl -s -X PUT http://127.0.0.1:3000/api/config -H "X-Token: $TOKEN" \
+  -H "Content-Type: application/json" -d @config/pages.config.json | jq .
 ```
 
 Não há suíte de testes automatizados neste projeto — validação é manual

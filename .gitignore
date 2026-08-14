@@ -12,3 +12,4 @@ Thumbs.db
 # automaticamente a cada save pela tela de configuração.
 config/pages.config.json
 config/pages.config.backup.json
+config/token.json

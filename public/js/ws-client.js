@@ -6,18 +6,27 @@ class ClienteWs {
     this.socket = null;
     this.ouvintes = new Set();
     this.ouvintesConexao = new Set();
+    // Não conecta no construtor: sem token o servidor derruba o socket, e
+    // ficaríamos num ciclo de reconexão inútil antes do pareamento. Quem
+    // chama conectar() é o app.js, depois de garantir que há token.
     // Guarda o último estado conhecido para "repetir" a quem se inscrever
     // depois que ele já aconteceu — sem isso, se o WS conectar (ou mandar o
     // estado_completo) antes do app.js terminar de buscar /api/config e se
     // inscrever, a notificação se perde e a UI fica presa em "conectando…".
     this.conectado = false;
     this.ultimaMensagemCompleta = null;
+  }
+
+  conectar() {
+    if (this.socket) return;
     this._conectar();
   }
 
   _conectar() {
     const protocolo = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${protocolo}://${location.host}/ws`;
+    // O token vai na query: o handshake de WebSocket do navegador não
+    // permite mandar header.
+    const url = window.acesso.paraWs(`${protocolo}://${location.host}/ws`);
     this.socket = new WebSocket(url);
 
     this.socket.addEventListener('open', () => this._notificarConexao(true));
@@ -36,6 +45,7 @@ class ClienteWs {
 
     this.socket.addEventListener('close', () => {
       this._notificarConexao(false);
+      this.socket = null;
       setTimeout(() => this._conectar(), 2000);
     });
 

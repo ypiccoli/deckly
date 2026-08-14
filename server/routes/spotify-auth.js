@@ -6,11 +6,16 @@
 
 const express = require('express');
 const spotify = require('../integrations/spotify');
+const { exigirToken, exigirLocal } = require('../lib/auth');
 
 module.exports = function criarRotaSpotifyAuth() {
   const router = express.Router();
 
-  router.get('/login', (req, res) => {
+  // /login e /callback NÃO podem exigir token: o Spotify redireciona o
+  // navegador de volta para /callback sem ele. São protegidas por serem
+  // acessíveis só do próprio PC — o que casa com o fluxo, que é feito uma
+  // vez na máquina onde o servidor roda.
+  router.get('/login', exigirLocal, (req, res) => {
     if (!spotify.clientId || !spotify.clientSecret) {
       res
         .status(500)
@@ -20,7 +25,7 @@ module.exports = function criarRotaSpotifyAuth() {
     res.redirect(spotify.obterUrlAutorizacao());
   });
 
-  router.get('/callback', async (req, res) => {
+  router.get('/callback', exigirLocal, async (req, res) => {
     const { code, error } = req.query;
 
     if (error) {
@@ -54,7 +59,8 @@ module.exports = function criarRotaSpotifyAuth() {
   // Responde no mesmo formato { ok, opcoes: [{ id, nome, detalhe, ativo }] }
   // usado por todas as listagens de seletor (veja server/routes/atalhos.js),
   // para o frontend montar qualquer seletor com o mesmo código.
-  router.get('/dispositivos', async (req, res) => {
+  // Usada pelo deck (seletor "Tocar em…"), então exige token como as demais.
+  router.get('/dispositivos', exigirToken, async (req, res) => {
     try {
       const dispositivos = await spotify.listarDispositivos();
       res.json({

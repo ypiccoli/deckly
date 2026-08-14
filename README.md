@@ -15,6 +15,7 @@ próprio, e configurável por uma tela de configuração no próprio navegador.
 - [Instalação](#instalação)
 - [Como rodar](#como-rodar)
 - [Acessar do tablet (rede — importante no WSL2)](#acessar-do-tablet-rede--importante-no-wsl2)
+- [Token de acesso](#token-de-acesso)
 - [Controle de mídia (Windows via WSL2)](#controle-de-mídia-windows-via-wsl2)
 - [Atalhos: apps, sites, jogos e janelas](#atalhos-apps-sites-jogos-e-janelas)
 - [Habilitar o OBS](#habilitar-o-obs)
@@ -89,9 +90,16 @@ Ao subir, o terminal mostra algo como:
 
 ```
 Stream Deck Web rodando na porta 3000
-  -> Neste PC:        http://localhost:3000
-  -> No tablet (LAN): http://<IP-do-PC-na-rede>:3000
+
+  Neste PC          http://127.0.0.1:3000
+  Configurar        http://127.0.0.1:3000/config/
+  No tablet (LAN)   http://192.168.1.20:3000
+
+  Token de acesso   XXXX-XXXX-XXXX-XXXX   (gerado agora)
 ```
+
+Veja [Token de acesso](#token-de-acesso) para parear o tablet — tem um QR
+code no terminal para não precisar digitar.
 
 ## Acessar do tablet (rede — importante no WSL2)
 
@@ -180,6 +188,51 @@ Windows/WSL.
 - No Chrome do tablet, use o menu → **"Adicionar à tela inicial"** (ou o
   banner de instalação) para instalar como PWA — ele abre em tela cheia,
   sem barra de endereço, como um app nativo.
+
+## Token de acesso
+
+O deck manda o seu PC abrir programas — então ele **não pode** ficar aberto
+para qualquer aparelho da rede. Todo acesso exige um token.
+
+Na primeira execução o servidor gera um e mostra assim:
+
+```
+  Token de acesso   XXXX-XXXX-XXXX-XXXX   (gerado agora)
+
+  Para parear o tablet, escaneie o QR abaixo ou abra o link:
+  http://192.168.1.20:3000/?token=XXXX-XXXX-XXXX-XXXX
+
+  █▀▀▀▀▀█ ▄▀█▄▀ █▀▀▀▀▀█
+  █ ███ █ ▀▄█ ▄ █ ███ █
+  ...
+```
+
+**Escaneie o QR com o tablet** e pronto — o token fica guardado no
+navegador, você não digita de novo. Sem câmera? O token foi feito para ser
+digitável (sem letras ambíguas, e maiúscula/minúscula e hífen não importam):
+a página pede ele numa tela de pareamento.
+
+O token fica em `config/token.json` (ignorado pelo Git). Para trocar, apague
+esse arquivo e reinicie — ou fixe um valor seu em `STREAM_DECK_TOKEN` no
+`.env`.
+
+### A tela de configuração é mais restrita
+
+Montar botões é o mesmo que decidir quais programas o deck pode abrir, então
+**por padrão a tela de configuração só responde no próprio PC** (127.0.0.1),
+mesmo com token válido. Para configurar também pelo tablet:
+
+```
+CONFIG_REMOTO=true
+```
+
+### Até onde isso protege
+
+O tráfego é HTTP puro na rede local, sem TLS. O token impede que outro
+aparelho da rede use o seu deck — que é o risco real numa casa. Ele **não**
+protege contra alguém capaz de capturar o tráfego da própria rede, e nada
+disso torna seguro expor a porta à internet. Continue sem fazer port
+forwarding.
 
 ## Controle de mídia (Windows via WSL2)
 

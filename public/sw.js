@@ -2,13 +2,14 @@
 // funcionar em rede instável. Requisições dinâmicas (ações, WS, config)
 // nunca são cacheadas — sempre vão direto para a rede.
 
-const CACHE_NOME = 'stream-deck-web-v9';
+const CACHE_NOME = 'stream-deck-web-v10';
 const ARQUIVOS_ESTATICOS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/css/style.css',
   '/js/app.js',
+  '/js/token.js',
   '/js/ws-client.js',
   '/icons/icon.svg',
   '/icons/icon-maskable.svg',

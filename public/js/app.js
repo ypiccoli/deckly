@@ -27,7 +27,7 @@
   }
 
   async function enviarAcao(id, corpo) {
-    const resposta = await fetch(`/action/${encodeURIComponent(id)}`, {
+    const resposta = await window.acesso.buscar(`/action/${encodeURIComponent(id)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(corpo || {}),
@@ -180,7 +180,7 @@
     overlay.classList.add('aberto');
 
     try {
-      const resposta = await fetch(botao.fonte);
+      const resposta = await window.acesso.buscar(botao.fonte);
       const dados = await resposta.json();
       if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'Falha ao buscar a lista');
 
@@ -302,7 +302,12 @@
   }
 
   async function carregarConfig() {
-    const resposta = await fetch('/api/config');
+    const resposta = await window.acesso.buscar('/api/config');
+    if (resposta.status === 401) {
+      const erro = new Error('Token de acesso inválido');
+      erro.naoAutorizado = true;
+      throw erro;
+    }
     const dados = await resposta.json();
     paginas = dados.paginas || [];
 
@@ -345,8 +350,22 @@
     window.clienteWs.aoReceberMensagem(tratarMensagemWs);
     window.clienteWs.aoMudarConexao(tratarMudancaConexao);
 
-    await carregarConfig();
+    try {
+      await carregarConfig();
+    } catch (erro) {
+      // Token guardado deixou de valer (servidor gerou outro, por exemplo):
+      // pede o pareamento de novo em vez de mostrar uma tela vazia.
+      if (erro && erro.naoAutorizado) {
+        window.acesso.esquecer();
+        window.acesso.pedirToken();
+        return;
+      }
+      throw erro;
+    }
+
+    window.clienteWs.conectar();
   }
 
-  iniciar();
+  // Só começa depois que houver token — sem ele, toda chamada volta 401.
+  window.acesso.garantir(iniciar);
 })();
