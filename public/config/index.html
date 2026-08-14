@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Configuração — Stream Deck Web</title>
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="config.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-titulo">
+      <span class="logo">🎛️</span>
+      <div>
+        <h1>Configuração</h1>
+        <p class="topo-sub" id="topo-sub">carregando…</p>
+      </div>
+    </div>
+    <div class="topo-acoes">
+      <span class="aviso-sujo" id="aviso-sujo" hidden>alterações não salvas</span>
+      <a class="btn btn-fantasma" href="../">Ver o deck</a>
+      <button type="button" class="btn btn-primario" id="btn-salvar" disabled>Salvar</button>
+    </div>
+  </header>
+
+  <div class="erros" id="erros" hidden></div>
+
+  <main class="colunas">
+    <!-- Coluna 1: páginas -->
+    <section class="coluna coluna-paginas">
+      <div class="coluna-cabecalho">
+        <h2>Páginas</h2>
+        <button type="button" class="btn btn-pequeno" id="btn-add-pagina">+ Página</button>
+      </div>
+      <ul class="lista" id="lista-paginas"></ul>
+    </section>
+
+    <!-- Coluna 2: botões da página selecionada -->
+    <section class="coluna coluna-botoes">
+      <div class="coluna-cabecalho">
+        <h2 id="titulo-botoes">Botões</h2>
+        <button type="button" class="btn btn-pequeno" id="btn-add-botao" disabled>+ Botão</button>
+      </div>
+      <ul class="lista" id="lista-botoes"></ul>
+    </section>
+
+    <!-- Coluna 3: formulário -->
+    <section class="coluna coluna-form">
+      <div class="coluna-cabecalho">
+        <h2 id="titulo-form">Detalhes</h2>
+      </div>
+      <div id="form" class="form">
+        <p class="vazio">Escolha um botão à esquerda, ou crie um novo.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Seletor de emoji -->
+  <div class="overlay" id="overlay-emoji">
+    <div class="overlay-cartao">
+      <h2>Escolher ícone</h2>
+      <input type="text" class="campo" id="emoji-livre" placeholder="Ou digite/cole um emoji aqui" maxlength="8" />
+      <div class="emoji-grade" id="emoji-grade"></div>
+      <button type="button" class="btn btn-fantasma" id="emoji-fechar">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="config.js"></script>
+</body>
+</html>

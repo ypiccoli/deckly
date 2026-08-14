@@ -6,7 +6,7 @@ rede Wi-Fi). Cada botão dispara uma ação no PC — mídia/volume, cenas e
 gravação do OBS, e (opcionalmente) Spotify e Philips Hue.
 
 Feito para substituir o Touch Portal: sem limites de plugin, com visual
-próprio e 100% configurável editando um arquivo.
+próprio, e configurável por uma tela de configuração no próprio navegador.
 
 ## Sumário
 
@@ -21,6 +21,7 @@ próprio e 100% configurável editando um arquivo.
 - [Habilitar o Spotify](#habilitar-o-spotify)
 - [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
 - [Editar páginas e botões](#editar-páginas-e-botões)
+- [Tela de configuração](#pela-tela-de-configuração-recomendado)
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Scripts npm](#scripts-npm)
 - [Solução de problemas](#solução-de-problemas)
@@ -330,6 +331,26 @@ faltando só suas credenciais e a implementação das chamadas HTTP.
 
 ## Editar páginas e botões
 
+### Pela tela de configuração (recomendado)
+
+Abra **`http://localhost:3000/config/`** — ou toque na engrenagem ⚙️ no canto
+do deck. Dá para criar, editar, reordenar e remover páginas e botões sem
+tocar em arquivo nenhum:
+
+- Escolha a integração e a ação numa lista, e os campos de parâmetro
+  aparecem sozinhos (o caminho do programa, a URL, o nome da cena…).
+  Integração indisponível aparece marcada, com o motivo.
+- Botão pode virar **macro** (várias ações num toque) com um clique.
+- Ícone sai de uma paleta de emojis testados, ou você cola o seu.
+- Ao salvar, **o tablet se atualiza sozinho** — nada de reiniciar servidor.
+  Se algo estiver errado, a tela lista os problemas e não grava nada.
+
+A primeira vez que você salvar, o seu `config/pages.config.json` é criado a
+partir do exemplo. A versão anterior fica sempre guardada em
+`config/pages.config.backup.json`.
+
+### Pelo arquivo
+
 O layout fica em **dois arquivos**, no mesmo esquema do `.env`/`.env.example`:
 
 | Arquivo | Vai pro Git? | O que é |
@@ -406,6 +427,7 @@ stream-deck-web/
 │   ├── css/style.css
 │   ├── js/app.js               # renderiza a grade, dispara ações, aplica estado
 │   ├── js/ws-client.js         # conexão WebSocket com reconexão automática
+│   ├── config/                 # tela de configuração (editor de páginas/botões)
 │   └── icons/
 ├── .env.example                 # copie para .env e preencha
 └── package.json

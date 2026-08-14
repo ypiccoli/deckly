@@ -171,6 +171,22 @@ O botão "Janelas" substituiu um Alt+Tab simulado: o seletor nativo do
 Windows não dá para navegar por toque (ficava aberto esperando o teclado),
 então listar as janelas e focar a escolhida funciona muito melhor no tablet.
 
+## Tela de configuração (`public/config/`)
+
+Editor de páginas e botões servido em `/config/` (link ⚙️ no cabeçalho do
+deck). HTML/CSS/JS puro, como o resto — sem framework, sem build.
+
+O ponto central: **nada ali é hardcoded por integração**. Os formulários são
+montados a partir de `GET /api/catalogo`, então uma integração nova aparece
+sozinha no editor assim que expuser seu getter `catalogo`. Se você adicionar
+uma ação e ela não aparecer no editor, o que falta é a entrada no catálogo,
+não código de UI.
+
+Fluxo: carrega `/api/config` numa cópia em memória, edita à vontade, e só
+grava em `PUT /api/config` ao clicar em Salvar. Erro de validação volta em
+400 e é listado na tela sem gravar nada. Salvar dispara a recarga a quente,
+então o tablet reflete a mudança na hora.
+
 ## Schema do config (campos de um botão)
 
 Antes ficava nos comentários do `pages.config.js`; JSON não tem comentários,

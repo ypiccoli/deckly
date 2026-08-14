@@ -126,6 +126,22 @@ body {
   box-shadow: 0 0 8px var(--cor-perigo);
 }
 
+/* Acesso à tela de configuração. Discreto de propósito: fica no cabeçalho,
+   fora da área de toque dos botões, para não ser apertado sem querer. */
+.link-config {
+  font-size: 1.1rem;
+  text-decoration: none;
+  opacity: 0.45;
+  padding: 4px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.link-config:hover,
+.link-config:focus-visible {
+  opacity: 1;
+  background: var(--cor-cartao);
+}
+
 .grade {
   flex: 1;
   overflow-y: auto;
