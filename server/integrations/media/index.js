@@ -6,17 +6,8 @@
 // Windows, ou um backend Linux/Mac) sem tocar no resto do app.
 
 const EventEmitter = require('events');
+const { detectarModo } = require('../../lib/powershell-interop');
 const { ControladorWindows } = require('./windows');
-
-function detectarModo() {
-  const forcado = (process.env.MEDIA_BACKEND || 'auto').toLowerCase();
-  if (forcado === 'wsl-windows') return 'wsl';
-  if (forcado === 'windows') return 'nativo';
-
-  if (process.platform === 'win32') return 'nativo';
-  if (process.env.WSL_DISTRO_NAME) return 'wsl';
-  return null;
-}
 
 class IntegracaoMedia extends EventEmitter {
   constructor() {

@@ -78,6 +78,15 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
   integração) e faz o broadcast via WebSocket. Ao conectar, um cliente
   recebe `{ tipo: 'estado_completo', dados: estadoGlobal }`; a partir daí,
   `{ tipo: 'estado', integracao, dados }` a cada mudança.
+- Botões do tipo `"lista"` são um **seletor genérico**: o frontend faz um GET
+  na URL de `fonte`, que responde `{ ok, opcoes: [{ id, nome, detalhe, ativo }] }`,
+  mostra as opções num overlay e manda a escolhida de volta para a ação do
+  próprio botão como `parametros.opcaoId`. É o mesmo mecanismo usado por
+  "Tocar em…" (dispositivos do Spotify), "Janelas" (janelas abertas do
+  Windows) e "Jogar…" (jogos instalados na Steam) — para criar outro, basta
+  uma rota GET nesse formato e um botão apontando para ela. As rotas de
+  listagem ficam fora do dispatcher de `/action/:id` (são GET, não ações):
+  veja `server/routes/atalhos.js` e `/spotify/dispositivos`.
 - No frontend, `estadoChave` (dot-path, ex.: `"obs.cenaAtual"`) resolve um
   valor dentro do estado global; `estadoComparar` (opcional) compara esse
   valor com `botao.parametros[<chave>]` (usado nos botões de cena do OBS,
@@ -86,12 +95,34 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
   `estadoComparar`, o botão fica "ativo" quando o valor resolvido é truthy
   (mute, gravando, luz ligada, etc).
 
-## Integração de mídia (Windows via WSL2) — ponto delicado
+## Integrações que agem no Windows (via WSL2) — pontos delicados
 
-`server/integrations/media/` controla volume master e teclas de mídia do
-**Windows**, mesmo com o servidor rodando dentro do WSL2, chamando
-`powershell.exe` via interop (`server/integrations/media/windows.js`). O
-script real é `scripts/windows-media.ps1`.
+Duas integrações agem no sistema operacional chamando `powershell.exe` via
+interop, mesmo com o servidor rodando dentro do WSL2:
+
+- `server/integrations/media/` — volume master e teclas de mídia
+  (script `scripts/windows-media.ps1`).
+- `server/integrations/atalhos/` — atalhos de teclado/sistema, abrir
+  apps/sites/jogos, listar e focar janelas
+  (script `scripts/windows-atalhos.ps1`).
+
+As duas usam `server/lib/powershell-interop.js`, que centraliza a detecção
+de modo (`wsl` vs `nativo`), a conversão do caminho do script (`wslpath -w`)
+e a execução com `spawn` + timeout. Gotchas já resolvidos ali, importantes
+não reintroduzir:
+
+- **`spawn` com `stdio: ['ignore', ...]`, não `execFile`.** O `execFile`
+  deixa o stdin como pipe aberto e a ponte de interop WSL→Windows chegou a
+  travar esperando algo que nunca chegava. Há também um timeout de 10s —
+  sem ele, um travamento desses derrubava a subida do servidor inteiro.
+- **`[Console]::OutputEncoding = UTF8` no topo de qualquer script que
+  devolva texto livre.** Sem isso o PowerShell escreve na codepage do
+  console (CP850/CP1252 em português) e títulos de janela com emoji/acento
+  viram bytes inválidos — inclusive caracteres de **controle crus** dentro
+  do JSON, que o `JSON.parse` do Node rejeita. O `windows-atalhos.ps1`
+  também remove caracteres de controle dos títulos por segurança.
+
+### O script de mídia especificamente
 
 Gotcha já resolvido, importante não reintroduzir: **PowerShell não consegue
 chamar métodos de interfaces COM que só implementam `IUnknown` (sem
@@ -104,10 +135,21 @@ PowerShell só como métodos estáticos com tipos primitivos
 script, mantenha esse padrão — não tente chamar `$objComInterface.Metodo()`
 direto do corpo PowerShell.
 
-`server/integrations/media/index.js` decide o modo via `MEDIA_BACKEND`
-(`.env`, padrão `auto`): `win32` → `nativo` (chama PowerShell local sem
-`wslpath`), `WSL_DISTRO_NAME` definida → `wsl` (converte o caminho do
-script com `wslpath -w` antes de chamar `powershell.exe`).
+O modo vem de `MEDIA_BACKEND` (`.env`, padrão `auto`): `win32` → `nativo`
+(chama PowerShell local sem `wslpath`), `WSL_DISTRO_NAME` definida → `wsl`.
+O nome da variável ficou de quando só a integração de mídia existia — hoje
+vale para as duas.
+
+### O script de atalhos especificamente
+
+Trazer uma janela para frente a partir de um processo em segundo plano
+esbarra no **foreground lock** do Windows: `SetForegroundWindow` sozinho
+normalmente só pisca o botão na barra de tarefas. Por isso `TrazerParaFrente`
+simula um toque na tecla ALT em volta da chamada, que libera esse bloqueio.
+
+O botão "Janelas" substituiu um Alt+Tab simulado: o seletor nativo do
+Windows não dá para navegar por toque (ficava aberto esperando o teclado),
+então listar as janelas e focar a escolhida funciona muito melhor no tablet.
 
 ## Adicionando uma nova integração
 

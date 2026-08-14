@@ -391,7 +391,7 @@ body {
    um seletor de classe com "display" tem a MESMA especificidade da regra
    [hidden] { display: none } da folha de estilo do navegador, e como vem
    depois na cascata, vence — o [hidden] seria ignorado. */
-.overlay-dispositivos {
+.overlay-lista {
   display: none;
   position: fixed;
   inset: 0;
@@ -402,7 +402,7 @@ body {
   padding: 24px;
 }
 
-.overlay-dispositivos.aberto {
+.overlay-lista.aberto {
   display: flex;
 }
 
@@ -425,20 +425,20 @@ body {
   color: var(--cor-texto);
 }
 
-.lista-dispositivos {
+.lista-opcoes {
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
 }
 
-.lista-dispositivos-mensagem {
+.lista-mensagem {
   color: var(--cor-texto-fraco);
   font-size: 0.9rem;
   margin: 0;
 }
 
-.item-dispositivo {
+.item-lista {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -453,17 +453,28 @@ body {
   text-align: left;
 }
 
-.item-dispositivo:active {
+.item-lista:active {
   transform: scale(0.98);
 }
 
-.item-dispositivo.ativo {
+.item-lista.ativo {
   border-color: var(--cor-acento-2);
   background: linear-gradient(160deg, rgba(0, 209, 178, 0.16), var(--cor-fundo-cabecalho) 60%);
 }
 
-.item-dispositivo-icone {
+.item-lista-icone {
   font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+/* Títulos de janela costumam ser longos ("Projeto - Arquivo - Editor 1.2.3"),
+   então corta com reticências para manter todos os itens da mesma altura. */
+.item-lista-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .overlay-fechar {

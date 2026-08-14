@@ -2,7 +2,7 @@
 // funcionar em rede instável. Requisições dinâmicas (ações, WS, config)
 // nunca são cacheadas — sempre vão direto para a rede.
 
-const CACHE_NOME = 'stream-deck-web-v7';
+const CACHE_NOME = 'stream-deck-web-v8';
 const ARQUIVOS_ESTATICOS = [
   '/',
   '/index.html',

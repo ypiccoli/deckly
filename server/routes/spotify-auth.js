@@ -51,10 +51,21 @@ module.exports = function criarRotaSpotifyAuth() {
     }
   });
 
+  // Responde no mesmo formato { ok, opcoes: [{ id, nome, detalhe, ativo }] }
+  // usado por todas as listagens de seletor (veja server/routes/atalhos.js),
+  // para o frontend montar qualquer seletor com o mesmo código.
   router.get('/dispositivos', async (req, res) => {
     try {
       const dispositivos = await spotify.listarDispositivos();
-      res.json({ ok: true, dispositivos });
+      res.json({
+        ok: true,
+        opcoes: dispositivos.map((d) => ({
+          id: d.id,
+          nome: d.name,
+          detalhe: d.type,
+          ativo: Boolean(d.is_active),
+        })),
+      });
     } catch (erro) {
       res.status(500).json({ ok: false, erro: erro.message });
     }

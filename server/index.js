@@ -10,13 +10,15 @@ const WebSocket = require('ws');
 const { obterPaginas } = require('./config-loader');
 const criarRotaAcoes = require('./routes/actions');
 const criarRotaSpotifyAuth = require('./routes/spotify-auth');
+const criarRotaAtalhos = require('./routes/atalhos');
 
 const media = require('./integrations/media');
 const obs = require('./integrations/obs');
 const spotify = require('./integrations/spotify');
 const hue = require('./integrations/hue');
+const atalhos = require('./integrations/atalhos');
 
-const integracoes = { media, obs, spotify, hue };
+const integracoes = { media, obs, spotify, hue, atalhos };
 
 const app = express();
 app.use(express.json());
@@ -28,6 +30,7 @@ app.get('/api/config', (req, res) => {
 
 app.use('/action', criarRotaAcoes(integracoes));
 app.use('/spotify', criarRotaSpotifyAuth());
+app.use('/atalhos', criarRotaAtalhos());
 
 const servidorHttp = http.createServer(app);
 const wss = new WebSocket.Server({ server: servidorHttp, path: '/ws' });

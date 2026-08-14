@@ -141,12 +141,17 @@
     if (elTerciaria) elTerciaria.textContent = terciaria ? `em ${terciaria}` : '';
   }
 
-  function iconePorTipoDispositivo(tipo) {
-    const mapa = { Computer: '💻', Smartphone: '📱', Speaker: '🔊', TV: '📺', Tablet: '📱', GameConsole: '🎮', CastVideo: '📺', CastAudio: '🔊' };
-    return mapa[tipo] || '📡';
+  // Ícone de cada item do seletor, escolhido pelo campo "detalhe" que a
+  // listagem devolve (tipo do dispositivo Spotify, nome do processo, etc).
+  function iconeDoItem(detalhe, iconePadrao) {
+    const mapa = {
+      Computer: '💻', Smartphone: '📱', Speaker: '🔊', TV: '📺',
+      Tablet: '📱', GameConsole: '🎮', CastVideo: '📺', CastAudio: '🔊',
+    };
+    return mapa[detalhe] || iconePadrao || '•';
   }
 
-  function criarBotaoDispositivo(botao) {
+  function criarBotaoLista(botao) {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'botao';
@@ -157,41 +162,47 @@
       <span class="botao-titulo">${botao.titulo}</span>
     `;
 
-    el.addEventListener('click', () => abrirSeletorDispositivos(botao));
+    el.addEventListener('click', () => abrirSeletor(botao));
 
     return el;
   }
 
-  async function abrirSeletorDispositivos(botao) {
-    const overlay = document.getElementById('overlay-dispositivos');
-    const lista = document.getElementById('lista-dispositivos');
-    lista.innerHTML = '<p class="lista-dispositivos-mensagem">Buscando dispositivos…</p>';
+  // Seletor genérico: busca as opções em botao.fonte (que responde
+  // { ok, opcoes: [{ id, nome, detalhe, ativo }] }) e manda a escolha de
+  // volta como parametros.opcaoId na ação do próprio botão.
+  async function abrirSeletor(botao) {
+    const overlay = document.getElementById('overlay-lista');
+    const lista = document.getElementById('lista-opcoes');
+    const titulo = document.getElementById('overlay-titulo');
+
+    titulo.textContent = botao.titulo;
+    lista.innerHTML = '<p class="lista-mensagem">Buscando…</p>';
     overlay.classList.add('aberto');
 
     try {
-      const resposta = await fetch('/spotify/dispositivos');
+      const resposta = await fetch(botao.fonte);
       const dados = await resposta.json();
-      if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'Falha ao buscar dispositivos');
+      if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'Falha ao buscar a lista');
 
       lista.innerHTML = '';
-      if (!dados.dispositivos.length) {
-        lista.innerHTML = '<p class="lista-dispositivos-mensagem">Nenhum dispositivo Spotify ativo encontrado. Abra o Spotify em algum aparelho e tente de novo.</p>';
+      if (!dados.opcoes.length) {
+        lista.innerHTML = `<p class="lista-mensagem">${botao.mensagemVazia || 'Nada encontrado.'}</p>`;
         return;
       }
 
-      dados.dispositivos.forEach((dispositivo) => {
+      dados.opcoes.forEach((opcao) => {
         const item = document.createElement('button');
         item.type = 'button';
-        item.className = 'item-dispositivo';
-        if (dispositivo.is_active) item.classList.add('ativo');
+        item.className = 'item-lista';
+        if (opcao.ativo) item.classList.add('ativo');
         item.innerHTML = `
-          <span class="item-dispositivo-icone">${iconePorTipoDispositivo(dispositivo.type)}</span>
-          <span class="item-dispositivo-nome">${dispositivo.name}</span>
+          <span class="item-lista-icone">${iconeDoItem(opcao.detalhe, botao.iconeItem)}</span>
+          <span class="item-lista-nome">${opcao.nome}</span>
         `;
         item.addEventListener('click', async () => {
           overlay.classList.remove('aberto');
           try {
-            await enviarAcao(botao.id, { dispositivoId: dispositivo.id });
+            await enviarAcao(botao.id, { opcaoId: opcao.id });
           } catch (erro) {
             console.error(erro);
           }
@@ -199,7 +210,7 @@
         lista.appendChild(item);
       });
     } catch (erro) {
-      lista.innerHTML = `<p class="lista-dispositivos-mensagem">Erro: ${erro.message}</p>`;
+      lista.innerHTML = `<p class="lista-mensagem">Erro: ${erro.message}</p>`;
     }
   }
 
@@ -230,7 +241,7 @@
       let el;
       if (botao.tipo === 'slider') el = criarBotaoSlider(botao);
       else if (botao.tipo === 'info') el = criarBotaoInfo(botao);
-      else if (botao.tipo === 'dispositivo') el = criarBotaoDispositivo(botao);
+      else if (botao.tipo === 'lista') el = criarBotaoLista(botao);
       else el = criarBotaoNormal(botao);
       elGrade.appendChild(el);
     });
@@ -292,8 +303,8 @@
     elStatusConexao.querySelector('.status-texto').textContent = conectado ? 'ao vivo' : 'reconectando…';
   }
 
-  function configurarOverlayDispositivos() {
-    const overlay = document.getElementById('overlay-dispositivos');
+  function configurarOverlayLista() {
+    const overlay = document.getElementById('overlay-lista');
     document.getElementById('overlay-fechar').addEventListener('click', () => {
       overlay.classList.remove('aberto');
     });
@@ -307,7 +318,7 @@
       navigator.serviceWorker.register('sw.js').catch((erro) => console.warn('SW: falha ao registrar', erro));
     }
 
-    configurarOverlayDispositivos();
+    configurarOverlayLista();
 
     // Inscreve nos eventos do WS antes de esperar o fetch: se a conexão (ou
     // a primeira mensagem de estado) chegar durante o await abaixo, ainda

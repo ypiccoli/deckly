@@ -16,6 +16,7 @@ próprio e 100% configurável editando um arquivo.
 - [Como rodar](#como-rodar)
 - [Acessar do tablet (rede — importante no WSL2)](#acessar-do-tablet-rede--importante-no-wsl2)
 - [Controle de mídia (Windows via WSL2)](#controle-de-mídia-windows-via-wsl2)
+- [Atalhos: apps, sites, jogos e janelas](#atalhos-apps-sites-jogos-e-janelas)
 - [Habilitar o OBS](#habilitar-o-obs)
 - [Habilitar o Spotify](#habilitar-o-spotify)
 - [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
@@ -29,9 +30,10 @@ próprio e 100% configurável editando um arquivo.
 ```
 Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + ws)
                                                           |
-                                                          ├── integrations/media   -> Windows (teclas de mídia + volume)
+                                                          ├── integrations/media   -> Windows (volume + mute)
+                                                          ├── integrations/atalhos -> Windows (atalhos, apps, janelas, jogos)
                                                           ├── integrations/obs     -> obs-websocket-js
-                                                          ├── integrations/spotify -> Web API (estrutura pronta, desativada)
+                                                          ├── integrations/spotify -> Web API oficial
                                                           └── integrations/hue     -> CLIP API v2 (estrutura pronta, desativada)
 ```
 
@@ -197,6 +199,44 @@ Se um dia você rodar o servidor nativamente no Windows (fora do WSL), não
 precisa mudar nada além de garantir `MEDIA_BACKEND=auto` (ou `windows`) — a
 mesma abstração cuida da diferença.
 
+## Atalhos: apps, sites, jogos e janelas
+
+As páginas **Sistema** e **Atalhos** usam a integração
+`server/integrations/atalhos/` (script `scripts/windows-atalhos.ps1`), que
+funciona pelo mesmo interop WSL2 → Windows do controle de mídia.
+
+**Sistema** — atalhos de teclado e janelas: print (`Win+Shift+S`), bloquear,
+área de trabalho, snap ⬅/➡, área de transferência (`Win+V`) e **Janelas**
+(seletor que lista as janelas abertas para você tocar e ir direto). Se você
+usa múltiplos monitores, há botões de mover janela entre telas comentados
+no config, prontos para descomentar.
+
+**Atalhos** — abre programas, sites e jogos. Cada botão usa uma destas ações:
+
+| Ação | Parâmetros | Para que serve |
+|------|------------|----------------|
+| `abrirApp` | `caminho` | Executável, comando no PATH (`code`, `wt`) ou atalho `.lnk` |
+| `abrirUwp` | `appId` | Apps da Store/MSIX que não têm `.exe` (ex.: Claude Desktop) |
+| `abrirUrl` | `url`, `navegador` (opcional) | Abre um site; sem `navegador`, usa o padrão do Windows |
+| `abrirJogo` | `appId` | Dá play num jogo da Steam via `steam://rungameid/` |
+
+Dicas para montar os seus:
+
+- **Prefira o atalho `.lnk` do Menu Iniciar** ao `.exe` direto para apps que
+  se auto-atualizam (Spotify, Obsidian, Blitz criam pastas com número de
+  versão que muda a cada update, quebrando um caminho fixo). Eles ficam em
+  `C:\Users\SEU_USUARIO\AppData\Roaming\Microsoft\Windows\Start Menu\Programs`
+  ou `C:\ProgramData\Microsoft\Windows\Start Menu\Programs`.
+- **Apps da Store/MSIX** não têm `.exe` chamável. Descubra o AppUserModelID
+  com `Get-StartApps | Where-Object { $_.Name -like '*NomeDoApp*' }` no
+  PowerShell e use `abrirUwp`.
+- **Jogos da Steam**: o botão "Jogar…" lista sozinho tudo que está
+  instalado, lendo os `appmanifest_*.acf` de todas as bibliotecas (inclusive
+  as em outros discos). Não precisa cadastrar jogo por jogo.
+- **Navegador específico**: passe o caminho do `.exe` em `navegador` — útil
+  para separar contextos (ex.: painéis de rede num navegador, faculdade em
+  outro).
+
 ## Habilitar o OBS
 
 1. No OBS Studio (28+), vá em **Ferramentas → WebSocket Server Settings**.
@@ -298,17 +338,22 @@ stream-deck-web/
 ├── config/
 │   └── pages.config.js       # páginas e botões — edite aqui para customizar
 ├── scripts/
-│   └── windows-media.ps1     # controla volume/mídia do Windows (P/Invoke)
+│   ├── windows-media.ps1     # volume e mute do Windows (P/Invoke)
+│   └── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam
 ├── server/
 │   ├── index.js               # bootstrap: Express + WebSocket + integrações
 │   ├── config-loader.js       # lê e indexa config/pages.config.js
+│   ├── lib/
+│   │   └── powershell-interop.js  # chama powershell.exe (WSL2 ou nativo), compartilhado
 │   ├── routes/
 │   │   ├── actions.js          # POST /action/:id — dispatcher genérico
-│   │   └── spotify-auth.js     # /spotify/login e /spotify/callback (OAuth, uma vez)
+│   │   ├── spotify-auth.js     # /spotify/login e /spotify/callback (OAuth, uma vez)
+│   │   └── atalhos.js          # GET /atalhos/janelas e /atalhos/jogos (listas dos seletores)
 │   └── integrations/
-│       ├── media/             # play/pause, faixas, mute, volume (Windows)
+│       ├── media/             # volume e mute do Windows
+│       ├── atalhos/            # atalhos de sistema, abrir apps/sites/jogos, janelas
 │       ├── obs/                # cenas, mic, gravação (obs-websocket-js)
-│       ├── spotify/            # play/pause, faixas, now playing (Web API)
+│       ├── spotify/            # play/pause, faixas, volume, now playing (Web API)
 │       └── hue/                 # estruturado, aguardando credenciais
 ├── public/                     # frontend estático (PWA)
 │   ├── index.html

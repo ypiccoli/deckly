@@ -214,11 +214,13 @@ class IntegracaoSpotify extends EventEmitter {
       },
       transferirReproducao: async (parametros = {}) => {
         this._garantirConfigurado();
-        if (!parametros.dispositivoId) throw new Error('Parâmetro "dispositivoId" é obrigatório.');
+        // "opcaoId" vem da escolha do usuário no seletor (tipo "lista").
+        const dispositivoId = parametros.opcaoId || parametros.dispositivoId;
+        if (!dispositivoId) throw new Error('Parâmetro "dispositivoId" é obrigatório.');
         const resposta = await this._chamarApi('/me/player', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ device_ids: [parametros.dispositivoId], play: true }),
+          body: JSON.stringify({ device_ids: [dispositivoId], play: true }),
         });
         if (!resposta.ok && resposta.status !== 204) {
           throw new Error(`Spotify retornou ${resposta.status} ao transferir a reprodução.`);
