@@ -13,8 +13,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const caminhos = require('./lib/caminhos');
 
-const PASTA_CONFIG = path.join(__dirname, '..', 'config');
+const PASTA_CONFIG = caminhos.config;
 const CAMINHO_PESSOAL = path.join(PASTA_CONFIG, 'pages.config.json');
 const CAMINHO_EXEMPLO = path.join(PASTA_CONFIG, 'pages.config.example.json');
 const CAMINHO_BACKUP = path.join(PASTA_CONFIG, 'pages.config.backup.json');

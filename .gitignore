@@ -13,3 +13,4 @@ Thumbs.db
 config/pages.config.json
 config/pages.config.backup.json
 config/token.json
+build/

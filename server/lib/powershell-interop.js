@@ -10,8 +10,17 @@
 // vez de derrubar quem estiver esperando (ex.: a subida do servidor).
 
 const { spawn, execFileSync } = require('child_process');
+const path = require('path');
+const caminhos = require('./caminhos');
 
 const TIMEOUT_MS = 10000;
+
+// Resolve o caminho de um script .ps1. Fica aqui porque o PowerShell precisa
+// de um arquivo de verdade em disco — no modo empacotado eles são gravados
+// na pasta de dados antes de qualquer chamada.
+function caminhoScript(nomeArquivo) {
+  return path.join(caminhos.scripts, nomeArquivo);
+}
 
 function detectarModo() {
   // Nome da variável ficou de quando só a integração de mídia existia — hoje
@@ -93,4 +102,4 @@ function executarScript(caminhoScript, acao, valor, extra) {
   });
 }
 
-module.exports = { detectarModo, resolverCaminhoScript, executarScript };
+module.exports = { detectarModo, resolverCaminhoScript, executarScript, caminhoScript };

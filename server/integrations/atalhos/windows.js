@@ -1,15 +1,14 @@
 // Executa o script scripts/windows-atalhos.ps1 via powershell.exe (interop
 // WSL2 ou nativo) usando o utilitário compartilhado em server/lib.
 
-const path = require('path');
-const { resolverCaminhoScript, executarScript } = require('../../lib/powershell-interop');
+const { caminhoScript, resolverCaminhoScript, executarScript } = require('../../lib/powershell-interop');
 
-const CAMINHO_SCRIPT_WSL = path.join(__dirname, '..', '..', '..', 'scripts', 'windows-atalhos.ps1');
+const CAMINHO_SCRIPT = caminhoScript('windows-atalhos.ps1');
 
 class ControladorAtalhos {
   constructor({ modo }) {
     this.modo = modo;
-    this.caminhoScript = resolverCaminhoScript(CAMINHO_SCRIPT_WSL, modo);
+    this.caminhoScript = resolverCaminhoScript(CAMINHO_SCRIPT, modo);
   }
 
   // Teclas / ações de sistema

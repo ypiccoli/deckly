@@ -171,6 +171,34 @@ O botão "Janelas" substituiu um Alt+Tab simulado: o seletor nativo do
 Windows não dá para navegar por toque (ficava aberto esperando o teclado),
 então listar as janelas e focar a escolhida funciona muito melhor no tablet.
 
+## Empacotamento (.exe) e resolução de caminhos
+
+`npm run build` gera `build/stream-deck-web.exe` — Node SEA (Single
+Executable Application). Roda a partir do WSL: baixa o `node.exe` do
+Windows e injeta o app dentro dele com `postject`.
+
+**A regra que faz os dois modos conviverem** está em
+`server/lib/caminhos.js`. Nada de código deve montar caminho com
+`__dirname` para `public/`, `scripts/` ou `config/` — depois do bundle o
+`__dirname` não aponta mais para o repositório. Use `caminhos.publico`,
+`caminhos.scripts`, `caminhos.config`, `caminhos.env`.
+
+- **Do código-fonte:** tudo resolve para a raiz do repositório, como sempre.
+- **Empacotado:** `public/`, `scripts/*.ps1` e os modelos vão embutidos como
+  assets do SEA e são gravados numa pasta `dados/` ao lado do `.exe`
+  (`caminhos.prepararArquivos()`, chamado no topo de `server/index.js`,
+  **antes** dos outros requires — eles já leem config e token de lá).
+- Quem sobrescreve o quê: **código** (`public/`, `scripts/`) é reescrito a
+  cada inicialização, para não ficar defasado do executável; **dados**
+  (`config/`, `.env`) só são criados se não existirem.
+- Se a pasta ao lado do `.exe` não for gravável (Program Files), cai para
+  `%LOCALAPPDATA%\StreamDeckWeb`.
+
+O build também é o único jeito prático de exercitar o caminho `nativo` do
+`powershell-interop.js` — rodando do WSL o modo é sempre `wsl`. O `.exe`
+gerado pode ser executado direto do WSL via interop, e aí reporta
+`platform: win32`; foi assim que o modo nativo foi validado.
+
 ## Acesso (token e restrição local)
 
 `server/lib/token.js` + `server/lib/auth.js`. Duas travas com propósitos

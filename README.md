@@ -23,6 +23,7 @@ próprio, e configurável por uma tela de configuração no próprio navegador.
 - [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
 - [Editar páginas e botões](#editar-páginas-e-botões)
 - [Tela de configuração](#pela-tela-de-configuração-recomendado)
+- [Gerar o executável (.exe)](#gerar-o-executável-exe)
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Scripts npm](#scripts-npm)
 - [Solução de problemas](#solução-de-problemas)
@@ -448,6 +449,52 @@ por exemplo, abrir o jogo e o overlay juntos:
 Depois de editar, é só salvar — se estiver com `npm run dev`, o servidor
 recarrega sozinho.
 
+## Gerar o executável (.exe)
+
+Para usar no dia a dia ou passar para outra pessoa, dá para empacotar tudo
+num executável único de Windows — **quem for usar não precisa de Node, nem
+de WSL, nem de instalar nada**:
+
+```bash
+npm run build
+```
+
+Sai um `build/stream-deck-web.exe` (~90 MB — a maior parte é o próprio Node
+embutido). O build roda tanto do WSL quanto do Windows: ele baixa o
+`node.exe` do Windows e injeta o app dentro.
+
+### Como usar o executável
+
+Copie o `.exe` para uma pasta onde você possa gravar (a Área de Trabalho
+serve) e execute. Na primeira vez ele cria ao lado uma pasta `dados/`:
+
+```
+stream-deck-web.exe
+dados/
+├── .env                  # porta, credenciais de OBS/Spotify/Hue
+├── config/
+│   ├── pages.config.json # seu layout (criado ao salvar pela primeira vez)
+│   └── token.json        # token de acesso
+├── public/               # a interface
+└── scripts/              # os scripts do PowerShell
+```
+
+`public/` e `scripts/` são reescritos toda vez que ele sobe, para nunca
+ficarem defasados em relação ao executável. Já `config/` e `.env` **nunca
+são sobrescritos** — são seus. Para atualizar de versão, troque só o `.exe`
+e mantenha a pasta `dados/`.
+
+### Iniciar junto com o Windows
+
+Aperte `Win + R`, digite `shell:startup` e coloque ali um atalho para o
+`.exe`.
+
+### Avisos que podem aparecer
+
+O executável não é assinado digitalmente, então o Windows pode mostrar um
+aviso do SmartScreen na primeira execução (**Mais informações → Executar
+assim mesmo**). Assinar exigiria um certificado pago.
+
 ## Estrutura de pastas
 
 ```
@@ -457,11 +504,15 @@ stream-deck-web/
 │   └── pages.config.json          # SEU layout real — gitignored, edite aqui
 ├── scripts/
 │   ├── windows-media.ps1     # volume e mute do Windows (P/Invoke)
-│   └── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam
+│   ├── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam
+│   └── build.js              # gera o executável do Windows (npm run build)
 ├── server/
 │   ├── index.js               # bootstrap: Express + WebSocket + integrações
 │   ├── config-store.js        # lê, valida, grava e recarrega o config
 │   ├── lib/
+│   │   ├── caminhos.js       # resolve caminhos (código-fonte vs empacotado)
+│   │   ├── token.js          # token de acesso
+│   │   ├── auth.js           # middlewares de token e restrição local
 │   │   └── powershell-interop.js  # chama powershell.exe (WSL2 ou nativo), compartilhado
 │   ├── routes/
 │   │   ├── actions.js          # POST /action/:id — dispatcher genérico
@@ -492,6 +543,7 @@ stream-deck-web/
 |-----------------|-------------------------------------------------------|
 | `npm start`     | Sobe o servidor uma vez (produção)                    |
 | `npm run dev`   | Sobe com `nodemon`, reiniciando a cada alteração      |
+| `npm run build` | Gera `build/stream-deck-web.exe` para Windows         |
 
 ## Solução de problemas
 

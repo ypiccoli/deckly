@@ -1,11 +1,17 @@
 // Servidor do Stream Deck Web: Express (HTTP + API) + WebSocket (estado ao vivo).
 
-require('dotenv').config();
-
-const path = require('path');
 const http = require('http');
 const express = require('express');
 const WebSocket = require('ws');
+
+// Antes de qualquer outra coisa: no modo empacotado, grava na pasta de dados
+// o que veio embutido no .exe (public/, scripts/*.ps1, modelo de config).
+// Tem que vir antes dos requires abaixo, porque eles já leem config e token
+// de dentro dessa pasta.
+const caminhos = require('./lib/caminhos');
+caminhos.prepararArquivos();
+
+require('dotenv').config({ path: caminhos.env });
 
 const criarRotaAcoes = require('./routes/actions');
 const criarRotaConfig = require('./routes/config');
@@ -29,7 +35,7 @@ app.use(express.json());
 // Os arquivos estáticos ficam abertos de propósito: HTML, CSS e JS não têm
 // segredo nenhum, e a página precisa carregar para poder pedir o token a
 // quem ainda não pareou. O que é protegido é a API abaixo.
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(caminhos.publico));
 
 // Declarada aqui e definida mais abaixo (depois que o WebSocket existe):
 // a rota de config precisa avisar os clientes quando o layout muda.

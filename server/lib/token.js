@@ -16,12 +16,13 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const caminhos = require('./caminhos');
 
 const ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem I, O, 0, 1
 const GRUPOS = 4;
 const TAMANHO_GRUPO = 4;
 
-const CAMINHO_TOKEN = path.join(__dirname, '..', '..', 'config', 'token.json');
+const CAMINHO_TOKEN = path.join(caminhos.config, 'token.json');
 
 function gerar() {
   const total = GRUPOS * TAMANHO_GRUPO;
