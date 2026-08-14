@@ -200,6 +200,26 @@ Reproduzir a recusa de conexão do WSL exige cuidado: nesta máquina uma porta
 fechada em `127.0.0.1` **pendura** em vez de recusar, então testes de
 "servidor fora do ar" não se comportam como no Windows.
 
+## Discord: por que não usa a API do Discord
+
+`server/integrations/discord/` não fala com o Discord — ele **envia atalhos
+globais de teclado** pela integração `atalhos`. Não é preguiça, é o único
+caminho que funciona para quem recebe o `.exe`:
+
+- O RPC local do Discord tem `SET_VOICE_SETTINGS`, que faria isso direito e
+  ainda devolveria o estado (botão acendendo). Mas o escopo `rpc` só vale
+  para o **dono do app** e até 50 testadores até a Discord aprovar o app
+  manualmente. Serviria para uma pessoa, não para quem baixa o programa.
+- **Go Live não existe em lugar nenhum**: nem API, nem tecla de atalho. Só o
+  botão na interface. Não tente implementar — não há por onde.
+- Consequência aceita: **os botões de Discord não acendem**. Sem RPC não há
+  estado, e o catálogo declara `estados: []` de propósito.
+
+Isso trouxe a ação genérica `atalhos.enviarTeclas` (combo livre tipo
+`CTRL+SHIFT+M`), com `Converter-Combo` no `windows-atalhos.ps1` traduzindo
+nomes para códigos de tecla virtual. Qualquer programa com atalho global
+pode ser acionado assim, sem integração nova.
+
 ## Empacotamento (.exe) e resolução de caminhos
 
 `npm run build` gera `build/stream-deck-web.exe` — Node SEA (Single
@@ -273,6 +293,11 @@ Duas peças de documentação **não** são escritas à mão:
 - `docs/Guia-Stream-Deck-Web.pdf` sai de `scripts/gerar-pdf.js`, que imprime
   `docs/guia-primeiro-acesso.html` com o Chrome do Windows em headless. **A
   fonte é o HTML** — editar o PDF não faz sentido, ele é regenerado.
+
+Escritos à mão, e que precisam ser atualizados junto com o código:
+`docs/urls.md` (todas as rotas e suas travas — atualize ao criar rota nova)
+e `docs/casa-inteligente.md` (por que Tuya cobre quase todo o mercado
+brasileiro, por que Alexa não serve, e o que cada marca exige).
 
 O guia em PDF é para quem só vai *usar* o programa (linguagem sem jargão,
 começando do download); o README é a documentação técnica. Os dois se

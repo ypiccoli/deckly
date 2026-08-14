@@ -15,6 +15,7 @@
     print | bloquear | area_trabalho | snap_esquerda | snap_direita |
     clipboard | mover_monitor_esquerda | mover_monitor_direita
   Ações com parâmetro:
+    enviar_teclas -Valor <combo, ex.: "CTRL+SHIFT+M">
     abrir_url    -Valor <url> [-Extra <caminho do navegador>]
     abrir_app    -Valor <caminho/comando/atalho .lnk>
     abrir_uwp    -Valor <AppUserModelID>   (apps da Store/MSIX, ex.: Claude)
@@ -95,6 +96,38 @@ function Enviar-Combo([byte[]]$teclas) {
     Start-Sleep -Milliseconds 50
 }
 
+# Traduz "CTRL+SHIFT+M" para códigos de tecla virtual. Existe para o combo
+# poder vir de fora (ex.: o atalho global que a pessoa configurou no
+# Discord), em vez de um punhado de combos fixos no código.
+$MAPA_TECLAS = @{
+    'CTRL' = 0x11; 'CONTROL' = 0x11; 'SHIFT' = 0x10; 'ALT' = 0x12;
+    'WIN' = 0x5B; 'WINDOWS' = 0x5B;
+    'ESC' = 0x1B; 'ESCAPE' = 0x1B; 'TAB' = 0x09; 'ENTER' = 0x0D; 'RETURN' = 0x0D;
+    'SPACE' = 0x20; 'ESPACO' = 0x20; 'BACKSPACE' = 0x08; 'DELETE' = 0x2E; 'DEL' = 0x2E;
+    'INSERT' = 0x2D; 'HOME' = 0x24; 'END' = 0x23; 'PAGEUP' = 0x21; 'PAGEDOWN' = 0x22;
+    'LEFT' = 0x25; 'UP' = 0x26; 'RIGHT' = 0x27; 'DOWN' = 0x28;
+    'PAUSE' = 0x13; 'PRINTSCREEN' = 0x2C; 'CAPSLOCK' = 0x14;
+}
+# Letras, números e F1–F24 saem por regra, não por tabela.
+foreach ($c in [char[]]'ABCDEFGHIJKLMNOPQRSTUVWXYZ') { $MAPA_TECLAS["$c"] = [byte][char]$c }
+foreach ($n in 0..9) { $MAPA_TECLAS["$n"] = [byte](0x30 + $n) }
+foreach ($n in 1..24) { $MAPA_TECLAS["F$n"] = [byte](0x6F + $n) }
+
+function Converter-Combo([string]$combo) {
+    if ([string]::IsNullOrWhiteSpace($combo)) { throw 'Combo de teclas vazio.' }
+    $teclas = @()
+    foreach ($parte in ($combo -split '\+')) {
+        $nome = $parte.Trim().ToUpperInvariant()
+        if ($nome -eq '') { continue }
+        if (-not $MAPA_TECLAS.ContainsKey($nome)) {
+            throw "Tecla desconhecida no combo: '$nome' (combo recebido: '$combo')"
+        }
+        $teclas += [byte]$MAPA_TECLAS[$nome]
+    }
+    if ($teclas.Count -eq 0) { throw "Combo de teclas inválido: '$combo'" }
+    return ,[byte[]]$teclas
+}
+
 function Obter-Janelas {
     # MainWindowTitle já filtra para processos com janela real de verdade —
     # bem mais simples e confiável que enumerar tudo com EnumWindows.
@@ -150,6 +183,10 @@ switch ($Acao) {
     'snap_esquerda'          { Enviar-Combo @($VK_LWIN, $VK_LEFT) }
     'snap_direita'           { Enviar-Combo @($VK_LWIN, $VK_RIGHT) }
     'clipboard'                { Enviar-Combo @($VK_LWIN, $VK_V) }
+    'enviar_teclas' {
+        if ([string]::IsNullOrEmpty($Valor)) { throw 'Parametro -Valor (combo de teclas) é obrigatório para enviar_teclas' }
+        Enviar-Combo (Converter-Combo $Valor)
+    }
     'mover_monitor_esquerda' { Enviar-Combo @($VK_LWIN, $VK_SHIFT, $VK_LEFT) }
     'mover_monitor_direita'  { Enviar-Combo @($VK_LWIN, $VK_SHIFT, $VK_RIGHT) }
 

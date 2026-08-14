@@ -8,24 +8,42 @@ gravação do OBS, e (opcionalmente) Spotify e Philips Hue.
 Feito para substituir o Touch Portal: sem limites de plugin, com visual
 próprio, e configurável por uma tela de configuração no próprio navegador.
 
-## 📄 Só quer usar? Comece pelo guia em PDF
+## O que baixar
 
-**[Guia de Primeiro Acesso (PDF)](docs/Guia-Stream-Deck-Web.pdf)** — do
-arquivo baixado até o deck funcionando no tablet, em uns 10 minutos, sem
-precisar saber programar.
+Há dois caminhos, e a maioria das pessoas quer o primeiro.
 
-1. Baixe o **`stream-deck-web.exe`** (na aba
-   [Releases](../../releases) deste repositório) e o
-   **[guia em PDF](docs/Guia-Stream-Deck-Web.pdf)**.
-2. Abra o PDF **antes** de rodar o programa e siga os passos.
+### 🎛️ Só quero usar o deck
 
-Não é preciso instalar Node, WSL, nem clonar este repositório: o `.exe` é um
-arquivo só e cria a pasta `dados/` com a configuração ao lado dele.
+**Baixe um arquivo só: `stream-deck-web.exe`**, na aba
+[Releases](../../releases).
 
-O resto deste README é a documentação técnica — para quem vai rodar do
-código-fonte, mexer no projeto ou entender como ele funciona por dentro. A
-lista completa do que dá para colocar num botão está em
-**[docs/acoes.md](docs/acoes.md)**.
+- **Não precisa clonar o repositório.**
+- **Não precisa instalar Node, WSL, nem nada.** O Node vai embutido dentro
+  do executável.
+- **Não tem instalador.** É um `.exe` avulso: você o põe numa pasta sua e dá
+  dois cliques. Na primeira execução ele cria uma pasta `dados/` ao lado,
+  com a sua configuração e o seu token.
+- **Nada é instalado no tablet.** Ele só abre uma página no navegador.
+
+Junto, baixe o **[Guia de Primeiro Acesso (PDF)](docs/Guia-Stream-Deck-Web.pdf)**
+e leia antes de rodar — são uns 10 minutos, do arquivo baixado até o deck
+funcionando no tablet, sem jargão.
+
+Para atualizar depois, troque só o `.exe` e mantenha a pasta `dados/`: sua
+configuração e credenciais ficam ali e não são sobrescritas.
+
+Requisitos: Windows 10 ou 11, e um tablet/celular na **mesma rede Wi-Fi**.
+
+### 🛠️ Quero mexer no código
+
+Aí sim, clone o repositório e siga [Instalação](#instalação). Você vai
+precisar de Node.js 18+. Rodando do código-fonte não existe `.exe` nem pasta
+`dados/` — os arquivos ficam na raiz do repositório.
+
+O resto deste README é a documentação técnica. Veja também:
+
+- **[docs/acoes.md](docs/acoes.md)** — tudo que dá para colocar num botão
+- **[docs/urls.md](docs/urls.md)** — todas as URLs e rotas da API
 
 ## Sumário
 
@@ -44,6 +62,8 @@ lista completa do que dá para colocar num botão está em
 - [Editar páginas e botões](#editar-páginas-e-botões)
 - [Tela de configuração](#pela-tela-de-configuração-recomendado)
 - [Todas as ações disponíveis](docs/acoes.md)
+- [Todas as URLs e rotas](docs/urls.md)
+- [Habilitar o Discord](#habilitar-o-discord)
 - [Gerar o executável (.exe)](#gerar-o-executável-exe)
 - [Rodando em segundo plano](#rodando-em-segundo-plano)
 - [Estrutura de pastas](#estrutura-de-pastas)
@@ -415,10 +435,62 @@ O refresh token não expira por tempo, mas pode ser revogado se você trocar
 sua senha do Spotify ou remover o acesso do app manualmente — se isso
 acontecer, clique em **Reconectar ao Spotify** na aba Integrações.
 
-## Habilitar o Hue (ainda não conectado)
+## Habilitar o Discord
 
-Mesma ideia: módulo estruturado em `server/integrations/hue/index.js`,
-faltando só suas credenciais e a implementação das chamadas HTTP.
+Mudo do microfone, surdo (mudo total) e câmera. **Funciona por atalho global
+de teclado**, não pela API do Discord — e isso tem consequências que vale
+entender antes de configurar.
+
+### Por que atalho de teclado
+
+O Discord tem um canal local (RPC, por named pipe) com um comando
+`SET_VOICE_SETTINGS` que faria exatamente isto e ainda devolveria o estado
+atual, permitindo o botão acender sozinho. O problema é o acesso: o escopo
+`rpc` vale só para o dono do app e uma lista de até 50 testadores até a
+Discord aprovar o app manualmente. Funcionaria para quem criasse um app no
+portal de desenvolvedores — e para mais ninguém.
+
+Como este projeto é distribuído como um `.exe` para quem não vai criar app
+nenhum, o atalho global ganha: funciona para todo mundo, hoje, sem cadastro
+e sem dependência nova.
+
+**O preço:** os botões de Discord **não acendem**. O Discord não conta para
+ninguém se você está mudo, então não há estado para refletir. Você aperta e
+alterna, sem confirmação visual no deck.
+
+### Configurar
+
+1. No Discord: **Configurações do Usuário** (engrenagem) → **Teclas de
+   Atalho** → **Gravar Atalho**.
+2. Crie um atalho para cada ação que quiser: *Alternar Mudo*, *Alternar
+   Surdo*, *Alternar Câmera*. **Eles não vêm configurados de fábrica.**
+3. Na aba **Integrações** do deck, informe exatamente as mesmas combinações.
+
+Sugestões que não conflitam com atalhos do Windows: `CTRL+SHIFT+F1`,
+`CTRL+SHIFT+F2`, `CTRL+SHIFT+F3`.
+
+### E "transmitir" (Go Live)?
+
+Não dá, e não é limitação deste projeto: o Discord **não expõe o Go Live**
+nem por API nem por tecla de atalho — só pelo botão na interface. Pedidos
+por uma API de Go Live existem há anos e seguem sem resposta. Se algum dia
+o Discord adicionar um atalho de teclado para isso, o botão passa a ser
+possível com a ação genérica **Enviar atalho de teclado** (integração
+`atalhos`), sem precisar de código novo.
+
+## Casa inteligente (Hue e outras marcas)
+
+Nenhuma integração de casa inteligente está funcionando ainda. Antes de
+escolher uma, leia **[docs/casa-inteligente.md](docs/casa-inteligente.md)** —
+ele explica por que quase todo dispositivo barato vendido no Brasil
+(Positivo, Intelbras, Multilaser, Elgin…) é **Tuya por baixo**, por que uma
+integração Tuya cobre quase tudo de uma vez, por que a Alexa não é um bom
+caminho, e o que cada marca exige.
+
+### Hue (ainda não conectado)
+
+Módulo estruturado em `server/integrations/hue/index.js`, faltando suas
+credenciais e a implementação das chamadas HTTP.
 
 1. Descubra o IP da sua bridge Hue (app oficial Philips Hue, ou
    <https://discovery.meethue.com/>).

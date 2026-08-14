@@ -42,8 +42,9 @@ function iniciarServidor() {
   const spotify = require('./integrations/spotify');
   const hue = require('./integrations/hue');
   const atalhos = require('./integrations/atalhos');
+  const discord = require('./integrations/discord');
 
-  const integracoes = { media, obs, spotify, hue, atalhos };
+  const integracoes = { media, obs, spotify, hue, atalhos, discord };
 
   const app = express();
   app.use(express.json());

@@ -138,8 +138,23 @@ Nas configurações do botão, esta é a integração **atalhos**.
 | `areaTransferencia` | Área de transferência (Win+V) | — |
 | `moverMonitorEsquerda` | Mover janela para o monitor da esquerda | — |
 | `moverMonitorDireita` | Mover janela para o monitor da direita | — |
+| `enviarTeclas` | Enviar atalho de teclado | `combo` (texto, obrigatório) — Combinação de teclas _Ex.: CTRL+SHIFT+M. Vale CTRL, SHIFT, ALT, WIN, letras, números, F1–F24 e teclas como ENTER, ESC, TAB, setas._ |
 | `abrirApp` | Abrir programa | `caminho` (texto, obrigatório) — Caminho, comando ou atalho .lnk _Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt)._ |
 | `abrirUwp` | Abrir app da Store (MSIX) | `appId` (texto, obrigatório) — AppUserModelID _Descubra com: Get-StartApps | Where-Object { $_.Name -like '*Nome*' }_ |
 | `abrirUrl` | Abrir site | `url` (texto, obrigatório) — Endereço<br />`navegador` (texto) — Navegador específico (opcional) _Caminho do .exe. Em branco, abre no navegador padrão do Windows._ |
 | `abrirJogo` | Abrir jogo da Steam | `appId` (texto) — AppID na Steam |
 | `focarJanela` | Ir para uma janela | `handle` (texto) — Identificador da janela |
+
+## Discord
+
+Nas configurações do botão, esta é a integração **discord**.
+
+**Precisa de:** Discord aberto, com os atalhos globais cadastrados em **Configurações do Usuário > Teclas de Atalho** e as mesmas teclas informadas na aba Integrações. Os botões não acendem: o Discord não informa se você está mudo.
+
+### Ações
+
+| Ação | O que faz | Parâmetros |
+| --- | --- | --- |
+| `alternarMudo` | Alternar mudo do microfone | — |
+| `alternarSurdo` | Alternar surdo (mudo total) | — |
+| `alternarVideo` | Alternar câmera | — |

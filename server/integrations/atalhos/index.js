@@ -66,6 +66,18 @@ class IntegracaoAtalhos extends EventEmitter {
         areaTransferencia: semParametros('Área de transferência (Win+V)'),
         moverMonitorEsquerda: semParametros('Mover janela para o monitor da esquerda'),
         moverMonitorDireita: semParametros('Mover janela para o monitor da direita'),
+        enviarTeclas: {
+          rotulo: 'Enviar atalho de teclado',
+          parametros: [
+            {
+              nome: 'combo',
+              rotulo: 'Combinação de teclas',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'Ex.: CTRL+SHIFT+M. Vale CTRL, SHIFT, ALT, WIN, letras, números, F1–F24 e teclas como ENTER, ESC, TAB, setas.',
+            },
+          ],
+        },
         abrirApp: {
           rotulo: 'Abrir programa',
           parametros: [
@@ -127,6 +139,11 @@ class IntegracaoAtalhos extends EventEmitter {
       areaTransferencia: () => { this._garantirDisponivel(); return this.controlador.areaTransferencia(); },
       moverMonitorEsquerda: () => { this._garantirDisponivel(); return this.controlador.moverMonitorEsquerda(); },
       moverMonitorDireita: () => { this._garantirDisponivel(); return this.controlador.moverMonitorDireita(); },
+      enviarTeclas: (parametros = {}) => {
+        this._garantirDisponivel();
+        if (!parametros.combo) throw new Error('Parâmetro "combo" é obrigatório.');
+        return this.controlador.enviarTeclas(parametros.combo);
+      },
 
       abrirUrl: (parametros = {}) => {
         this._garantirDisponivel();

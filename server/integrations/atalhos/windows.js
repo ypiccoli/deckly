@@ -21,6 +21,10 @@ class ControladorAtalhos {
   moverMonitorEsquerda() { return executarScript(this.caminhoScript, 'mover_monitor_esquerda'); }
   moverMonitorDireita() { return executarScript(this.caminhoScript, 'mover_monitor_direita'); }
 
+  // Combo livre ("CTRL+SHIFT+M"). É o que permite acionar atalhos globais de
+  // outros programas — a integração do Discord é feita inteiramente disto.
+  enviarTeclas(combo) { return executarScript(this.caminhoScript, 'enviar_teclas', combo); }
+
   // Abrir coisas
   abrirUrl(url, navegador) { return executarScript(this.caminhoScript, 'abrir_url', url, navegador); }
   abrirApp(caminho) { return executarScript(this.caminhoScript, 'abrir_app', caminho); }
