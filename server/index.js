@@ -31,6 +31,7 @@ function iniciarServidor() {
   const criarRotaSpotifyAuth = require('./routes/spotify-auth');
   const criarRotaAtalhos = require('./routes/atalhos');
   const criarRotaBemVindo = require('./routes/bemvindo');
+  const criarRotaIntegracoes = require('./routes/integracoes');
   const { exigirToken } = require('./lib/auth');
   const { conferir: conferirToken, ORIGEM: ORIGEM_TOKEN } = require('./lib/token');
   const mostrarBoasVindas = require('./lib/boas-vindas');
@@ -62,6 +63,7 @@ function iniciarServidor() {
   // para o middleware de token logo abaixo.
   app.use('/api', criarRotaBemVindo(PORTA));
   app.use('/api', exigirToken, criarRotaConfig(integracoes, () => avisarConfigAtualizada()));
+  app.use('/api', exigirToken, criarRotaIntegracoes(integracoes));
   app.use('/action', exigirToken, criarRotaAcoes(integracoes));
   app.use('/atalhos', exigirToken, criarRotaAtalhos());
   // O /spotify tem uma particularidade: as rotas de OAuth não podem exigir

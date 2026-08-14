@@ -356,6 +356,46 @@ grava em `PUT /api/config` ao clicar em Salvar. Erro de validação volta em
 400 e é listado na tela sem gravar nada. Salvar dispara a recarga a quente,
 então o tablet reflete a mudança na hora.
 
+## Aba "Integrações" (credenciais pela UI)
+
+`server/routes/integracoes.js` + `server/lib/env-store.js` + o overlay em
+`public/config/`. Existe para tirar da frente de quem recebe o `.exe` a
+etapa de editar `.env` no Bloco de Notas e reiniciar.
+
+O padrão é o mesmo do `catalogo`, e vale manter: **cada integração declara um
+getter `configuracao`** (`rotulo`, `resumo`, `comoObter`, `campos[]` com a
+variável de ambiente de cada um, e opcionalmente `autorizacao` para um passo
+de OAuth). A UI não sabe o que é "Spotify" — integração nova aparece sozinha
+ao declarar isso. Sem `configuracao`, ela não aparece (é o caso de `media` e
+`atalhos`, que não precisam de nada).
+
+Decisões que importam ao mexer aqui:
+
+- **O `.env` continua sendo a fonte de verdade**, em vez de um JSON novo:
+  ele já é lido por todo mundo, mora na pasta de dados e continua editável à
+  mão. O `env-store` reescreve **só a linha da chave alterada**, preservando
+  comentários — o arquivo é a própria documentação dele (nasce do
+  `.env.example`), e um dump de `CHAVE=valor` jogaria isso fora.
+- **Segredo nunca volta para o navegador.** O GET manda `preenchido:
+  true/false` para campos `tipo: 'senha'`, nunca o valor. Por isso campo de
+  senha vazio no PUT significa "não mexi"; apagar de verdade manda `null`.
+- **Só grava chaves declaradas pela própria integração.** Sem essa lista, um
+  PUT escreveria qualquer variável de ambiente (`PATH`, `STREAM_DECK_TOKEN`).
+- **`reconfigurar()`** é o que evita "reinicie o servidor": relê o `.env` e
+  reconecta. Quem adiciona `configuracao` deveria adicionar isso também. No
+  OBS há o detalhe do `_reconfigurando`: o `disconnect()` que nós mesmos
+  pedimos dispara `ConnectionClosed`, que sem a flag viraria "a conexão caiu"
+  no log e uma reconexão concorrente.
+- O `env-store.gravar()` também atualiza `process.env`, senão o valor novo só
+  valeria depois de reiniciar — exatamente o que a tela existe para evitar.
+
+O OAuth do Spotify agora **grava o refresh token sozinho** no callback
+(`server/routes/spotify-auth.js`) e chama `reconfigurar()`. Antes, a página
+mostrava o token para a pessoa copiar no `.env` e reiniciar duas vezes.
+O Redirect URI padrão sai de `_redirectPadrao()`, derivado de `PORT` — fixá-lo
+em `:3000` fazia a tela instruir o cadastro errado para quem mudasse a porta,
+com um `INVALID_CLIENT` incompreensível do outro lado.
+
 ## Schema do config (campos de um botão)
 
 Antes ficava nos comentários do `pages.config.js`; JSON não tem comentários,
@@ -394,6 +434,9 @@ devolve erros já legíveis, apontando página e botão.
    `motivoIndisponivel`, `estados`, `acoes` com rótulo e parâmetros) — é o
    que faz a integração aparecer na tela de configuração. Sem ele, ela
    funciona mas fica invisível para quem for montar botões pela UI.
+   Se ela precisar de credenciais, exponha também `configuracao` e
+   `reconfigurar()` — veja "Aba Integrações" acima. Sem isso, configurá-la
+   volta a exigir editar `.env` na mão.
 4. Adicione botões em `config/pages.config.json` referenciando
    `integracao: '<nome>'` e `acao: '<nomeDaAcao>'`.
 5. Se a ação tiver estado ao vivo, emita `this.emit('estado', this.estado)`

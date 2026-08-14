@@ -198,7 +198,7 @@
     <li><strong>Conectar o tablet</strong> — o QR code e o token de acesso</li>
     <li><strong>Deixar com cara de aplicativo</strong> — instalar na tela inicial</li>
     <li><strong>Montar o seu deck</strong> — criar e editar botões</li>
-    <li><strong>Extras opcionais</strong> — OBS, Spotify e iniciar junto com o Windows</li>
+    <li><strong>Extras opcionais</strong> — conectar OBS e Spotify, e iniciar junto com o Windows</li>
     <li><strong>Quando algo não funciona</strong> — os problemas mais comuns</li>
   </ol>
 
@@ -466,29 +466,48 @@
 <section class="secao">
   <h2>6. Extras opcionais</h2>
 
-  <p>Nada aqui é necessário para o deck funcionar. São ajustes no arquivo
-  <code>.env</code>, que fica dentro da pasta <code>dados</code>, ao lado do
-  programa. Abra com o Bloco de Notas, edite e reinicie o programa.</p>
+  <p>Nada aqui é necessário para o deck funcionar. Tudo se configura pela
+  tela de <strong>Integrações</strong> — no PC, abra a tela de configuração e
+  clique em <strong>🔌 Integrações</strong> (ou vá direto em
+  <code>http://127.0.0.1:3000/config/#integracoes</code>).</p>
+
+  <div class="caixa">
+    <div class="titulo">Não precisa mexer em arquivo</div>
+    <p>Cada integração mostra ali o que precisa e onde conseguir. Ao salvar,
+    vale na hora — sem reiniciar o programa. Suas senhas ficam guardadas no
+    PC e nunca são exibidas de volta na tela.</p>
+  </div>
 
   <h3>OBS Studio</h3>
   <ol>
     <li>No OBS: <strong>Ferramentas > Configurações do Servidor WebSocket</strong>.</li>
     <li>Marque <strong>Ativar servidor WebSocket</strong>.</li>
-    <li>Se você definir uma senha ali, copie-a para
-    <code>OBS_WEBSOCKET_PASSWORD=</code> no <code>.env</code>.</li>
+    <li>Se houver senha ali, copie para o campo <strong>Senha do WebSocket</strong>
+    na tela de Integrações e salve.</li>
     <li>Na tela de configuração, corrija os nomes das cenas para bater
     exatamente com os do seu OBS.</li>
   </ol>
   <p>O programa reconecta sozinho: pode deixar os botões prontos e abrir o OBS
-  depois. Se você não usa OBS, ponha <code>OBS_HABILITADO=false</code> no
-  <code>.env</code> e apague a página.</p>
+  depois. Se você não usa OBS, mude <strong>Usar o OBS</strong> para "Não" e
+  apague a página do deck.</p>
 
   <h3>Spotify</h3>
-  <p>Exige <strong>Spotify Premium</strong> (é uma limitação do próprio
-  Spotify) e alguns minutos criando um aplicativo no site de desenvolvedores
-  deles. Em troca você ganha um mostrador com a música tocando, um volume só do
-  Spotify e a troca de aparelho onde a música toca. O passo a passo completo
-  está na seção "Habilitar o Spotify" do README.</p>
+  <p>Exige <strong>Spotify Premium</strong> — é uma limitação do próprio
+  Spotify. Em troca você ganha um mostrador com a música tocando, um volume só
+  do Spotify e a troca de aparelho onde a música toca.</p>
+  <ol>
+    <li>Entre em <code>developer.spotify.com/dashboard</code> com a sua conta
+    do Spotify e clique em <strong>Create app</strong>. Nome e descrição podem
+    ser qualquer coisa.</li>
+    <li>No campo <strong>Redirect URI</strong>, cole exatamente o endereço que
+    a tela de Integrações mostra. Tem que ser idêntico.</li>
+    <li>Marque <strong>Web API</strong> e salve.</li>
+    <li>Copie o <strong>Client ID</strong> e o <strong>Client Secret</strong>
+    para os campos na tela de Integrações e clique em Salvar.</li>
+    <li>Clique em <strong>Conectar ao Spotify</strong>, autorize, e pronto —
+    o resto acontece sozinho.</li>
+  </ol>
+  <p>O passo 5 precisa ser feito no navegador do PC, não do tablet.</p>
 
   <h3>Iniciar junto com o Windows</h3>
   <ol>

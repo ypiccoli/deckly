@@ -38,6 +38,7 @@ lista completa do que dá para colocar num botão está em
 - [Controle de mídia (Windows via WSL2)](#controle-de-mídia-windows-via-wsl2)
 - [Atalhos: apps, sites, jogos e janelas](#atalhos-apps-sites-jogos-e-janelas)
 - [Habilitar o OBS](#habilitar-o-obs)
+- [Configurar as integrações (aba Integrações)](#configurar-as-integrações-aba-integrações)
 - [Habilitar o Spotify](#habilitar-o-spotify)
 - [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
 - [Editar páginas e botões](#editar-páginas-e-botões)
@@ -334,17 +335,39 @@ Dicas para montar os seus:
   para separar contextos (ex.: painéis de rede num navegador, faculdade em
   outro).
 
+## Configurar as integrações (aba Integrações)
+
+**O jeito recomendado, e o único que quem recebe o `.exe` precisa conhecer:**
+abra `http://127.0.0.1:3000/config/#integracoes` (ou o botão **🔌 Integrações**
+na tela de configuração, ou o atalho na tela de boas-vindas).
+
+Ali cada integração diz o que precisa, com o passo a passo de onde tirar cada
+credencial. **Salvar já vale na hora** — as credenciais vão para o `.env` e a
+integração se reconecta sozinha, sem reiniciar o servidor.
+
+Detalhes que valem saber:
+
+- **Nada de segredo volta para o navegador.** Campos de senha mostram só se
+  estão preenchidos ou não; para trocar, digite por cima, e para apagar existe
+  o link "apagar" ao lado do campo.
+- **O `.env` continua editável à mão** e é a mesma fonte de verdade — a tela
+  reescreve só a linha da chave alterada e preserva os comentários do arquivo.
+- **Só grava chaves que a integração declarou** no getter `configuracao`. Um
+  PUT tentando escrever `PATH` ou `STREAM_DECK_TOKEN` é recusado.
+- Como o resto da tela de configuração, responde **só no próprio PC** (veja
+  `CONFIG_REMOTO`).
+
+As seções abaixo descrevem o que fazer do lado do OBS/Spotify — a parte que
+acontece fora deste app.
+
 ## Habilitar o OBS
 
 1. No OBS Studio (28+), vá em **Ferramentas → WebSocket Server Settings**.
 2. Marque **Enable WebSocket server**, defina uma senha (recomendado) e
    confira a porta (padrão `4455`).
-3. No `.env`, preencha:
-   ```
-   OBS_WEBSOCKET_HOST=localhost
-   OBS_WEBSOCKET_PORT=4455
-   OBS_WEBSOCKET_PASSWORD=sua_senha
-   ```
+3. Na aba **Integrações** da tela de configuração, preencha endereço, porta e
+   senha, e salve. (Se preferir arquivo: `OBS_WEBSOCKET_HOST`,
+   `OBS_WEBSOCKET_PORT` e `OBS_WEBSOCKET_PASSWORD` no `.env`.)
 4. Em `config/pages.config.json`, ajuste os botões da página "OBS":
    - `parametros.cena` de cada botão de cena deve bater **exatamente** com
      o nome da cena no seu OBS.
@@ -352,46 +375,34 @@ Dicas para montar os seus:
      áudio (ex.: "Mic/Aux"). Alternativamente, defina
      `OBS_MIC_INPUT_NAME=NomeDaSuaEntrada` no `.env` — é o nome usado para
      decidir qual mudança de mute reflete no botão de mic.
-5. Reinicie o servidor. A cena ativa fica destacada, o botão de mic fica
+5. A cena ativa fica destacada, o botão de mic fica
    vermelho quando mutado, e o botão de gravação pulsa em vermelho enquanto
    grava — tudo isso chega em tempo real pelo WebSocket, então funciona
    mesmo se você trocar de cena pelo próprio OBS (não só pelo tablet).
 
 ## Habilitar o Spotify
 
-A integração já está implementada (`server/integrations/spotify/index.js`):
-play/pause, próxima/anterior faixa, e "now playing" (música/artista tocando)
-refletido no estado ao vivo a cada 5s. O próprio servidor tem rotas para
-fazer a autorização OAuth pelo navegador — não precisa copiar/colar código
-de autorização manualmente.
+Exige **conta Premium** — é limitação da API do Spotify, não deste app. A
+integração dá play/pause, faixa anterior/próxima, volume só do Spotify e o
+"now playing" (música/artista) ao vivo, atualizado a cada 5s.
+
+Tudo pela aba **Integrações**, sem editar arquivo nem reiniciar:
 
 1. Crie um app em <https://developer.spotify.com/dashboard> ("Create app").
-2. Nas configurações do app (**Edit Settings**), em **Redirect URIs**,
-   adicione exatamente:
-   ```
-   http://127.0.0.1:3000/spotify/callback
-   ```
-   (troque `3000` se você mudou `PORT` no `.env`). Precisa bater
-   **exatamente** com `SPOTIFY_REDIRECT_URI` do `.env` — protocolo, host e
-   porta incluídos. Use `127.0.0.1`, não `localhost`: o Spotify não aceita
-   mais `http://localhost` como URI "segura" — só `https://` ou o IP de
-   loopback literal `127.0.0.1` (é assim mesmo rodando tudo local).
-3. Copie o **Client ID** e o **Client Secret** do app para o `.env`:
-   ```
-   SPOTIFY_CLIENT_ID=...
-   SPOTIFY_CLIENT_SECRET=...
-   ```
-4. Reinicie o servidor (`npm run dev`/`npm start`).
-5. No navegador **do PC** (não do tablet — precisa ser exatamente a URL
-   cadastrada no passo 2), acesse:
-   ```
-   http://127.0.0.1:3000/spotify/login
-   ```
-   Você será redirecionado para o Spotify, faça login e autorize o app. Ao
-   voltar, a página mostra um **refresh token**.
-6. Copie esse valor para `SPOTIFY_REFRESH_TOKEN` no `.env` e reinicie o
-   servidor de novo. Pronto — os botões de Spotify na página "Casa" passam
-   a funcionar.
+   Nome e descrição podem ser qualquer coisa.
+2. Em **Redirect URIs**, cole exatamente o endereço que a tela de
+   configuração mostra — algo como `http://127.0.0.1:3000/spotify/callback`,
+   com a sua porta. Precisa bater **caractere por caractere**. Use
+   `127.0.0.1`, não `localhost`: o Spotify não aceita mais `http://localhost`
+   como URI "segura" — só `https://` ou o IP de loopback literal.
+3. Marque **Web API** e salve.
+4. Copie **Client ID** e **Client Secret** para os campos da aba Integrações
+   e clique em **Salvar**.
+5. Clique em **Conectar ao Spotify**. Você autoriza no site do Spotify e
+   volta; o refresh token é obtido, **gravado e aplicado sozinho**.
+
+O passo 5 precisa acontecer no navegador **do PC**, não do tablet: o endereço
+de retorno é o `127.0.0.1` cadastrado no passo 2.
 
 **Importante:** os botões de play/pause/próxima/anterior só funcionam se
 houver um **dispositivo Spotify ativo** no momento (o app do Spotify aberto
@@ -402,7 +413,7 @@ isso.
 
 O refresh token não expira por tempo, mas pode ser revogado se você trocar
 sua senha do Spotify ou remover o acesso do app manualmente — se isso
-acontecer, repita os passos 5 e 6.
+acontecer, clique em **Reconectar ao Spotify** na aba Integrações.
 
 ## Habilitar o Hue (ainda não conectado)
 

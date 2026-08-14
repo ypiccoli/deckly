@@ -19,6 +19,7 @@
     </div>
     <div class="topo-acoes">
       <span class="aviso-sujo" id="aviso-sujo" hidden>alterações não salvas</span>
+      <button type="button" class="btn btn-fantasma" id="btn-integracoes">🔌 Integrações</button>
       <a class="btn btn-fantasma" href="../">Ver o deck</a>
       <button type="button" class="btn btn-primario" id="btn-salvar" disabled>Salvar</button>
     </div>
@@ -63,6 +64,22 @@
       <input type="text" class="campo" id="emoji-livre" placeholder="Ou digite/cole um emoji aqui" maxlength="8" />
       <div class="emoji-grade" id="emoji-grade"></div>
       <button type="button" class="btn btn-fantasma" id="emoji-fechar">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Credenciais das integrações (OBS, Spotify, …). Separado do editor de
+       botões de propósito: são coisas configuradas uma vez, não a cada uso. -->
+  <div class="overlay" id="overlay-integracoes">
+    <div class="overlay-cartao overlay-largo">
+      <div class="overlay-topo">
+        <h2>Integrações</h2>
+        <button type="button" class="btn btn-fantasma btn-pequeno" id="integracoes-fechar">Fechar</button>
+      </div>
+      <p class="overlay-ajuda">
+        Configure aqui o que cada integração precisa. Salvar já vale na hora —
+        não é preciso reiniciar o programa.
+      </p>
+      <div id="integracoes-lista"></div>
     </div>
   </div>
 

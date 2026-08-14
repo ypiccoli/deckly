@@ -32,6 +32,7 @@ class IntegracaoObs extends EventEmitter {
     // ausência de .env. Quem não usa OBS desliga aqui.
     this.habilitado = String(process.env.OBS_HABILITADO || 'true').toLowerCase() !== 'false';
     this._timeoutReconexao = null;
+    this._reconfigurando = false;
     this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
     // O aviso de "não achei o OBS" sai uma vez só. As tentativas seguintes
     // são silenciosas: é o caso normal de quem nunca vai abrir o OBS, e um
@@ -56,6 +57,12 @@ class IntegracaoObs extends EventEmitter {
     });
 
     this.obs.on('ConnectionClosed', () => {
+      // Desconexão que nós mesmos pedimos (ao reconfigurar) não é queda: não
+      // merece aviso nem reagendamento — quem chamou já vai reconectar.
+      if (this._reconfigurando) {
+        this._atualizarEstado({ conectado: false });
+        return;
+      }
       if (this.estado.conectado) {
         // Estava conectado e caiu: o OBS fechou ou travou. Aqui o aviso vale,
         // e a espera volta ao começo para reconectar rápido quando reabrir.
@@ -161,6 +168,68 @@ class IntegracaoObs extends EventEmitter {
       }
       this._agendarReconexao();
     }
+  }
+
+  // O que a tela de configuração precisa perguntar para esta integração
+  // funcionar. Mesma ideia do getter `catalogo`: quem sabe o que precisa é a
+  // integração, não a UI — assim uma integração nova aparece sozinha na tela
+  // de credenciais.
+  get configuracao() {
+    return {
+      rotulo: 'OBS Studio',
+      resumo: 'Trocar de cena, mutar o microfone e gravar.',
+      comoObter: [
+        'Abra o OBS e vá em Ferramentas > Configurações do Servidor WebSocket.',
+        'Marque "Ativar servidor WebSocket".',
+        'Se houver senha ali, copie para o campo abaixo. Sem senha, deixe em branco.',
+      ],
+      campos: [
+        {
+          env: 'OBS_HABILITADO',
+          rotulo: 'Usar o OBS',
+          tipo: 'booleano',
+          padrao: 'true',
+          ajuda: 'Desligue se você não usa OBS — evita tentativas de conexão à toa.',
+        },
+        { env: 'OBS_WEBSOCKET_HOST', rotulo: 'Endereço', tipo: 'texto', padrao: 'localhost' },
+        { env: 'OBS_WEBSOCKET_PORT', rotulo: 'Porta', tipo: 'numero', padrao: '4455' },
+        {
+          env: 'OBS_WEBSOCKET_PASSWORD',
+          rotulo: 'Senha do WebSocket',
+          tipo: 'senha',
+          ajuda: 'Deixe em branco se você não definiu senha no OBS.',
+        },
+        {
+          env: 'OBS_MIC_INPUT_NAME',
+          rotulo: 'Nome da fonte de microfone',
+          tipo: 'texto',
+          padrao: 'Mic/Aux',
+          ajuda: 'Precisa bater com o nome que aparece no mixer de áudio do OBS.',
+        },
+      ],
+    };
+  }
+
+  // Chamada depois que a tela de configuração grava as credenciais: relê o
+  // .env e reconecta, para não exigir reinício do servidor.
+  async reconfigurar() {
+    this.habilitado = String(process.env.OBS_HABILITADO || 'true').toLowerCase() !== 'false';
+    this.nomeEntradaMic = process.env.OBS_MIC_INPUT_NAME || 'Mic/Aux';
+
+    clearTimeout(this._timeoutReconexao);
+    this._timeoutReconexao = null;
+    this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
+    this._jaAvisouOffline = false;
+
+    this._reconfigurando = true;
+    try {
+      await this.obs.disconnect().catch(() => {});
+    } finally {
+      this._reconfigurando = false;
+    }
+
+    if (!this.habilitado) return;
+    await this.inicializar();
   }
 
   _motivoIndisponivel() {

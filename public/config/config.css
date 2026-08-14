@@ -302,6 +302,83 @@ details.avancado > div { display: flex; flex-direction: column; gap: 12px; paddi
   gap: 14px;
 }
 .overlay-cartao h2 { font-size: 1rem; }
+
+/* ---------------- overlay das integrações ---------------- */
+.overlay-largo { width: min(680px, 100%); overflow-y: auto; }
+.overlay-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.overlay-ajuda { font-size: 0.8rem; color: var(--cor-texto-fraco); margin: 0; }
+
+.integracao {
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--cor-fundo);
+}
+.integracao-topo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.integracao-topo h3 { margin: 0; font-size: 0.95rem; flex: 1; }
+.integracao-resumo { font-size: 0.78rem; color: var(--cor-texto-fraco); margin: 0 0 12px; }
+
+/* Selo de status: responde "isto está funcionando agora?" — a pergunta que
+   a pessoa realmente tem ao abrir esta tela. */
+.selo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.selo-ok { color: #2ed573; }
+.selo-off { color: var(--cor-texto-fraco); }
+.selo-obra { color: #d98324; }
+
+.integracao-passos {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 0.78rem;
+  color: var(--cor-texto-fraco);
+  line-height: 1.6;
+}
+.integracao-passos code {
+  font-family: ui-monospace, Consolas, monospace;
+  color: var(--cor-texto);
+  word-break: break-all;
+}
+.integracao-aviso {
+  font-size: 0.76rem;
+  color: #d98324;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(217, 131, 36, 0.09);
+}
+.integracao-campos { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.integracao-acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.integracao-status { font-size: 0.76rem; color: var(--cor-texto-fraco); }
+
+/* Campo de senha já preenchido: mostra que existe algo guardado sem nunca
+   mandar o valor para o navegador. */
+.campo-guardado {
+  font-size: 0.73rem;
+  color: #2ed573;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.campo-guardado button {
+  font: inherit;
+  font-size: 0.73rem;
+  background: none;
+  border: none;
+  color: var(--cor-texto-fraco);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+.campo-guardado button:hover { color: #ff4d5e; }
 .emoji-grade {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));

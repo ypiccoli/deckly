@@ -35,6 +35,20 @@ class IntegracaoHue extends EventEmitter {
     }
   }
 
+  // Aparece na tela de credenciais, mas sem campos: preencher IP e chave da
+  // bridge não faria nada enquanto as chamadas HTTP forem TODO. Melhor dizer
+  // isso do que aceitar dados e não funcionar.
+  get configuracao() {
+    return {
+      rotulo: 'Philips Hue',
+      resumo: 'Acender e apagar luzes da casa.',
+      naoImplementado:
+        'A integração com a Hue ainda não está pronta — a estrutura existe, mas as ' +
+        'chamadas para a bridge não foram implementadas. Os botões de luz não funcionam.',
+      campos: [],
+    };
+  }
+
   // Descreve o que esta integração oferece, para a tela de configuração
   // conseguir montar os formulários sozinha (veja GET /api/catalogo).
   get catalogo() {

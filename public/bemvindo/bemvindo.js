@@ -80,6 +80,7 @@
       document.getElementById('url-bemvindo').textContent = dados.urlLocal + '/bemvindo/';
       document.getElementById('link-deck').href = '/';
       document.getElementById('link-config').href = '/config/';
+      document.getElementById('link-integracoes').href = '/config/#integracoes';
 
       if (dados.qr) {
         document.getElementById('qr').innerHTML = dados.qr;

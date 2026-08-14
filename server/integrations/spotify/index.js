@@ -1,16 +1,17 @@
 // Integração com o Spotify (Web API).
 //
-// Fluxo de autorização (uma vez só, feito pelo navegador — veja o README):
-//   1. Crie um app em https://developer.spotify.com/dashboard
-//   2. Preencha SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET no .env
-//   3. Abra http://127.0.0.1:<porta>/spotify/login — o servidor redireciona
-//      para o Spotify, você autoriza, e a rota /spotify/callback (também
-//      deste servidor, veja server/routes/spotify-auth.js) troca o código
-//      pelo refresh token e mostra na tela.
-//   4. Cole esse valor em SPOTIFY_REFRESH_TOKEN no .env e reinicie o servidor.
+// Fluxo de autorização (uma vez só, pela aba "Integrações" da tela de
+// configuração):
+//   1. Crie um app em https://developer.spotify.com/dashboard e cadastre o
+//      Redirect URI que a própria tela mostra.
+//   2. Cole Client ID e Client Secret na tela e salve (vai para o .env).
+//   3. Clique em "Conectar ao Spotify": o servidor redireciona para lá, você
+//      autoriza, e /spotify/callback (server/routes/spotify-auth.js) troca o
+//      código pelo refresh token, **grava no .env e reconfigura na hora**.
 //
-// Depois disso, o access token (curta duração) é renovado sozinho a partir
-// do refresh token (longa duração) sempre que necessário.
+// Nada disso exige editar arquivo nem reiniciar o servidor. O access token
+// (curta duração) é renovado sozinho a partir do refresh token (longa
+// duração) sempre que necessário.
 
 const EventEmitter = require('events');
 
@@ -18,6 +19,14 @@ const URL_CONTAS_SPOTIFY = 'https://accounts.spotify.com';
 const URL_API_SPOTIFY = 'https://api.spotify.com/v1';
 const ESCOPOS = ['user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing'].join(' ');
 const INTERVALO_POLLING_MS = 5000;
+
+// O Redirect URI precisa bater EXATAMENTE com o cadastrado no painel do
+// Spotify, e é a tela de configuração que diz qual cadastrar. Se ele fosse
+// fixo em :3000, quem mudasse PORT veria a instrução errada e levaria um
+// "INVALID_CLIENT: Invalid redirect URI" sem entender por quê.
+function _redirectPadrao() {
+  return `http://127.0.0.1:${process.env.PORT || 3000}/spotify/callback`;
+}
 
 class IntegracaoSpotify extends EventEmitter {
   constructor() {
@@ -34,7 +43,7 @@ class IntegracaoSpotify extends EventEmitter {
 
     this.clientId = process.env.SPOTIFY_CLIENT_ID;
     this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000/spotify/callback';
+    this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || _redirectPadrao();
     this.refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
     this.habilitado = Boolean(this.clientId && this.clientSecret && this.refreshToken);
 
@@ -170,6 +179,60 @@ class IntegracaoSpotify extends EventEmitter {
     } catch (erro) {
       console.warn(`[spotify] Falha ao conectar (${erro.message}). Refaça a autorização em /spotify/login se o refresh token expirou.`);
     }
+  }
+
+  // O que a tela de configuração precisa perguntar. O refresh token não
+  // aparece como campo de propósito: ele é obtido pelo botão "Conectar ao
+  // Spotify" (o fluxo OAuth em server/routes/spotify-auth.js) e gravado
+  // sozinho. Pedir para alguém copiar um refresh token de uma página e colar
+  // num arquivo era o passo mais hostil do setup inteiro.
+  get configuracao() {
+    return {
+      rotulo: 'Spotify',
+      resumo: 'Música tocando, controle de faixa e volume só do Spotify.',
+      aviso: 'Exige conta Spotify Premium — é limitação da API deles, não deste app.',
+      comoObter: [
+        'Entre em developer.spotify.com/dashboard com a sua conta e clique em "Create app".',
+        'Nome e descrição podem ser qualquer coisa ("Stream Deck", por exemplo).',
+        'Em "Redirect URI", cole exatamente: ' + this.redirectUri,
+        'Marque "Web API", salve, e copie o Client ID e o Client Secret para os campos abaixo.',
+        'Salve aqui e clique em "Conectar ao Spotify" para autorizar.',
+      ],
+      campos: [
+        { env: 'SPOTIFY_CLIENT_ID', rotulo: 'Client ID', tipo: 'senha' },
+        { env: 'SPOTIFY_CLIENT_SECRET', rotulo: 'Client Secret', tipo: 'senha' },
+      ],
+      // A UI mostra este passo como um botão, depois dos campos salvos.
+      autorizacao: {
+        url: '/spotify/login',
+        rotulo: 'Conectar ao Spotify',
+        pronto: Boolean(this.refreshToken),
+        precisaAntes: ['SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET'],
+      },
+    };
+  }
+
+  // Relê as credenciais do .env e reinicia o polling. Chamada pela tela de
+  // configuração ao salvar e pelo callback do OAuth, para valer na hora.
+  async reconfigurar() {
+    this.clientId = process.env.SPOTIFY_CLIENT_ID;
+    this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || _redirectPadrao();
+    this.refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
+    this.habilitado = Boolean(this.clientId && this.clientSecret && this.refreshToken);
+
+    // O access token em memória foi emitido para as credenciais antigas.
+    this.accessToken = null;
+    this.accessTokenExpiraEm = 0;
+
+    clearInterval(this._intervaloPolling);
+    this._intervaloPolling = null;
+
+    if (!this.habilitado) {
+      this._atualizarEstado({ conectado: false, tocando: false, musica: null, artista: null, dispositivo: null });
+      return;
+    }
+    await this.inicializar();
   }
 
   // Descreve o que esta integração oferece, para a tela de configuração

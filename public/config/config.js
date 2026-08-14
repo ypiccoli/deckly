@@ -45,6 +45,9 @@
     overlayEmoji: document.getElementById('overlay-emoji'),
     emojiGrade: document.getElementById('emoji-grade'),
     emojiLivre: document.getElementById('emoji-livre'),
+    overlayIntegracoes: document.getElementById('overlay-integracoes'),
+    integracoesLista: document.getElementById('integracoes-lista'),
+    btnIntegracoes: document.getElementById('btn-integracoes'),
     toast: document.getElementById('toast'),
   };
 
@@ -752,6 +755,258 @@
     if (!estado.sujo) return;
     ev.preventDefault();
     ev.returnValue = '';
+  });
+
+  /* ---------------- integrações (credenciais) ---------------- */
+
+  // Esta tela é montada a partir de GET /api/integracoes, que por sua vez sai
+  // do getter `configuracao` de cada integração. Nada aqui sabe o que é
+  // "Spotify" ou "OBS" — integração nova aparece sozinha.
+
+  function selo(integracao) {
+    if (integracao.naoImplementado) return '<span class="selo selo-obra">em construção</span>';
+    if (integracao.disponivel) return '<span class="selo selo-ok">funcionando</span>';
+    return '<span class="selo selo-off">não conectado</span>';
+  }
+
+  function montarCampoIntegracao(campo) {
+    var wrap = document.createElement('div');
+    wrap.className = 'campo-grupo';
+
+    var id = 'int-' + campo.env;
+    var label = document.createElement('label');
+    label.setAttribute('for', id);
+    label.textContent = campo.rotulo;
+    wrap.appendChild(label);
+
+    if (campo.tipo === 'booleano') {
+      var sel = document.createElement('select');
+      sel.className = 'campo';
+      sel.id = id;
+      [['true', 'Sim'], ['false', 'Não']].forEach(function (par) {
+        var o = document.createElement('option');
+        o.value = par[0];
+        o.textContent = par[1];
+        sel.appendChild(o);
+      });
+      sel.value = (campo.valor || campo.padrao || 'true') === 'false' ? 'false' : 'true';
+      wrap.appendChild(sel);
+      wrap.dataset.env = campo.env;
+      return wrap;
+    }
+
+    var input = document.createElement('input');
+    input.className = 'campo';
+    input.id = id;
+    input.type = campo.secreto ? 'password' : campo.tipo === 'numero' ? 'number' : 'text';
+    input.autocomplete = 'off';
+    input.value = campo.valor || '';
+    input.placeholder = campo.padrao ? 'padrão: ' + campo.padrao : '';
+    wrap.appendChild(input);
+
+    // Segredo já guardado: o valor nunca vem do servidor, então o campo fica
+    // vazio. Sem este aviso, pareceria que a credencial se perdeu — e um
+    // campo vazio ao salvar significa "não mexi", não "apague".
+    if (campo.secreto && campo.preenchido) {
+      input.placeholder = '•••••••• (guardado — preencha só para trocar)';
+      var guardado = document.createElement('div');
+      guardado.className = 'campo-guardado';
+      guardado.innerHTML = '<span>✓ guardado</span>';
+      var limpar = document.createElement('button');
+      limpar.type = 'button';
+      limpar.textContent = 'apagar';
+      limpar.addEventListener('click', function () {
+        if (!window.confirm('Apagar ' + campo.rotulo + '?')) return;
+        input.value = '';
+        input.dataset.limpar = '1';
+        guardado.innerHTML = '<span style="color:#ff4d5e">será apagado ao salvar</span>';
+      });
+      guardado.appendChild(limpar);
+      wrap.appendChild(guardado);
+    }
+
+    if (campo.ajuda) {
+      var ajuda = document.createElement('p');
+      ajuda.className = 'campo-ajuda';
+      ajuda.textContent = campo.ajuda;
+      wrap.appendChild(ajuda);
+    }
+
+    wrap.dataset.env = campo.env;
+    wrap.dataset.secreto = campo.secreto ? '1' : '';
+    return wrap;
+  }
+
+  function montarIntegracao(integracao) {
+    var cartao = document.createElement('div');
+    cartao.className = 'integracao';
+
+    var topo = document.createElement('div');
+    topo.className = 'integracao-topo';
+    topo.innerHTML = '<h3>' + esc(integracao.rotulo) + '</h3>' + selo(integracao);
+    cartao.appendChild(topo);
+
+    if (integracao.resumo) {
+      var resumo = document.createElement('p');
+      resumo.className = 'integracao-resumo';
+      resumo.textContent = integracao.resumo;
+      cartao.appendChild(resumo);
+    }
+
+    if (integracao.naoImplementado) {
+      var obra = document.createElement('p');
+      obra.className = 'integracao-aviso';
+      obra.textContent = integracao.naoImplementado;
+      cartao.appendChild(obra);
+      return cartao;
+    }
+
+    if (integracao.aviso) {
+      var aviso = document.createElement('p');
+      aviso.className = 'integracao-aviso';
+      aviso.textContent = integracao.aviso;
+      cartao.appendChild(aviso);
+    }
+
+    if (integracao.comoObter.length) {
+      var passos = document.createElement('ol');
+      passos.className = 'integracao-passos';
+      integracao.comoObter.forEach(function (p) {
+        var li = document.createElement('li');
+        // Trecho entre dois espaços e fim de linha vira <code> quando parece
+        // um endereço — é o Redirect URI, que precisa ser copiado exato.
+        li.innerHTML = esc(p).replace(/(https?:\/\/\S+)/g, '<code>$1</code>');
+        passos.appendChild(li);
+      });
+      cartao.appendChild(passos);
+    }
+
+    var campos = document.createElement('div');
+    campos.className = 'integracao-campos';
+    integracao.campos.forEach(function (campo) {
+      campos.appendChild(montarCampoIntegracao(campo));
+    });
+    cartao.appendChild(campos);
+
+    var acoes = document.createElement('div');
+    acoes.className = 'integracao-acoes';
+
+    var salvar = document.createElement('button');
+    salvar.type = 'button';
+    salvar.className = 'btn btn-primario btn-pequeno';
+    salvar.textContent = 'Salvar';
+    acoes.appendChild(salvar);
+
+    var status = document.createElement('span');
+    status.className = 'integracao-status';
+    if (integracao.motivoIndisponivel) status.textContent = integracao.motivoIndisponivel;
+    acoes.appendChild(status);
+
+    salvar.addEventListener('click', function () {
+      salvar.disabled = true;
+      status.textContent = 'Salvando…';
+
+      var valores = {};
+      campos.querySelectorAll('[data-env]').forEach(function (grupo) {
+        var entrada = grupo.querySelector('input, select');
+        var env = grupo.dataset.env;
+        if (grupo.dataset.secreto) {
+          // Vazio e sem pedido de limpeza = não mexeu; não manda a chave.
+          if (entrada.dataset.limpar === '1') valores[env] = null;
+          else if (entrada.value.trim()) valores[env] = entrada.value.trim();
+          return;
+        }
+        valores[env] = entrada.value.trim();
+      });
+
+      window.acesso
+        .buscar('/api/integracoes', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome: integracao.nome, valores: valores }),
+        })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, corpo: j }; }); })
+        .then(function (res) {
+          salvar.disabled = false;
+          if (!res.ok || !res.corpo.ok) {
+            status.textContent = res.corpo.erro || 'Falhou ao salvar.';
+            toast('Não deu para salvar', true);
+            return;
+          }
+          toast(res.corpo.aviso || 'Salvo e aplicado');
+          // Recarrega o painel inteiro: o selo de status e o botão de
+          // autorização do Spotify mudam junto com o que acabou de ser salvo.
+          abrirIntegracoes();
+        })
+        .catch(function (e) {
+          salvar.disabled = false;
+          status.textContent = e.message;
+        });
+    });
+
+    // Passo de OAuth (hoje só o Spotify): um link normal, porque o fluxo é
+    // uma ida ao site do Spotify e uma volta para /spotify/callback.
+    if (integracao.autorizacao) {
+      var faltando = integracao.autorizacao.precisaAntes.some(function (env) {
+        return !integracao.campos.some(function (c) { return c.env === env && c.preenchido; });
+      });
+
+      var autorizar = document.createElement('a');
+      autorizar.className = 'btn btn-pequeno ' + (faltando ? 'btn-fantasma' : 'btn-primario');
+      autorizar.href = integracao.autorizacao.url;
+      autorizar.target = '_blank';
+      autorizar.rel = 'noopener';
+      autorizar.textContent = integracao.autorizacao.pronto
+        ? 'Reconectar ao Spotify'
+        : integracao.autorizacao.rotulo;
+      if (faltando) {
+        autorizar.removeAttribute('href');
+        autorizar.title = 'Salve as credenciais acima primeiro.';
+        autorizar.style.opacity = '0.5';
+        autorizar.style.pointerEvents = 'none';
+      }
+      acoes.appendChild(autorizar);
+
+      if (integracao.autorizacao.pronto) {
+        var ok = document.createElement('span');
+        ok.className = 'integracao-status';
+        ok.textContent = '✓ conta já autorizada';
+        acoes.appendChild(ok);
+      }
+    }
+
+    cartao.appendChild(acoes);
+    return cartao;
+  }
+
+  function abrirIntegracoes() {
+    el.overlayIntegracoes.classList.add('aberto');
+    el.integracoesLista.innerHTML = '<p class="vazio">carregando…</p>';
+
+    window.acesso
+      .buscar('/api/integracoes')
+      .then(function (r) { return r.json(); })
+      .then(function (dados) {
+        if (!dados.ok) throw new Error(dados.erro || 'resposta inesperada');
+        el.integracoesLista.innerHTML = '';
+        dados.integracoes.forEach(function (i) {
+          el.integracoesLista.appendChild(montarIntegracao(i));
+        });
+      })
+      .catch(function (e) {
+        el.integracoesLista.innerHTML = '<p class="vazio">Não deu para carregar: ' + esc(e.message) + '</p>';
+      });
+  }
+
+  el.btnIntegracoes.addEventListener('click', abrirIntegracoes);
+  // Link direto: /config/#integracoes cai já com o painel aberto. É por onde
+  // a tela de boas-vindas manda quem acabou de instalar.
+  if (location.hash === '#integracoes') abrirIntegracoes();
+  document.getElementById('integracoes-fechar').addEventListener('click', function () {
+    el.overlayIntegracoes.classList.remove('aberto');
+  });
+  el.overlayIntegracoes.addEventListener('click', function (ev) {
+    if (ev.target === el.overlayIntegracoes) el.overlayIntegracoes.classList.remove('aberto');
   });
 
   async function iniciar() {
