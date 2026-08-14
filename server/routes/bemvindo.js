@@ -8,10 +8,11 @@
 // descobrir o token por aqui.
 
 const express = require('express');
-const { exigirLocal } = require('../lib/auth');
+const { exigirLocal, exigirToken } = require('../lib/auth');
 const { TOKEN, ORIGEM } = require('../lib/token');
 const { gerarSvg } = require('../lib/qr');
 const { descobrirIpLan } = require('../lib/rede');
+const segundoPlano = require('../lib/segundo-plano');
 
 module.exports = function criarRotaBemVindo(porta) {
   const router = express.Router();
@@ -30,7 +31,20 @@ module.exports = function criarRotaBemVindo(porta) {
       urlLan,
       urlPareamento,
       qr: urlPareamento ? gerarSvg(urlPareamento) : null,
+      // Rodando destacado do console, esta tela vira o único jeito prático de
+      // desligar o servidor — e o log some de vista, então dizemos onde está.
+      segundoPlano: segundoPlano.ehFilho(),
+      arquivoLog: segundoPlano.ehFilho() ? segundoPlano.arquivoLog : null,
     });
+  });
+
+  // Desligar o servidor sem depender do Gerenciador de Tarefas. Pede token
+  // além de ser local: um POST de formulário vindo de outro site abriria a
+  // porta para derrubarem o servidor de fora, e o token corta isso.
+  router.post('/bemvindo/encerrar', exigirLocal, exigirToken, (req, res) => {
+    res.json({ ok: true, mensagem: 'Encerrando o Stream Deck Web…' });
+    // Um respiro para a resposta chegar antes do processo morrer.
+    setTimeout(() => process.exit(0), 250);
   });
 
   return router;

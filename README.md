@@ -8,6 +8,25 @@ gravação do OBS, e (opcionalmente) Spotify e Philips Hue.
 Feito para substituir o Touch Portal: sem limites de plugin, com visual
 próprio, e configurável por uma tela de configuração no próprio navegador.
 
+## 📄 Só quer usar? Comece pelo guia em PDF
+
+**[Guia de Primeiro Acesso (PDF)](docs/Guia-Stream-Deck-Web.pdf)** — do
+arquivo baixado até o deck funcionando no tablet, em uns 10 minutos, sem
+precisar saber programar.
+
+1. Baixe o **`stream-deck-web.exe`** (na aba
+   [Releases](../../releases) deste repositório) e o
+   **[guia em PDF](docs/Guia-Stream-Deck-Web.pdf)**.
+2. Abra o PDF **antes** de rodar o programa e siga os passos.
+
+Não é preciso instalar Node, WSL, nem clonar este repositório: o `.exe` é um
+arquivo só e cria a pasta `dados/` com a configuração ao lado dele.
+
+O resto deste README é a documentação técnica — para quem vai rodar do
+código-fonte, mexer no projeto ou entender como ele funciona por dentro. A
+lista completa do que dá para colocar num botão está em
+**[docs/acoes.md](docs/acoes.md)**.
+
 ## Sumário
 
 - [Arquitetura](#arquitetura)
@@ -23,7 +42,9 @@ próprio, e configurável por uma tela de configuração no próprio navegador.
 - [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
 - [Editar páginas e botões](#editar-páginas-e-botões)
 - [Tela de configuração](#pela-tela-de-configuração-recomendado)
+- [Todas as ações disponíveis](docs/acoes.md)
 - [Gerar o executável (.exe)](#gerar-o-executável-exe)
+- [Rodando em segundo plano](#rodando-em-segundo-plano)
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Scripts npm](#scripts-npm)
 - [Solução de problemas](#solução-de-problemas)
@@ -184,11 +205,25 @@ Windows/WSL.
 ### Confirmar que está acessível
 
 - No PC: abra `http://localhost:3000` — deve mostrar a grade de botões.
-- No tablet: abra `http://<IP>:3000` no Chrome. Se a grade aparecer e os
+- No tablet: abra `http://<IP>:3000` no navegador. Se a grade aparecer e os
   botões responderem ao toque, a rede está OK.
-- No Chrome do tablet, use o menu → **"Adicionar à tela inicial"** (ou o
-  banner de instalação) para instalar como PWA — ele abre em tela cheia,
-  sem barra de endereço, como um app nativo.
+- Use o menu → **"Adicionar à tela inicial"** (ou o banner de instalação)
+  para instalar como PWA — ele abre em tela cheia, sem barra de endereço,
+  como um app nativo.
+
+### Qual navegador usar no tablet
+
+O **Opera Mini** vai bem aqui: é leve, o que ajuda em tablets antigos — que
+é justamente o tipo de aparelho que costuma virar deck.
+
+**O cuidado que ele exige:** o modo de economia de dados do Opera Mini passa
+as páginas por servidores da Opera antes de exibir. Como o deck está na rede
+local, e não na internet, esse proxy não alcança o endereço e a página pode
+simplesmente não carregar. Se a tela ficar em branco, **desligue a economia
+de dados** (ou o modo "Extreme") nas configurações do app.
+
+O **Chrome** continua sendo a opção mais previsível, e tem o melhor suporte
+a instalar como PWA (tela cheia de verdade, com ícone próprio).
 
 ## Token de acesso
 
@@ -481,6 +516,25 @@ Nas execuções seguintes ela não abre sozinha (senão apareceria uma aba a
 cada vez que você liga o PC). Para mudar isso, use `ABRIR_NAVEGADOR` no
 `.env`: `primeira` (padrão), `sempre` ou `nunca`.
 
+### Rodando em segundo plano
+
+**A janela preta pode ser fechada.** O executável se solta do console e
+continua rodando — o processo que você clicou é só um lançador: ele confere
+se já não há uma instância no ar, sobe o servidor destacado, imprime o
+token/QR e sai.
+
+- **Para encerrar**, use o botão **Encerrar servidor** na tela de
+  boas-vindas (ou `taskkill /IM stream-deck-web.exe /F`).
+- **Os logs** vão para `dados/stream-deck.log`, já que não há console para
+  escrever. O arquivo é zerado quando passa de 512 KB.
+- **Clicar duas vezes no `.exe` com ele já rodando** não sobe uma segunda
+  cópia: abre a tela de boas-vindas da instância existente.
+- **Para acompanhar na tela** (diagnóstico), rode
+  `stream-deck-web.exe --console`, ou ponha `SEGUNDO_PLANO=false` no `.env`.
+
+Rodando do código-fonte (`npm start` / `npm run dev`) nada disso se aplica: o
+console continua sendo o lugar dos logs.
+
 Junto do `.exe` é criada uma pasta `dados/`:
 
 ```
@@ -515,17 +569,25 @@ assim mesmo**). Assinar exigiria um certificado pago.
 ```
 stream-deck-web/
 ├── config/
-│   ├── pages.config.example.json  # exemplo versionado (placeholders)
+│   ├── pages.config.example.json  # template inicial versionado (vai no .exe)
 │   └── pages.config.json          # SEU layout real — gitignored, edite aqui
+├── docs/
+│   ├── acoes.md                    # GERADO por npm run docs — todas as ações
+│   ├── guia-primeiro-acesso.html   # fonte do guia (edite este)
+│   └── Guia-Stream-Deck-Web.pdf    # GERADO por npm run docs:pdf
 ├── scripts/
 │   ├── windows-media.ps1     # volume e mute do Windows (P/Invoke)
 │   ├── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam
-│   └── build.js              # gera o executável do Windows (npm run build)
+│   ├── build.js              # gera o executável do Windows (npm run build)
+│   ├── gerar-docs.js         # gera docs/acoes.md a partir do catálogo
+│   └── gerar-pdf.js          # gera o PDF do guia (Chrome headless)
 ├── server/
 │   ├── index.js               # bootstrap: Express + WebSocket + integrações
 │   ├── config-store.js        # lê, valida, grava e recarrega o config
 │   ├── lib/
 │   │   ├── caminhos.js       # resolve caminhos (código-fonte vs empacotado)
+│   │   ├── segundo-plano.js  # relança o .exe destacado do console
+│   │   ├── catalogo-ui.js    # tipos de botão e estilos (editor + doc gerada)
 │   │   ├── qr.js             # QR em SVG para a tela de boas-vindas
 │   │   ├── rede.js           # descobre o IP da máquina na LAN
 │   │   ├── token.js          # token de acesso
@@ -533,6 +595,7 @@ stream-deck-web/
 │   │   └── powershell-interop.js  # chama powershell.exe (WSL2 ou nativo), compartilhado
 │   ├── routes/
 │   │   ├── actions.js          # POST /action/:id — dispatcher genérico
+│   │   ├── bemvindo.js         # GET /api/bemvindo e o encerrar do servidor
 │   │   ├── spotify-auth.js     # /spotify/login e /spotify/callback (OAuth, uma vez)
 │   │   └── atalhos.js          # GET /atalhos/janelas e /atalhos/jogos (listas dos seletores)
 │   └── integrations/
@@ -562,6 +625,14 @@ stream-deck-web/
 | `npm start`     | Sobe o servidor uma vez (produção)                    |
 | `npm run dev`   | Sobe com `nodemon`, reiniciando a cada alteração      |
 | `npm run build` | Gera `build/stream-deck-web.exe` para Windows         |
+| `npm run docs`  | Regenera `docs/acoes.md` a partir do catálogo das integrações |
+| `npm run docs:pdf` | Regenera o guia em PDF a partir de `docs/guia-primeiro-acesso.html` |
+
+`npm run docs` deve ser rodado sempre que uma ação for adicionada ou tiver
+rótulo/parâmetros alterados — o arquivo é gerado, não escrito à mão. O
+`docs:pdf` usa o Chrome (ou Edge/Brave) já instalado no Windows em modo
+headless; sem nenhum deles, dá para abrir o HTML e usar "Imprimir → Salvar
+como PDF".
 
 ## Solução de problemas
 
@@ -572,10 +643,12 @@ stream-deck-web/
 
 - **OBS não conecta**
   Confira se o WebSocket Server está habilitado no OBS (Ferramentas →
-  WebSocket Server Settings), se a porta/senha no `.env` batem, e se o OBS
-  está aberto antes de iniciar o servidor (a integração tenta reconectar
-  sozinha a cada 5s, então basta abrir o OBS depois — não precisa reiniciar
-  o servidor).
+  WebSocket Server Settings) e se a porta/senha no `.env` batem. Não precisa
+  abrir o OBS antes do servidor: a integração reconecta sozinha, com espera
+  crescente (5s, 10s, 20s… até 1 min), então abrir o OBS depois basta.
+  O aviso de "OBS não encontrado" sai **uma vez só** — as tentativas
+  seguintes são silenciosas, para não encher o log de quem não usa OBS.
+  Quem não usa pode desligar de vez com `OBS_HABILITADO=false` no `.env`.
 
 - **Tablet não consegue abrir a página**
   Revise a seção [Acessar do tablet](#acessar-do-tablet-rede--importante-no-wsl2).

@@ -7,7 +7,13 @@
 const EventEmitter = require('events');
 const OBSWebSocket = require('obs-websocket-js').default;
 
-const ATRASO_RECONEXAO_MS = 5000;
+// A reconexão começa rápida (quem fechou o OBS por um instante volta logo) e
+// vai desacelerando até um minuto. Sem esse teto, quem nunca abre o OBS teria
+// uma tentativa a cada 5 segundos para sempre.
+const ATRASO_RECONEXAO_INICIAL_MS = 5000;
+const ATRASO_RECONEXAO_MAXIMO_MS = 60000;
+// Prazo da tentativa de conexão — veja o comentário em _conectarComPrazo().
+const TEMPO_LIMITE_CONEXAO_MS = 8000;
 
 class IntegracaoObs extends EventEmitter {
   constructor() {
@@ -21,7 +27,16 @@ class IntegracaoObs extends EventEmitter {
     };
     this.obs = new OBSWebSocket();
     this.nomeEntradaMic = process.env.OBS_MIC_INPUT_NAME || 'Mic/Aux';
+    // Diferente de Spotify e Hue, o OBS não precisa de credencial nenhuma
+    // para funcionar — então não dá para deduzir "não configurado" da
+    // ausência de .env. Quem não usa OBS desliga aqui.
+    this.habilitado = String(process.env.OBS_HABILITADO || 'true').toLowerCase() !== 'false';
     this._timeoutReconexao = null;
+    this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
+    // O aviso de "não achei o OBS" sai uma vez só. As tentativas seguintes
+    // são silenciosas: é o caso normal de quem nunca vai abrir o OBS, e um
+    // log repetido só esconderia o que importa.
+    this._jaAvisouOffline = false;
     this._configurarEventos();
   }
 
@@ -42,7 +57,11 @@ class IntegracaoObs extends EventEmitter {
 
     this.obs.on('ConnectionClosed', () => {
       if (this.estado.conectado) {
-        console.warn('[obs] Conexão com o OBS caiu. Tentando reconectar em 5s...');
+        // Estava conectado e caiu: o OBS fechou ou travou. Aqui o aviso vale,
+        // e a espera volta ao começo para reconectar rápido quando reabrir.
+        console.warn('[obs] Conexão com o OBS caiu. Tentando reconectar...');
+        this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
+        this._jaAvisouOffline = true;
       }
       this._atualizarEstado({ conectado: false });
       this._agendarReconexao();
@@ -55,20 +74,58 @@ class IntegracaoObs extends EventEmitter {
   }
 
   _agendarReconexao() {
-    if (this._timeoutReconexao) return;
+    if (this._timeoutReconexao || !this.habilitado) return;
+    const atraso = this._atrasoReconexao;
+    this._atrasoReconexao = Math.min(atraso * 2, ATRASO_RECONEXAO_MAXIMO_MS);
     this._timeoutReconexao = setTimeout(() => {
       this._timeoutReconexao = null;
       this.inicializar().catch(() => {});
-    }, ATRASO_RECONEXAO_MS);
+    }, atraso);
+    // Não segura o processo vivo só por causa da tentativa agendada.
+    if (this._timeoutReconexao.unref) this._timeoutReconexao.unref();
+  }
+
+  // Por que não chamar `this.obs.connect()` direto: quando ninguém atende na
+  // porta, o `connect()` do obs-websocket-js depende do socket devolver erro
+  // para rejeitar. Numa recusa limpa (Windows) isso é imediato, mas quando a
+  // rede engole a tentativa em silêncio — o caso do WSL2 em modo espelhado,
+  // que fica esperando o Windows responder — a promessa nunca resolve nem
+  // rejeita. Sem prazo, a primeira tentativa ficaria pendurada para sempre e
+  // a reconexão nunca chegaria a ser agendada: o OBS não conectaria nem
+  // depois de aberto.
+  async _conectarComPrazo(url, senha) {
+    let expirar;
+    const prazo = new Promise((_, rejeitar) => {
+      expirar = setTimeout(
+        () => rejeitar(new Error(`sem resposta em ${TEMPO_LIMITE_CONEXAO_MS / 1000}s`)),
+        TEMPO_LIMITE_CONEXAO_MS,
+      );
+    });
+
+    try {
+      await Promise.race([this.obs.connect(url, senha), prazo]);
+    } catch (erro) {
+      // Deixa o socket meio aberto para trás e a próxima tentativa herdaria a
+      // bagunça — o connect() só troca de socket depois de desconectar.
+      await this.obs.disconnect().catch(() => {});
+      throw erro;
+    } finally {
+      clearTimeout(expirar);
+    }
   }
 
   async inicializar() {
+    if (!this.habilitado) {
+      console.log('[obs] Desligado por OBS_HABILITADO=false no .env — módulo inativo.');
+      return;
+    }
+
     const host = process.env.OBS_WEBSOCKET_HOST || 'localhost';
     const porta = process.env.OBS_WEBSOCKET_PORT || 4455;
     const senha = process.env.OBS_WEBSOCKET_PASSWORD || undefined;
 
     try {
-      await this.obs.connect(`ws://${host}:${porta}`, senha);
+      await this._conectarComPrazo(`ws://${host}:${porta}`, senha);
 
       const { currentProgramSceneName } = await this.obs.call('GetSceneList');
       const { outputActive } = await this.obs.call('GetRecordStatus');
@@ -87,11 +144,29 @@ class IntegracaoObs extends EventEmitter {
         gravando: outputActive,
         micMudo,
       });
+      this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
+      this._jaAvisouOffline = false;
       console.log('[obs] Conectado ao OBS WebSocket.');
     } catch (erro) {
-      console.warn(`[obs] Não foi possível conectar ao OBS (${erro.message}). Tentando novamente em 5s...`);
+      if (!this._jaAvisouOffline) {
+        this._jaAvisouOffline = true;
+        // Numa recusa de conexão o obs-websocket-js devolve o erro sem
+        // mensagem, e "( )" no log só confunde.
+        const motivo = erro.message || 'conexão recusada';
+        console.log(
+          `[obs] OBS não encontrado em ${host}:${porta} (${motivo}). ` +
+            'Vou tentando em segundo plano — abra o OBS com o WebSocket Server ligado e ' +
+            'ele conecta sozinho. Se você não usa OBS, ponha OBS_HABILITADO=false no .env.',
+        );
+      }
       this._agendarReconexao();
     }
+  }
+
+  _motivoIndisponivel() {
+    if (!this.habilitado) return 'Desligado por OBS_HABILITADO=false no .env.';
+    if (this.estado.conectado) return null;
+    return 'OBS não conectado — abra o OBS com o WebSocket Server ligado (ele reconecta sozinho).';
   }
 
   // Descreve o que esta integração oferece, para a tela de configuração
@@ -100,9 +175,7 @@ class IntegracaoObs extends EventEmitter {
     return {
       rotulo: 'OBS Studio',
       disponivel: this.estado.conectado,
-      motivoIndisponivel: this.estado.conectado
-        ? null
-        : 'OBS não conectado — abra o OBS com o WebSocket Server ligado (ele reconecta sozinho).',
+      motivoIndisponivel: this._motivoIndisponivel(),
       estados: [
         { chave: 'obs.cenaAtual', rotulo: 'Cena ativa', tipo: 'texto' },
         { chave: 'obs.micMudo', rotulo: 'Microfone mudo', tipo: 'booleano' },

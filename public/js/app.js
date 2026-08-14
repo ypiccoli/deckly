@@ -360,6 +360,13 @@
         window.acesso.pedirToken();
         return;
       }
+      // Com token válido, o outro jeito de falhar aqui é o servidor estar
+      // fora do ar — e aí o casco do app veio do cache do service worker,
+      // desenhando um deck de mentira. Melhor dizer isso na cara.
+      if (!(await window.acesso.servidorNoAr())) {
+        window.acesso.mostrarOffline();
+        return;
+      }
       throw erro;
     }
 

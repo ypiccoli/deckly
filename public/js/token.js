@@ -9,10 +9,12 @@
 //   3. A pessoa digita, na tela de pareamento que aparece quando falta.
 //
 // Expõe window.acesso com:
-//   .token          valor atual (ou null)
-//   .buscar(u, o)   fetch já com o header do token
-//   .paraWs(url)    acrescenta o token na query (WebSocket não aceita header)
-//   .pedirToken()   abre a tela de pareamento
+//   .token             valor atual (ou null)
+//   .buscar(u, o)      fetch já com o header do token
+//   .paraWs(url)       acrescenta o token na query (WebSocket não aceita header)
+//   .pedirToken()      abre a tela de pareamento
+//   .servidorNoAr()    promessa true/false — o servidor respondeu?
+//   .mostrarOffline()  abre a tela de "servidor fora do ar", com religa sozinho
 
 (function () {
   'use strict';
@@ -98,9 +100,92 @@
       'background:linear-gradient(135deg,#6c5ce7,#00d1b2)}',
       '.pareamento-cartao button:disabled{opacity:.5;cursor:default}',
       '.pareamento-erro{color:#ff4d5e!important;font-size:.85rem!important}',
+      // Tela de servidor offline: mesmo cartão, com um cabeçalho de aviso.
+      '.pareamento-titulo{display:flex;align-items:center;gap:10px}',
+      '.pareamento-titulo .icone{font-size:1.5rem;line-height:1}',
+      '.pareamento-lista{margin:0;padding-left:18px;font-size:.86rem;color:#8a8f9c;line-height:1.6}',
+      '.pareamento-lista code{font-family:ui-monospace,Consolas,monospace;color:#eef0f4}',
+      '.pareamento-tentando{font-size:.8rem!important;color:#6b7180!important;text-align:center}',
     ].join('');
     document.head.appendChild(estilo);
   }
+
+  /* ---------------- servidor fora do ar ---------------- */
+
+  // Qualquer resposta HTTP serve como prova de vida — inclusive um 401, que
+  // significa "estou aqui, mas seu token não vale". O que distingue o
+  // servidor desligado é a promessa REJEITAR (falha de rede).
+  //
+  // Precisa ser uma URL sob /api: o service worker cacheia o casco do app
+  // (veja public/sw.js) e responderia do cache para /, /index.html e afins —
+  // era exatamente por isso que o deck parecia vivo com o servidor desligado.
+  acesso.servidorNoAr = function () {
+    return fetch('/api/config', { cache: 'no-store' }).then(
+      function () { return true; },
+      function () { return false; },
+    );
+  };
+
+  var INTERVALO_RETENTATIVA_MS = 4000;
+
+  // Enquanto esta tela está aberta, fica testando sozinha: quando o servidor
+  // subir, o deck volta sem ninguém tocar no tablet. É o caso comum — o
+  // tablet fica na base e o PC é quem liga e desliga.
+  acesso.mostrarOffline = function (aoVoltar) {
+    if (document.querySelector('.pareamento')) return;
+    injetarEstilo();
+
+    var fundo = document.createElement('div');
+    fundo.className = 'pareamento';
+    fundo.innerHTML =
+      '<div class="pareamento-cartao">' +
+      '<div class="pareamento-titulo"><span class="icone">🔌</span>' +
+      '<h2>Servidor não encontrado</h2></div>' +
+      '<p>Esta tela abriu do cache do aparelho, mas o Stream Deck Web não está ' +
+      'respondendo. Os botões não funcionariam.</p>' +
+      '<ul class="pareamento-lista">' +
+      '<li>O programa está rodando no PC? Abra o <code>stream-deck-web.exe</code>.</li>' +
+      '<li>O PC está ligado e na mesma rede Wi-Fi que este aparelho?</li>' +
+      '</ul>' +
+      '<button type="button" id="offline-tentar">Tentar de novo</button>' +
+      '<p class="pareamento-tentando" id="offline-status">Tentando sozinho a cada 4 segundos…</p>' +
+      '</div>';
+    document.body.appendChild(fundo);
+
+    var botao = fundo.querySelector('#offline-tentar');
+    var status = fundo.querySelector('#offline-status');
+    var timer = null;
+
+    function voltar() {
+      clearInterval(timer);
+      fundo.remove();
+      // Recarregar é mais confiável do que retomar um boot pela metade: o
+      // servidor pode ter subido com outro token ou outro layout.
+      if (aoVoltar) aoVoltar();
+      else location.reload();
+    }
+
+    function tentar(manual) {
+      if (manual) {
+        botao.disabled = true;
+        status.textContent = 'Procurando o servidor…';
+      }
+      acesso.servidorNoAr().then(function (vivo) {
+        if (vivo) {
+          status.textContent = 'Servidor encontrado! Recarregando…';
+          voltar();
+          return;
+        }
+        if (manual) {
+          botao.disabled = false;
+          status.textContent = 'Ainda sem resposta. Tentando sozinho a cada 4 segundos…';
+        }
+      });
+    }
+
+    botao.addEventListener('click', function () { tentar(true); });
+    timer = setInterval(function () { tentar(false); }, INTERVALO_RETENTATIVA_MS);
+  };
 
   // Criada por JS em vez de ficar no HTML porque as duas páginas (deck e
   // configuração) precisam dela e nenhuma deveria duplicar esse markup.
@@ -170,7 +255,14 @@
       aoTerToken();
       return;
     }
-    acesso.pedirToken(aoTerToken);
+    // Sem token guardado, pedir o token só faz sentido se houver servidor
+    // para validá-lo. Com o servidor desligado, o casco do app ainda abre
+    // pelo cache do service worker — e sem esta checagem a pessoa digitaria
+    // um token correto para receber "sem conexão" de volta.
+    acesso.servidorNoAr().then(function (vivo) {
+      if (vivo) acesso.pedirToken(aoTerToken);
+      else acesso.mostrarOffline();
+    });
   };
 
   window.acesso = acesso;

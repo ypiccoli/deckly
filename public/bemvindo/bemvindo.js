@@ -15,6 +15,43 @@
       (detalhe ? '<p>' + detalhe + '</p>' : '') + '</div>';
   }
 
+  // O rodapé muda conforme o servidor esteja preso a uma janela de console ou
+  // rodando destacado — nos dois casos a pergunta é a mesma ("e para
+  // desligar?"), mas a resposta é diferente.
+  function montarRodape(dados) {
+    var texto = document.getElementById('rodape-texto');
+    if (texto) {
+      texto.innerHTML = dados.segundoPlano
+        ? 'O servidor está rodando em segundo plano — pode fechar a janela preta ' +
+          'sem derrubar o deck. Ele fica no ar até você encerrar aqui ou desligar o PC.' +
+          (dados.arquivoLog ? '<br />Log: <code>' + dados.arquivoLog + '</code>' : '')
+        : 'Enquanto a janela do servidor estiver aberta, o deck funciona. ' +
+          'Fechá-la derruba o servidor.';
+    }
+
+    var botao = document.getElementById('encerrar');
+    if (!botao) return;
+    botao.addEventListener('click', function () {
+      if (!window.confirm('Encerrar o Stream Deck Web? O deck para de responder no tablet.')) return;
+      botao.disabled = true;
+      botao.textContent = 'Encerrando…';
+      // O token vai junto: sem ele qualquer página aberta no navegador
+      // conseguiria derrubar o servidor com um POST.
+      fetch('/api/bemvindo/encerrar', {
+        method: 'POST',
+        headers: { 'X-Token': dados.token },
+      })
+        .then(function () {
+          botao.textContent = 'Servidor encerrado';
+        })
+        .catch(function () {
+          // O processo pode morrer antes de a resposta chegar — o que, aqui,
+          // significa que deu certo.
+          botao.textContent = 'Servidor encerrado';
+        });
+    });
+  }
+
   fetch('/api/bemvindo')
     .then(function (r) {
       if (r.status === 403) {
@@ -56,6 +93,8 @@
 
       var elUrlLan = document.getElementById('url-lan');
       if (elUrlLan) elUrlLan.textContent = dados.urlLan || '(endereço não descoberto)';
+
+      montarRodape(dados);
 
       var botao = document.getElementById('copiar');
       if (botao) {

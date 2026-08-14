@@ -13,6 +13,7 @@
 const express = require('express');
 const configStore = require('../config-store');
 const { exigirLocal } = require('../lib/auth');
+const { TIPOS_BOTAO, ESTILOS_ESTADO } = require('../lib/catalogo-ui');
 
 module.exports = function criarRotaConfig(integracoes, aoAtualizarConfig) {
   const router = express.Router();
@@ -57,17 +58,8 @@ module.exports = function criarRotaConfig(integracoes, aoAtualizarConfig) {
     }
     res.json({
       integracoes: catalogo,
-      tipos: [
-        { id: 'botao', rotulo: 'Botão', descricao: 'Toca e dispara uma ação.' },
-        { id: 'slider', rotulo: 'Slider', descricao: 'Controle deslizante, para volume e afins.' },
-        { id: 'info', rotulo: 'Mostrador', descricao: 'Só exibe informação ao vivo, não dispara nada.' },
-        { id: 'lista', rotulo: 'Seletor', descricao: 'Abre uma lista de opções para escolher.' },
-      ],
-      estilosEstado: [
-        { id: 'destaque', rotulo: 'Destaque (verde)' },
-        { id: 'perigo', rotulo: 'Alerta (vermelho)' },
-        { id: 'gravando', rotulo: 'Gravando (vermelho pulsante)' },
-      ],
+      tipos: TIPOS_BOTAO,
+      estilosEstado: ESTILOS_ESTADO,
     });
   });
 

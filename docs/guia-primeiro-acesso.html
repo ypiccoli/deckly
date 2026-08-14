@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Stream Deck Web — Guia de Primeiro Acesso</title>
+<style>
+  /* Folha pensada para impressão (é daqui que sai o PDF), não para tela.
+     Tudo em preto no branco, sem imagem externa: o gerador roda o Chrome em
+     modo headless, que não busca nada na rede. */
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #14161c;
+    margin: 0;
+  }
+
+  h1, h2, h3 { line-height: 1.25; }
+
+  /* ---------- capa ---------- */
+  .capa {
+    height: 245mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    page-break-after: always;
+  }
+  .capa .marca {
+    font-size: 42pt;
+    line-height: 1;
+    margin-bottom: 14mm;
+  }
+  .capa h1 {
+    font-size: 30pt;
+    margin: 0 0 4mm;
+    letter-spacing: -0.02em;
+  }
+  .capa .linha {
+    width: 28mm;
+    height: 3pt;
+    background: #6c5ce7;
+    margin: 6mm 0;
+  }
+  .capa p {
+    font-size: 12pt;
+    color: #4a4f5c;
+    max-width: 120mm;
+    margin: 0 0 3mm;
+  }
+  .capa .rodape-capa {
+    margin-top: 18mm;
+    font-size: 9.5pt;
+    color: #6b7180;
+  }
+
+  /* ---------- estrutura ---------- */
+  h2 {
+    font-size: 15pt;
+    margin: 0 0 4mm;
+    padding-bottom: 2mm;
+    border-bottom: 1.5pt solid #e3e5ea;
+  }
+  h3 {
+    font-size: 11.5pt;
+    margin: 6mm 0 2mm;
+  }
+  .secao {
+    page-break-before: always;
+  }
+  .secao--continua {
+    page-break-before: auto;
+    margin-top: 10mm;
+  }
+
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.5mm; }
+
+  code {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 9.5pt;
+    background: #f1f2f5;
+    border: 0.5pt solid #e0e2e8;
+    border-radius: 3pt;
+    padding: 0.4mm 1.2mm;
+  }
+
+  strong { color: #000; }
+
+  /* ---------- passos ---------- */
+  .passo {
+    display: flex;
+    gap: 5mm;
+    margin-bottom: 6mm;
+    page-break-inside: avoid;
+  }
+  .passo-num {
+    flex: 0 0 9mm;
+    height: 9mm;
+    border-radius: 50%;
+    background: #6c5ce7;
+    color: #fff;
+    font-weight: 700;
+    font-size: 12pt;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .passo-corpo { flex: 1; }
+  .passo-corpo h3 { margin-top: 0.6mm; }
+
+  /* ---------- caixas ---------- */
+  .caixa {
+    border: 0.75pt solid #d8dae1;
+    border-left: 3pt solid #6c5ce7;
+    border-radius: 3pt;
+    padding: 3.5mm 4mm;
+    margin: 0 0 4mm;
+    background: #fafafc;
+    page-break-inside: avoid;
+  }
+  .caixa p:last-child { margin-bottom: 0; }
+  .caixa .titulo {
+    font-weight: 700;
+    font-size: 9.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #514a9c;
+    margin-bottom: 1.5mm;
+  }
+  .caixa--atencao { border-left-color: #d98324; background: #fffaf4; }
+  .caixa--atencao .titulo { color: #a5661a; }
+
+  /* ---------- tabelas ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 4mm;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 2mm 2.5mm;
+    border-bottom: 0.5pt solid #e3e5ea;
+  }
+  th {
+    background: #f1f2f5;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #4a4f5c;
+  }
+
+  .sumario ol { padding-left: 5mm; }
+  .sumario li { margin-bottom: 2mm; }
+
+  .nota-final {
+    margin-top: 8mm;
+    padding-top: 3mm;
+    border-top: 0.5pt solid #e3e5ea;
+    font-size: 9pt;
+    color: #6b7180;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== CAPA ===================== -->
+<section class="capa">
+  <div class="marca">🎛️</div>
+  <h1>Stream Deck Web</h1>
+  <div class="linha"></div>
+  <p><strong>Guia de primeiro acesso.</strong> Do arquivo baixado até o deck
+  funcionando no tablet, sem precisar saber programar.</p>
+  <p>Transforme qualquer tablet ou celular numa mesa de botões para o seu PC:
+  volume, mídia, atalhos do Windows, programas, jogos e OBS — tudo por toque,
+  pela rede da sua casa.</p>
+  <div class="rodape-capa">
+    Leva cerca de 10 minutos · Windows 10 ou 11 · Nenhuma instalação necessária
+  </div>
+</section>
+
+<!-- ===================== SUMÁRIO ===================== -->
+<section class="secao sumario">
+  <h2>O que tem neste guia</h2>
+  <ol>
+    <li><strong>Antes de começar</strong> — o que você precisa ter em mãos</li>
+    <li><strong>Ligar o programa no PC</strong> — baixar, rodar e o aviso do Windows</li>
+    <li><strong>Conectar o tablet</strong> — o QR code e o token de acesso</li>
+    <li><strong>Deixar com cara de aplicativo</strong> — instalar na tela inicial</li>
+    <li><strong>Montar o seu deck</strong> — criar e editar botões</li>
+    <li><strong>Extras opcionais</strong> — OBS, Spotify e iniciar junto com o Windows</li>
+    <li><strong>Quando algo não funciona</strong> — os problemas mais comuns</li>
+  </ol>
+
+  <div class="caixa">
+    <div class="titulo">Como isto funciona, em uma frase</div>
+    <p>O programa que roda no seu PC é um pequeno servidor. O tablet abre uma
+    página no navegador, pela rede Wi-Fi da sua casa, e cada botão que você
+    toca ali manda um comando para o PC. Nada passa pela internet e nada é
+    instalado no tablet.</p>
+  </div>
+
+  <h2 class="secao--continua">1. Antes de começar</h2>
+  <table>
+    <tr>
+      <th style="width: 38mm">O que</th>
+      <th>Detalhe</th>
+    </tr>
+    <tr>
+      <td>Um PC com Windows</td>
+      <td>Windows 10 ou 11. É nele que o programa roda e é ele que os botões controlam.</td>
+    </tr>
+    <tr>
+      <td>Um tablet ou celular</td>
+      <td>Android ou iPad, com um navegador. É a sua mesa de botões.</td>
+    </tr>
+    <tr>
+      <td>A mesma rede Wi-Fi</td>
+      <td><strong>O ponto mais importante.</strong> PC e tablet precisam estar na
+      mesma rede da casa. Se o tablet estiver em outra rede (ou usando dados
+      móveis), nada vai carregar.</td>
+    </tr>
+    <tr>
+      <td>O arquivo do programa</td>
+      <td><code>stream-deck-web.exe</code> — um arquivo só, sem instalador.</td>
+    </tr>
+  </table>
+
+  <div class="caixa">
+    <div class="titulo">Rede de visitantes</div>
+    <p>Alguns roteadores têm uma rede "Visitantes" separada, que impede os
+    aparelhos de conversarem entre si. Se o seu tablet estiver nela, mude para
+    a rede principal.</p>
+  </div>
+</section>
+
+<!-- ===================== PASSO 2 ===================== -->
+<section class="secao">
+  <h2>2. Ligar o programa no PC</h2>
+
+  <div class="passo">
+    <div class="passo-num">1</div>
+    <div class="passo-corpo">
+      <h3>Coloque o arquivo numa pasta sua</h3>
+      <p>Crie uma pasta em algum lugar de que você goste — por exemplo
+      <code>Documentos\StreamDeck</code> — e mova o <code>stream-deck-web.exe</code>
+      para lá.</p>
+      <p>Isso importa: na primeira vez que roda, o programa cria uma pasta
+      <code>dados</code> ao lado dele, com a sua configuração e o seu token. Se
+      o arquivo ficar na pasta Downloads, sua configuração vai morar na pasta
+      Downloads também.</p>
+    </div>
+  </div>
+
+  <div class="passo">
+    <div class="passo-num">2</div>
+    <div class="passo-corpo">
+      <h3>Dê dois cliques no arquivo</h3>
+      <p>Uma janela preta abre por alguns segundos, mostrando um QR code, e o
+      seu navegador abre sozinho numa tela de boas-vindas.</p>
+    </div>
+  </div>
+
+  <div class="passo">
+    <div class="passo-num">3</div>
+    <div class="passo-corpo">
+      <h3>Se aparecer um aviso azul do Windows</h3>
+      <p>A tela diz <em>"O Windows protegeu o computador"</em>. Isso acontece com
+      qualquer programa novo que não tenha uma assinatura digital paga — não é
+      um alerta de vírus. Clique em <strong>Mais informações</strong> e depois em
+      <strong>Executar assim mesmo</strong>.</p>
+    </div>
+  </div>
+
+  <div class="passo">
+    <div class="passo-num">4</div>
+    <div class="passo-corpo">
+      <h3>Se aparecer o alerta do Firewall</h3>
+      <p>O Windows vai perguntar se o programa pode se comunicar na rede.
+      Marque <strong>Redes particulares</strong> e clique em
+      <strong>Permitir acesso</strong>. Sem isso o tablet não consegue enxergar
+      o PC.</p>
+    </div>
+  </div>
+
+  <div class="passo">
+    <div class="passo-num">5</div>
+    <div class="passo-corpo">
+      <h3>Pode fechar a janela preta</h3>
+      <p>O programa se solta dela e continua rodando em segundo plano. O deck
+      segue funcionando no tablet mesmo com a janela fechada.</p>
+      <p>Para desligar, volte na tela de boas-vindas
+      (<code>http://127.0.0.1:3000/bemvindo/</code>) e clique em
+      <strong>Encerrar servidor</strong>.</p>
+    </div>
+  </div>
+
+  <div class="caixa">
+    <div class="titulo">A tela de boas-vindas é o seu painel</div>
+    <p>É ela que mostra o QR code, o token e os atalhos para abrir o deck e a
+    tela de configuração. Ela só abre no PC onde o programa roda — de
+    propósito, já que é onde o token aparece. Guarde o endereço
+    <code>http://127.0.0.1:3000/bemvindo/</code> nos favoritos.</p>
+  </div>
+</section>
+
+<!-- ===================== PASSO 3 ===================== -->
+<section class="secao">
+  <h2>3. Conectar o tablet</h2>
+
+  <p>O deck é protegido por um <strong>token</strong> — uma senha curta, no
+  formato <code>ABCD-1234-EFGH-5678</code>. Sem ela, nenhum outro aparelho da
+  rede consegue mandar comandos para o seu PC. Você só precisa informá-la uma
+  vez por aparelho.</p>
+
+  <h3>O jeito fácil: apontar a câmera</h3>
+  <ol>
+    <li>No tablet, abra a câmera (ou um leitor de QR code).</li>
+    <li>Aponte para o QR que está na tela de boas-vindas do PC.</li>
+    <li>Toque no link que aparecer.</li>
+  </ol>
+  <p>Pronto: o navegador abre já com o token preenchido, e o deck aparece. O
+  token fica guardado no aparelho — nas próximas vezes é só abrir.</p>
+
+  <h3>O jeito manual</h3>
+  <ol>
+    <li>Na tela de boas-vindas do PC, veja o endereço em "Sem câmera?" — algo
+    como <code>http://192.168.0.15:3000</code>.</li>
+    <li>Digite esse endereço no navegador do tablet.</li>
+    <li>Quando pedir, digite o token que aparece na tela do PC.</li>
+  </ol>
+
+  <div class="caixa">
+    <div class="titulo">Qual navegador usar no tablet</div>
+    <p>O <strong>Opera Mini</strong> é uma boa escolha: é leve e rápido, o que
+    ajuda em tablets antigos, que é justamente o tipo de aparelho que costuma
+    virar deck.</p>
+    <p><strong>Um cuidado:</strong> ele tem um modo de economia de dados que
+    passa as páginas por servidores da Opera antes de exibir. Como o seu deck
+    está na rede da sua casa, e não na internet, esse modo pode impedir a
+    página de carregar. Se a tela ficar em branco ou der erro, abra as
+    configurações do Opera Mini e <strong>desligue a economia de dados</strong>
+    (ou o "modo Extreme").</p>
+    <p>Se ainda assim não abrir, use o <strong>Chrome</strong> — ele também tem
+    o melhor suporte ao passo 4 (instalar na tela inicial).</p>
+  </div>
+
+  <div class="caixa caixa--atencao">
+    <div class="titulo">Sobre segurança</div>
+    <p>O token impede que outros aparelhos da rede usem o seu deck, e a tela de
+    configuração só responde no próprio PC. Mas isto foi feito para a rede de
+    casa: <strong>não exponha o programa à internet</strong> (nada de abrir
+    portas no roteador).</p>
+  </div>
+</section>
+
+<!-- ===================== PASSO 4 ===================== -->
+<section class="secao">
+  <h2>4. Deixar com cara de aplicativo</h2>
+
+  <p>Dá para usar pelo navegador mesmo, mas instalando na tela inicial o deck
+  abre em tela cheia, sem barra de endereço, e ganha um ícone próprio —
+  parecendo um app de verdade.</p>
+
+  <h3>No Android (Chrome)</h3>
+  <ol>
+    <li>Com o deck aberto, toque nos três pontinhos do canto.</li>
+    <li>Escolha <strong>Adicionar à tela inicial</strong> (ou "Instalar app").</li>
+    <li>Confirme. O ícone aparece junto dos seus outros aplicativos.</li>
+  </ol>
+
+  <h3>No Opera Mini</h3>
+  <p>Toque no menu e procure <strong>Adicionar à tela inicial</strong>. Ele cria
+  um atalho — que já resolve, ainda que sem a tela cheia completa do Chrome.</p>
+
+  <h3>No iPad (Safari)</h3>
+  <ol>
+    <li>Toque no ícone de compartilhar (o quadrado com a seta para cima).</li>
+    <li>Escolha <strong>Adicionar à Tela de Início</strong>.</li>
+  </ol>
+
+  <div class="caixa">
+    <div class="titulo">Dica de tablet</div>
+    <p>Nas configurações do tablet, aumente o tempo até a tela apagar (ou
+    desative o bloqueio automático) enquanto ele estiver na base servindo de
+    deck. E deixe-o carregando: a tela ligada consome bateria.</p>
+  </div>
+</section>
+
+<!-- ===================== PASSO 5 ===================== -->
+<section class="secao">
+  <h2>5. Montar o seu deck</h2>
+
+  <p>O deck já vem com quatro páginas prontas. As três primeiras funcionam sem
+  você configurar nada:</p>
+
+  <table>
+    <tr>
+      <th style="width: 30mm">Página</th>
+      <th>O que faz</th>
+    </tr>
+    <tr>
+      <td>🎵 Mídia</td>
+      <td>Play/pause, faixa anterior e próxima, mudo e uma barra de volume do
+      Windows. Funciona com o que estiver tocando — YouTube, Spotify, jogo.</td>
+    </tr>
+    <tr>
+      <td>🖥️ Sistema</td>
+      <td>Lista das janelas abertas (toque para ir direto a uma), print,
+      bloquear o PC, mostrar a área de trabalho, encaixar janelas nos lados.</td>
+    </tr>
+    <tr>
+      <td>🚀 Atalhos</td>
+      <td>Exemplos de abrir programas e sites, além de um seletor com os jogos
+      instalados da Steam.</td>
+    </tr>
+    <tr>
+      <td>🎬 OBS</td>
+      <td>Trocar de cena, mutar o microfone e gravar. Só funciona com o OBS
+      aberto — veja a seção 6.</td>
+    </tr>
+  </table>
+
+  <h3>Para mudar os botões</h3>
+  <p>No PC, abra <code>http://127.0.0.1:3000/config/</code> (ou clique no ⚙️ no
+  canto do deck). Dali você cria páginas, adiciona botões, escolhe emoji,
+  arrasta o que quiser e clica em <strong>Salvar</strong>.</p>
+  <p><strong>Não precisa reiniciar nada:</strong> ao salvar, o tablet se
+  atualiza sozinho, na hora.</p>
+
+  <div class="caixa">
+    <div class="titulo">Por que a configuração só abre no PC</div>
+    <p>Um botão pode mandar abrir qualquer programa. Deixar isso editável pela
+    rede seria o mesmo que deixar qualquer aparelho da casa executar coisas no
+    seu PC. Por isso a tela de configuração, por padrão, só responde na própria
+    máquina.</p>
+  </div>
+
+  <h3>O que dá para colocar num botão</h3>
+  <ul>
+    <li><strong>Programas e sites</strong> — pelo caminho do <code>.exe</code>,
+    por um comando (<code>notepad</code>) ou por um endereço.</li>
+    <li><strong>Atalhos do Windows</strong> — print, bloquear, área de
+    transferência, encaixar janelas, trocar de monitor.</li>
+    <li><strong>Volume e mídia</strong> — inclusive uma barra deslizante.</li>
+    <li><strong>Macros</strong> — vários passos num toque só (abrir o jogo
+    <em>e</em> o Discord, por exemplo).</li>
+    <li><strong>Botões que acendem</strong> — o botão de mudo fica vermelho
+    quando o PC está mudo, o de gravar pisca enquanto grava.</li>
+  </ul>
+  <p>A lista completa, com todos os parâmetros de cada ação, está no arquivo
+  <code>docs/acoes.md</code>, no repositório.</p>
+</section>
+
+<!-- ===================== PASSO 6 ===================== -->
+<section class="secao">
+  <h2>6. Extras opcionais</h2>
+
+  <p>Nada aqui é necessário para o deck funcionar. São ajustes no arquivo
+  <code>.env</code>, que fica dentro da pasta <code>dados</code>, ao lado do
+  programa. Abra com o Bloco de Notas, edite e reinicie o programa.</p>
+
+  <h3>OBS Studio</h3>
+  <ol>
+    <li>No OBS: <strong>Ferramentas > Configurações do Servidor WebSocket</strong>.</li>
+    <li>Marque <strong>Ativar servidor WebSocket</strong>.</li>
+    <li>Se você definir uma senha ali, copie-a para
+    <code>OBS_WEBSOCKET_PASSWORD=</code> no <code>.env</code>.</li>
+    <li>Na tela de configuração, corrija os nomes das cenas para bater
+    exatamente com os do seu OBS.</li>
+  </ol>
+  <p>O programa reconecta sozinho: pode deixar os botões prontos e abrir o OBS
+  depois. Se você não usa OBS, ponha <code>OBS_HABILITADO=false</code> no
+  <code>.env</code> e apague a página.</p>
+
+  <h3>Spotify</h3>
+  <p>Exige <strong>Spotify Premium</strong> (é uma limitação do próprio
+  Spotify) e alguns minutos criando um aplicativo no site de desenvolvedores
+  deles. Em troca você ganha um mostrador com a música tocando, um volume só do
+  Spotify e a troca de aparelho onde a música toca. O passo a passo completo
+  está na seção "Habilitar o Spotify" do README.</p>
+
+  <h3>Iniciar junto com o Windows</h3>
+  <ol>
+    <li>Clique com o botão direito no <code>stream-deck-web.exe</code> e escolha
+    <strong>Criar atalho</strong>.</li>
+    <li>Aperte <strong>Windows + R</strong>, digite <code>shell:startup</code> e
+    dê Enter.</li>
+    <li>Arraste o atalho para a pasta que abriu.</li>
+  </ol>
+  <p>A partir daí o deck fica pronto assim que o PC liga, sem nenhuma janela
+  aparecendo.</p>
+</section>
+
+<!-- ===================== PROBLEMAS ===================== -->
+<section class="secao">
+  <h2>7. Quando algo não funciona</h2>
+
+  <table>
+    <tr>
+      <th style="width: 55mm">Sintoma</th>
+      <th>O que costuma ser</th>
+    </tr>
+    <tr>
+      <td>A página não abre no tablet</td>
+      <td>Quase sempre é a rede. Confirme que o tablet está no <strong>mesmo
+      Wi-Fi</strong> (não em dados móveis, nem na rede de visitantes). Se estiver
+      usando Opera Mini, desligue a economia de dados. Depois, confira se o
+      Firewall do Windows foi liberado para redes particulares.</td>
+    </tr>
+    <tr>
+      <td>Abre, mas pede o token toda hora</td>
+      <td>O navegador está apagando os dados do site ao fechar (modo anônimo ou
+      limpeza automática). Use uma aba normal, ou instale na tela inicial.</td>
+    </tr>
+    <tr>
+      <td>O deck abre mas os botões não fazem nada</td>
+      <td>O indicador de conexão no canto mostra o estado. Se estiver
+      desconectado, o programa provavelmente foi encerrado no PC — rode o
+      <code>.exe</code> de novo.</td>
+    </tr>
+    <tr>
+      <td>Os botões do OBS estão apagados</td>
+      <td>O OBS está fechado ou o servidor WebSocket dele não está ligado. Veja
+      a seção 6.</td>
+    </tr>
+    <tr>
+      <td>Um ícone aparece como quadradinho</td>
+      <td>O emoji escolhido não existe na fonte do tablet. Troque por outro na
+      tela de configuração.</td>
+    </tr>
+    <tr>
+      <td>Nada acontece ao dar dois cliques</td>
+      <td>Pode já estar rodando em segundo plano: abra
+      <code>http://127.0.0.1:3000/bemvindo/</code>. Se não abrir, rode pelo
+      Prompt de Comando com <code>stream-deck-web.exe --console</code> para ver
+      a mensagem de erro na tela.</td>
+    </tr>
+    <tr>
+      <td>Quero ver o que deu errado</td>
+      <td>Há um arquivo <code>stream-deck.log</code> dentro da pasta
+      <code>dados</code>, com tudo que o programa registrou.</td>
+    </tr>
+  </table>
+
+  <h3>Como desinstalar</h3>
+  <p>Não há instalação, então não há desinstalação: encerre o servidor e apague
+  a pasta. Se tiver criado o atalho de inicialização, apague-o de
+  <code>shell:startup</code> também.</p>
+
+  <div class="nota-final">
+    Stream Deck Web é um projeto pessoal, de código aberto. A documentação
+    técnica completa — como funciona por dentro, como adicionar novas
+    integrações e a lista de todas as ações — está no repositório, no
+    <code>README.md</code> e em <code>docs/acoes.md</code>.
+  </div>
+</section>
+
+</body>
+</html>

@@ -187,6 +187,29 @@ h1 {
   font-size: 0.8rem;
   color: var(--texto-fraco);
 }
+.rodape p { margin: 0 0 14px; }
+.rodape code {
+  font-family: ui-monospace, Consolas, monospace;
+  color: var(--texto);
+}
+
+/* Desligar o servidor: rodando em segundo plano não há janela para fechar,
+   então este botão é o caminho normal — mas continua sendo destrutivo, daí o
+   tom de alerta só no hover. */
+.btn-encerrar {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--borda);
+  background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-encerrar:hover { color: #ff8095; border-color: #ff8095; }
+.btn-encerrar:disabled { opacity: 0.5; cursor: default; }
 
 .erro {
   background: rgba(255, 77, 94, 0.08);

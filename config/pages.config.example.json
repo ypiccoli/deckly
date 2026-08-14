@@ -1,33 +1,45 @@
 {
+  "_nota": "Deck inicial do Stream Deck Web. É o que aparece na primeira execução, e serve de ponto de partida: tudo aqui pode ser mudado pela tela de configuração (o ⚙️ no canto do deck), sem editar este arquivo. As duas primeiras páginas funcionam sem configurar nada; a de OBS precisa do OBS aberto. A lista completa do que dá para colocar num botão está em docs/acoes.md.",
   "paginas": [
     {
       "id": "midia",
       "titulo": "Mídia",
       "icone": "🎵",
+      "_nota": "Controla o áudio do Windows inteiro (seja YouTube, Spotify, jogo). Funciona sem configurar nada. Se você tem Spotify Premium, dá para adicionar botões que mostram a música tocando e trocam o volume só do Spotify — veja 'Habilitar o Spotify' no README.",
       "botoes": [
         {
-          "id": "midia.mute",
+          "id": "midia.play_pause",
+          "titulo": "Play / Pause",
+          "icone": "⏯️",
+          "integracao": "media",
+          "acao": "playPause"
+        },
+        {
+          "id": "midia.anterior",
+          "titulo": "Anterior",
+          "icone": "⏮️",
+          "integracao": "media",
+          "acao": "faixaAnterior"
+        },
+        {
+          "id": "midia.proxima",
+          "titulo": "Próxima",
+          "icone": "⏭️",
+          "integracao": "media",
+          "acao": "proximaFaixa"
+        },
+        {
+          "id": "midia.mudo",
           "titulo": "Mudo",
           "icone": "🔇",
           "integracao": "media",
           "acao": "alternarMudo",
           "estadoChave": "media.mudo",
-          "estiloEstado": "perigo"
+          "estiloEstado": "perigo",
+          "_nota": "estadoChave + estiloEstado deixam o botão vermelho sozinho quando o PC está mudo, mesmo que o mudo tenha sido feito pelo teclado."
         },
         {
-          "id": "spotify.now_playing",
-          "titulo": "Tocando agora",
-          "icone": "🎵",
-          "tipo": "info",
-          "estadoChave": "spotify.tocando",
-          "estadoTexto": "spotify.musica",
-          "estadoTextoSecundario": "spotify.artista",
-          "estadoTextoTerciario": "spotify.dispositivo",
-          "estiloEstado": "destaque",
-          "_nota": "Fica cedo na lista de propósito: é o que menos deveria acabar cortado por scroll."
-        },
-        {
-          "id": "midia.volume_slider",
+          "id": "midia.volume",
           "titulo": "Volume",
           "icone": "🎚️",
           "tipo": "slider",
@@ -36,199 +48,6 @@
           "integracao": "media",
           "acao": "definirVolume",
           "estadoChave": "media.volume"
-        },
-        {
-          "id": "spotify.volume_slider",
-          "titulo": "Volume Spotify",
-          "icone": "🎧",
-          "tipo": "slider",
-          "min": 0,
-          "max": 100,
-          "integracao": "spotify",
-          "acao": "definirVolume",
-          "estadoChave": "spotify.volume"
-        },
-        {
-          "id": "spotify.anterior",
-          "titulo": "Spotify ⏮",
-          "icone": "🎧",
-          "integracao": "spotify",
-          "acao": "faixaAnterior"
-        },
-        {
-          "id": "spotify.play_pause",
-          "titulo": "Spotify ▶",
-          "tituloAtivo": "Spotify ⏸",
-          "icone": "🎧",
-          "integracao": "spotify",
-          "acao": "playPause",
-          "estadoChave": "spotify.tocando",
-          "estiloEstado": "destaque",
-          "_nota": "Usa o mesmo ícone dos outros botões de Spotify; quem muda conforme o estado é o título (tituloAtivo)."
-        },
-        {
-          "id": "spotify.proxima",
-          "titulo": "Spotify ⏭",
-          "icone": "🎧",
-          "integracao": "spotify",
-          "acao": "proximaFaixa"
-        },
-        {
-          "id": "spotify.tocar_em",
-          "titulo": "Tocar em…",
-          "icone": "📡",
-          "tipo": "lista",
-          "fonte": "/spotify/dispositivos",
-          "mensagemVazia": "Nenhum dispositivo Spotify ativo. Abra o Spotify em algum aparelho e tente de novo.",
-          "integracao": "spotify",
-          "acao": "transferirReproducao"
-        }
-      ]
-    },
-    {
-      "id": "atalhos",
-      "titulo": "Atalhos",
-      "icone": "🚀",
-      "botoes": [
-        {
-          "id": "atalhos.spotify",
-          "titulo": "Spotify",
-          "icone": "🎧",
-          "integracao": "atalhos",
-          "acao": "abrirApp",
-          "parametros": {
-            "caminho": "C:\\Users\\SEU_USUARIO\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Spotify.lnk"
-          },
-          "_nota": "Aponta para o .lnk do Menu Iniciar, não para o .exe: apps que se auto-atualizam trocam a pasta de versão e quebrariam um caminho fixo."
-        },
-        {
-          "id": "atalhos.claude",
-          "titulo": "Claude",
-          "icone": "🤖",
-          "integracao": "atalhos",
-          "acao": "abrirUwp",
-          "parametros": {
-            "appId": "Claude_pzs8sxrjxfjjc!Claude"
-          },
-          "_nota": "Claude Desktop é app empacotado (MSIX/Store): não tem .exe chamável, abre pelo AppUserModelID."
-        },
-        {
-          "id": "atalhos.obsidian",
-          "titulo": "Obsidian",
-          "icone": "🗒️",
-          "integracao": "atalhos",
-          "acao": "abrirApp",
-          "parametros": {
-            "caminho": "C:\\Users\\SEU_USUARIO\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Obsidian.lnk"
-          },
-          "_nota": "Aponta para o .lnk do Menu Iniciar (mesmo motivo do Spotify)."
-        },
-        {
-          "id": "atalhos.mobaxterm",
-          "titulo": "MobaXterm",
-          "icone": "🔌",
-          "integracao": "atalhos",
-          "acao": "abrirApp",
-          "parametros": {
-            "caminho": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\MobaXterm\\MobaXterm.lnk"
-          }
-        },
-        {
-          "id": "atalhos.vscode",
-          "titulo": "VS Code",
-          "icone": "💻",
-          "integracao": "atalhos",
-          "acao": "abrirApp",
-          "parametros": {
-            "caminho": "code"
-          }
-        },
-        {
-          "id": "atalhos.terminal",
-          "titulo": "Terminal",
-          "icone": "⌨️",
-          "integracao": "atalhos",
-          "acao": "abrirApp",
-          "parametros": {
-            "caminho": "wt"
-          }
-        },
-        {
-          "id": "atalhos.lol",
-          "titulo": "LoL + Blitz",
-          "icone": "🎮",
-          "acoes": [
-            {
-              "integracao": "atalhos",
-              "acao": "abrirApp",
-              "parametros": {
-                "caminho": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Riot Games\\League of Legends.lnk"
-              }
-            },
-            {
-              "integracao": "atalhos",
-              "acao": "abrirApp",
-              "parametros": {
-                "caminho": "C:\\Users\\SEU_USUARIO\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Blitz.lnk"
-              }
-            }
-          ],
-          "_nota": "Macro: um toque abre o jogo e o overlay juntos."
-        },
-        {
-          "id": "atalhos.steam",
-          "titulo": "Steam",
-          "icone": "🕹️",
-          "integracao": "atalhos",
-          "acao": "abrirApp",
-          "parametros": {
-            "caminho": "C:\\Program Files (x86)\\Steam\\steam.exe"
-          }
-        },
-        {
-          "id": "atalhos.jogos_steam",
-          "titulo": "Jogar…",
-          "icone": "🎯",
-          "tipo": "lista",
-          "fonte": "/atalhos/jogos",
-          "iconeItem": "🎮",
-          "mensagemVazia": "Nenhum jogo instalado encontrado na Steam.",
-          "integracao": "atalhos",
-          "acao": "abrirJogo",
-          "_nota": "Lê os appmanifest_*.acf de todas as bibliotecas da Steam, inclusive em outros discos — jogo novo aparece sozinho."
-        },
-        {
-          "id": "atalhos.uptime_kuma",
-          "titulo": "Uptime Kuma",
-          "icone": "📈",
-          "integracao": "atalhos",
-          "acao": "abrirUrl",
-          "parametros": {
-            "url": "http://IP-DO-SEU-SERVIDOR:3001",
-            "navegador": "C:\\Users\\SEU_USUARIO\\AppData\\Local\\Vivaldi\\Application\\vivaldi.exe"
-          }
-        },
-        {
-          "id": "atalhos.pihole",
-          "titulo": "Pi-hole",
-          "icone": "🛡️",
-          "integracao": "atalhos",
-          "acao": "abrirUrl",
-          "parametros": {
-            "url": "http://IP-DO-SEU-SERVIDOR/admin",
-            "navegador": "C:\\Users\\SEU_USUARIO\\AppData\\Local\\Vivaldi\\Application\\vivaldi.exe"
-          }
-        },
-        {
-          "id": "atalhos.faculdade",
-          "titulo": "Faculdade",
-          "icone": "🎓",
-          "integracao": "atalhos",
-          "acao": "abrirUrl",
-          "parametros": {
-            "url": "https://portal.suafaculdade.edu.br/",
-            "navegador": "C:\\Program Files\\Zen Browser\\zen.exe"
-          }
         }
       ]
     },
@@ -236,42 +55,8 @@
       "id": "sistema",
       "titulo": "Sistema",
       "icone": "🖥️",
+      "_nota": "Atalhos do Windows. Também funcionam sem configurar nada.",
       "botoes": [
-        {
-          "id": "sistema.print",
-          "titulo": "Print",
-          "icone": "📸",
-          "integracao": "atalhos",
-          "acao": "print"
-        },
-        {
-          "id": "sistema.bloquear",
-          "titulo": "Bloquear",
-          "icone": "🔒",
-          "integracao": "atalhos",
-          "acao": "bloquear"
-        },
-        {
-          "id": "sistema.area_trabalho",
-          "titulo": "Área de Trabalho",
-          "icone": "🖥️",
-          "integracao": "atalhos",
-          "acao": "areaTrabalho"
-        },
-        {
-          "id": "sistema.snap_esquerda",
-          "titulo": "Snap ⬅",
-          "icone": "◧",
-          "integracao": "atalhos",
-          "acao": "snapEsquerda"
-        },
-        {
-          "id": "sistema.snap_direita",
-          "titulo": "Snap ➡",
-          "icone": "◨",
-          "integracao": "atalhos",
-          "acao": "snapDireita"
-        },
         {
           "id": "sistema.janelas",
           "titulo": "Janelas",
@@ -282,103 +67,144 @@
           "mensagemVazia": "Nenhuma janela aberta no momento.",
           "integracao": "atalhos",
           "acao": "focarJanela",
-          "_nota": "Substituiu um Alt+Tab simulado: o seletor nativo do Windows não é navegável por toque."
+          "_nota": "Toque para ver as janelas abertas e ir direto para uma delas — funciona melhor no tablet do que um Alt+Tab simulado, que não dá para navegar por toque."
         },
         {
-          "id": "sistema.clipboard",
+          "id": "sistema.print",
+          "titulo": "Print",
+          "icone": "📸",
+          "integracao": "atalhos",
+          "acao": "print"
+        },
+        {
+          "id": "sistema.area_trabalho",
+          "titulo": "Área de Trabalho",
+          "icone": "🖥️",
+          "integracao": "atalhos",
+          "acao": "areaTrabalho"
+        },
+        {
+          "id": "sistema.area_transferencia",
           "titulo": "Área de Transferência",
           "icone": "📋",
           "integracao": "atalhos",
           "acao": "areaTransferencia"
+        },
+        {
+          "id": "sistema.snap_esquerda",
+          "titulo": "Encaixar ⬅",
+          "icone": "◧",
+          "integracao": "atalhos",
+          "acao": "snapEsquerda"
+        },
+        {
+          "id": "sistema.snap_direita",
+          "titulo": "Encaixar ➡",
+          "icone": "◨",
+          "integracao": "atalhos",
+          "acao": "snapDireita"
+        },
+        {
+          "id": "sistema.bloquear",
+          "titulo": "Bloquear",
+          "icone": "🔒",
+          "integracao": "atalhos",
+          "acao": "bloquear"
         }
       ]
     },
     {
-      "id": "casa",
-      "titulo": "Casa",
-      "icone": "💡",
+      "id": "atalhos",
+      "titulo": "Atalhos",
+      "icone": "🚀",
+      "_nota": "Exemplos de programas e sites, escolhidos por existirem em qualquer Windows. Troque pelos seus: na tela de configuração, a ação 'Abrir programa' aceita tanto um comando ('notepad') quanto o caminho completo de um .exe ou de um atalho .lnk.",
       "botoes": [
         {
-          "id": "hue.sala_toggle",
-          "titulo": "Luz Sala",
-          "icone": "💡",
-          "integracao": "hue",
-          "acao": "alternarLuz",
-          "parametros": {
-            "grupo": "Sala"
-          },
-          "estadoChave": "hue.sala.ligada",
-          "estiloEstado": "destaque"
+          "id": "atalhos.explorador",
+          "titulo": "Explorador",
+          "icone": "📁",
+          "integracao": "atalhos",
+          "acao": "abrirApp",
+          "parametros": { "caminho": "explorer" }
         },
         {
-          "id": "hue.quarto_toggle",
-          "titulo": "Luz Quarto",
-          "icone": "💡",
-          "integracao": "hue",
-          "acao": "alternarLuz",
-          "parametros": {
-            "grupo": "Quarto"
-          },
-          "estadoChave": "hue.quarto.ligada",
-          "estiloEstado": "destaque"
+          "id": "atalhos.bloco_notas",
+          "titulo": "Bloco de Notas",
+          "icone": "🗒️",
+          "integracao": "atalhos",
+          "acao": "abrirApp",
+          "parametros": { "caminho": "notepad" }
+        },
+        {
+          "id": "atalhos.calculadora",
+          "titulo": "Calculadora",
+          "icone": "🧮",
+          "integracao": "atalhos",
+          "acao": "abrirApp",
+          "parametros": { "caminho": "calc" }
+        },
+        {
+          "id": "atalhos.site_exemplo",
+          "titulo": "Abrir um site",
+          "icone": "🌐",
+          "integracao": "atalhos",
+          "acao": "abrirUrl",
+          "parametros": { "url": "https://www.google.com" },
+          "_nota": "Sem o parâmetro 'navegador', abre no navegador padrão do Windows. Preencha o caminho de um navegador específico se quiser forçar um."
+        },
+        {
+          "id": "atalhos.jogos_steam",
+          "titulo": "Jogar…",
+          "icone": "🎯",
+          "tipo": "lista",
+          "fonte": "/atalhos/jogos",
+          "iconeItem": "🎮",
+          "mensagemVazia": "Nenhum jogo da Steam encontrado neste PC.",
+          "integracao": "atalhos",
+          "acao": "abrirJogo",
+          "_nota": "Lê os jogos instalados da Steam, inclusive em outros discos. Jogo novo aparece sozinho. Se você não usa Steam, apague este botão."
         }
       ]
     },
     {
       "id": "obs",
       "titulo": "OBS",
-      "icone": "🎥",
+      "icone": "🎬",
+      "_nota": "Só funciona com o OBS aberto e o WebSocket Server ligado (Ferramentas > WebSocket Server Settings). Sem isso os botões ficam apagados e não fazem nada — não quebra nada. Se você não usa OBS, apague a página inteira e ponha OBS_HABILITADO=false no .env.",
       "botoes": [
         {
-          "id": "obs.cena_inicio",
-          "titulo": "Início",
-          "icone": "🏠",
+          "id": "obs.cena_1",
+          "titulo": "Cena 1",
+          "icone": "🎬",
           "integracao": "obs",
           "acao": "trocarCena",
-          "parametros": {
-            "cena": "Início"
-          },
+          "parametros": { "cena": "Cena" },
           "estadoChave": "obs.cenaAtual",
           "estadoComparar": "cena",
-          "estiloEstado": "destaque"
+          "estiloEstado": "destaque",
+          "_nota": "'Cena' é o nome padrão da primeira cena do OBS em português. Precisa bater EXATAMENTE com o nome no OBS, senão o botão não faz nada — corrija na tela de configuração."
         },
         {
-          "id": "obs.cena_jogo",
-          "titulo": "Jogo",
+          "id": "obs.cena_2",
+          "titulo": "Cena 2",
           "icone": "🎮",
           "integracao": "obs",
           "acao": "trocarCena",
-          "parametros": {
-            "cena": "Jogo"
-          },
+          "parametros": { "cena": "Cena 2" },
           "estadoChave": "obs.cenaAtual",
           "estadoComparar": "cena",
-          "estiloEstado": "destaque"
+          "estiloEstado": "destaque",
+          "_nota": "Duplique este botão para cada cena que você tiver. Todos usam a mesma estadoChave; quem acende é o que casa com o próprio parâmetro 'cena'."
         },
         {
-          "id": "obs.cena_camera",
-          "titulo": "Câmera",
-          "icone": "📷",
-          "integracao": "obs",
-          "acao": "trocarCena",
-          "parametros": {
-            "cena": "Câmera"
-          },
-          "estadoChave": "obs.cenaAtual",
-          "estadoComparar": "cena",
-          "estiloEstado": "destaque"
-        },
-        {
-          "id": "obs.mic_mute",
+          "id": "obs.mic",
           "titulo": "Mic",
           "icone": "🎙️",
           "integracao": "obs",
           "acao": "alternarMicMudo",
-          "parametros": {
-            "entrada": "Mic/Aux"
-          },
           "estadoChave": "obs.micMudo",
-          "estiloEstado": "perigo"
+          "estiloEstado": "perigo",
+          "_nota": "Usa a fonte de áudio definida em OBS_MIC_INPUT_NAME no .env (padrão: Mic/Aux)."
         },
         {
           "id": "obs.gravar",

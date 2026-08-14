@@ -796,6 +796,14 @@
 
       renderTudo();
     } catch (erro) {
+      // "Não deu para carregar: Failed to fetch" não ajuda ninguém. Se o
+      // servidor caiu entre abrir a página e buscar os dados, diga isso.
+      // (Esta tela não está no cache do service worker, ao contrário do
+      // deck — aqui a janela para dar errado é menor, mas existe.)
+      if (!(await window.acesso.servidorNoAr())) {
+        window.acesso.mostrarOffline();
+        return;
+      }
       el.subtitulo.textContent = 'falha ao carregar';
       el.erros.innerHTML = '<h3>Não deu para carregar a configuração</h3><ul><li>' + esc(erro.message) + '</li></ul>';
       el.erros.hidden = false;

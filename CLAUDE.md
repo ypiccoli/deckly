@@ -59,10 +59,16 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
 - **Dois arquivos de config, mesmo padrão do `.env`/`.env.example`:**
   `config/pages.config.json` é o pessoal (**gitignored** — tem caminhos da
   máquina, IPs da LAN e nomes de cena reais) e
-  `config/pages.config.example.json` é o exemplo versionado, com placeholders
-  (`SEU_USUARIO`, `IP-DO-SEU-SERVIDOR`). O `config-store.js` usa o pessoal
-  quando existe e cai no exemplo quando não. **Ao mexer no layout, mantenha
-  os dois em sincronia** — o exemplo é o que outras pessoas veem no GitHub.
+  `config/pages.config.example.json` é o versionado. O `config-store.js` usa
+  o pessoal quando existe e cai no exemplo quando não.
+- **O exemplo NÃO é um espelho do deck pessoal — é o template inicial.** Ele
+  é o que a pessoa recebe embutido no `.exe` e vê na primeira execução, então
+  o critério dele é outro: as páginas Mídia, Sistema e Atalhos precisam
+  funcionar **sem configurar nada**, e o que depende de setup (OBS, Spotify,
+  Hue) entra só com `_nota` explicando. Não copie botões pessoais para lá —
+  caminho de `C:\Users\...`, IP de servidor da casa e nome de cena real são
+  exatamente o que não deve aparecer para quem acabou de baixar. Mudança no
+  deck pessoal não precisa ser replicada no template.
 - O formato é **JSON**, não mais um módulo JS: precisa ser reescrito
   programaticamente pela tela de configuração sem perder nada. Como JSON não
   tem comentários, páginas e botões aceitam um campo opcional `_nota`, que
@@ -171,6 +177,29 @@ O botão "Janelas" substituiu um Alt+Tab simulado: o seletor nativo do
 Windows não dá para navegar por toque (ficava aberto esperando o teclado),
 então listar as janelas e focar a escolhida funciona muito melhor no tablet.
 
+## A conexão do OBS — dois modos de falhar, os dois já tratados
+
+O OBS é a única integração que fica tentando conectar sozinha, e ela erra de
+jeitos diferentes conforme o ambiente. Gotchas já resolvidos:
+
+- **`obs.connect()` pode nunca resolver nem rejeitar.** Ele depende de o
+  socket devolver erro. Numa recusa limpa (Windows nativo) isso é imediato,
+  mas quando a rede engole a tentativa em silêncio — o caso do WSL2 em modo
+  espelhado, que fica esperando o Windows — a promessa fica pendurada para
+  sempre, a reconexão nunca é agendada e o OBS não conecta **nem depois de
+  aberto**. Por isso existe `_conectarComPrazo()`, com prazo de 8s.
+- **A reconexão tem espera crescente (5s → 60s) e loga uma vez só.** Antes
+  era 5s fixo com um `console.warn` por tentativa: quem nunca abre o OBS
+  levava um aviso a cada 5 segundos para sempre. O aviso volta a sair quando
+  uma conexão que existia cai — aí é informação de verdade.
+- Diferente de Spotify e Hue, **não dá para deduzir "não configurado" da
+  ausência de `.env`**: o OBS funciona sem credencial nenhuma. Daí o
+  `OBS_HABILITADO` explícito.
+
+Reproduzir a recusa de conexão do WSL exige cuidado: nesta máquina uma porta
+fechada em `127.0.0.1` **pendura** em vez de recusar, então testes de
+"servidor fora do ar" não se comportam como no Windows.
+
 ## Empacotamento (.exe) e resolução de caminhos
 
 `npm run build` gera `build/stream-deck-web.exe` — Node SEA (Single
@@ -198,6 +227,60 @@ O build também é o único jeito prático de exercitar o caminho `nativo` do
 `powershell-interop.js` — rodando do WSL o modo é sempre `wsl`. O `.exe`
 gerado pode ser executado direto do WSL via interop, e aí reporta
 `platform: win32`; foi assim que o modo nativo foi validado.
+
+**Ao testar o `.exe` a partir do WSL, variáveis de ambiente do shell não
+chegam nele** (é um processo Windows; só passa o que estiver em `WSLENV`).
+Para mudar porta ou qualquer opção no teste, edite o `dados/.env` que ele
+cria — não adianta `PORT=3555 ./stream-deck-web.exe`.
+
+## Segundo plano (o .exe se solta do console)
+
+`server/lib/segundo-plano.js`. No Windows não dá para desprender um processo
+do console a que ele já pertence, então o executável **relança a si mesmo**
+destacado e o processo original vira só um lançador.
+
+- Pai e filho são o mesmo binário; o que os separa é a variável de ambiente
+  `STREAM_DECK_SEGUNDO_PLANO=1`, posta no filho. Sem essa marca o filho
+  relançaria a si mesmo para sempre.
+- **O pai é quem imprime o token/QR e abre o navegador**, não o filho: o
+  filho não tem console, e quando ele sobe o token já foi criado pelo pai —
+  ele nunca veria a condição de "primeira execução" (`ORIGEM === 'gerado
+  agora'`). Por isso o `listen()` do `index.js` volta cedo quando
+  `segundoPlano.ehFilho()`.
+- Por causa disso, `server/index.js` embrulha tudo em `iniciarServidor()`:
+  quando `talvezLancarEmSegundoPlano()` devolve `true`, **nada** do servidor
+  pode rodar neste processo. O lançador segue trabalhando em segundo plano
+  (o event loop fica vivo pelas esperas) e termina com `process.exit()`.
+- Só liga no modo empacotado. Do código-fonte o console é o lugar certo dos
+  logs — daí o `caminhos.empacotado` no `habilitado()`.
+- Antes de lançar, confere se a porta já responde: dois cliques no `.exe`
+  abrem a tela da instância existente em vez de subir uma segunda cópia.
+- Escotilhas: `--console` na linha de comando ou `SEGUNDO_PLANO=false`.
+
+Como não sobra janela para fechar, `POST /api/bemvindo/encerrar` (botão na
+tela de boas-vindas) é o caminho normal de desligar. Ele exige `exigirLocal`
+**e** `exigirToken` — só local não bastaria, porque um `<form>` de outro site
+aberto no navegador conseguiria derrubar o servidor com um POST.
+
+## Documentação gerada (`npm run docs`, `npm run docs:pdf`)
+
+Duas peças de documentação **não** são escritas à mão:
+
+- `docs/acoes.md` sai de `scripts/gerar-docs.js`, que lê o getter `catalogo`
+  de cada integração. Rode depois de mexer em qualquer ação. Uma ação que não
+  aparece ali é uma ação que também não aparece no editor — o que falta é a
+  entrada no catálogo.
+- `docs/Guia-Stream-Deck-Web.pdf` sai de `scripts/gerar-pdf.js`, que imprime
+  `docs/guia-primeiro-acesso.html` com o Chrome do Windows em headless. **A
+  fonte é o HTML** — editar o PDF não faz sentido, ele é regenerado.
+
+O guia em PDF é para quem só vai *usar* o programa (linguagem sem jargão,
+começando do download); o README é a documentação técnica. Os dois se
+apontam.
+
+`server/lib/catalogo-ui.js` existe por causa disso: os tipos de botão e os
+estilos de destaque são lidos tanto pela rota `/api/catalogo` quanto pelo
+gerador da doc.
 
 ## Tela de boas-vindas (`/bemvindo/`)
 
@@ -334,6 +417,21 @@ curl -s -H "X-Token: $TOKEN" -X POST http://localhost:3000/action/midia.volume_s
 # 127.0.0.1, senão dá 403 — veja CONFIG_REMOTO:
 curl -s -X PUT http://127.0.0.1:3000/api/config -H "X-Token: $TOKEN" \
   -H "Content-Type: application/json" -d @config/pages.config.json | jq .
+
+# Tela de boas-vindas (única rota sem token) e o desligamento:
+curl -s http://127.0.0.1:3000/api/bemvindo | jq '{segundoPlano, arquivoLog, urlLan}'
+curl -s -X POST -H "X-Token: $TOKEN" http://127.0.0.1:3000/api/bemvindo/encerrar
+```
+
+Validar o template inicial sem subir servidor (o mesmo validador da rota):
+
+```bash
+node -e "
+const store=require('./server/config-store');
+const integ={}; for (const n of ['media','obs','spotify','hue','atalhos'])
+  integ[n]=require('./server/integrations/'+n);
+const erros=store.validar(require('./config/pages.config.example.json'), integ);
+console.log(erros.length ? erros : 'template válido'); process.exit(0);"
 ```
 
 Não há suíte de testes automatizados neste projeto — validação é manual

@@ -2,7 +2,10 @@
 // funcionar em rede instável. Requisições dinâmicas (ações, WS, config)
 // nunca são cacheadas — sempre vão direto para a rede.
 
-const CACHE_NOME = 'stream-deck-web-v10';
+// Suba esta versão sempre que mexer em qualquer arquivo da lista abaixo: o
+// `activate` apaga os caches de nome diferente, e é só isso que faz um
+// aparelho já pareado largar o JS antigo.
+const CACHE_NOME = 'stream-deck-web-v11';
 const ARQUIVOS_ESTATICOS = [
   '/',
   '/index.html',
