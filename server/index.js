@@ -30,6 +30,7 @@ function iniciarServidor() {
   const criarRotaConfig = require('./routes/config');
   const criarRotaSpotifyAuth = require('./routes/spotify-auth');
   const criarRotaAtalhos = require('./routes/atalhos');
+  const criarRotaDiscord = require('./routes/discord');
   const criarRotaBemVindo = require('./routes/bemvindo');
   const criarRotaIntegracoes = require('./routes/integracoes');
   const { exigirToken } = require('./lib/auth');
@@ -67,6 +68,7 @@ function iniciarServidor() {
   app.use('/api', exigirToken, criarRotaIntegracoes(integracoes));
   app.use('/action', exigirToken, criarRotaAcoes(integracoes));
   app.use('/atalhos', exigirToken, criarRotaAtalhos());
+  app.use('/discord', exigirToken, criarRotaDiscord());
   // O /spotify tem uma particularidade: as rotas de OAuth não podem exigir
   // token, porque o Spotify redireciona o navegador de volta para /callback
   // sem ele. Elas se protegem por outro caminho (só respondem no próprio PC),

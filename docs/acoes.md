@@ -139,6 +139,8 @@ Nas configurações do botão, esta é a integração **atalhos**.
 | `moverMonitorEsquerda` | Mover janela para o monitor da esquerda | — |
 | `moverMonitorDireita` | Mover janela para o monitor da direita | — |
 | `enviarTeclas` | Enviar atalho de teclado | `combo` (texto, obrigatório) — Combinação de teclas _Ex.: CTRL+SHIFT+M. Vale CTRL, SHIFT, ALT, WIN, letras, números, F1–F24 e teclas como ENTER, ESC, TAB, setas._ |
+| `focarProcesso` | Trazer um programa para frente | `processo` (texto, obrigatório) — Nome do processo _Sem o .exe (ex.: Discord, vivaldi, Code). Falha se o programa não estiver aberto._ |
+| `digitarTexto` | Digitar um texto | `texto` (texto, obrigatório) — Texto _Digitado na janela que estiver em foco. Combine com "Trazer um programa para frente" numa macro._ |
 | `abrirApp` | Abrir programa | `caminho` (texto, obrigatório) — Caminho, comando ou atalho .lnk _Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt)._ |
 | `abrirUwp` | Abrir app da Store (MSIX) | `appId` (texto, obrigatório) — AppUserModelID _Descubra com: Get-StartApps | Where-Object { $_.Name -like '*Nome*' }_ |
 | `abrirUrl` | Abrir site | `url` (texto, obrigatório) — Endereço<br />`navegador` (texto) — Navegador específico (opcional) _Caminho do .exe. Em branco, abre no navegador padrão do Windows._ |
@@ -155,6 +157,15 @@ Nas configurações do botão, esta é a integração **discord**.
 
 | Ação | O que faz | Parâmetros |
 | --- | --- | --- |
-| `alternarMudo` | Alternar mudo do microfone | — |
-| `alternarSurdo` | Alternar surdo (mudo total) | — |
-| `alternarVideo` | Alternar câmera | — |
+| `alternarMudo` | Ativar/desativar microfone | — |
+| `alternarSurdo` | Ativar/desativar áudio (surdo) | — |
+| `atenderChamada` | Atender chamada | — |
+| `recusarChamada` | Recusar chamada | — |
+| `painelSom` | Alternar painel de som | — |
+| `canalAnterior` | Canal anterior | — |
+| `canalProximo` | Próximo canal | — |
+| `servidorAnterior` | Servidor anterior | — |
+| `servidorProximo` | Próximo servidor | — |
+| `ligacaoAtual` | Ir para a ligação atual | — |
+| `abrirBusca` | Abrir a busca do Discord | — |
+| `irPara` | Ir para um canal ou servidor | `destino` (texto) — Nome do canal ou servidor _Em branco num botão do tipo Seletor: as opções vêm da lista configurada na aba Integrações._ |

@@ -78,6 +78,30 @@ class IntegracaoAtalhos extends EventEmitter {
             },
           ],
         },
+        focarProcesso: {
+          rotulo: 'Trazer um programa para frente',
+          parametros: [
+            {
+              nome: 'processo',
+              rotulo: 'Nome do processo',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'Sem o .exe (ex.: Discord, vivaldi, Code). Falha se o programa não estiver aberto.',
+            },
+          ],
+        },
+        digitarTexto: {
+          rotulo: 'Digitar um texto',
+          parametros: [
+            {
+              nome: 'texto',
+              rotulo: 'Texto',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'Digitado na janela que estiver em foco. Combine com "Trazer um programa para frente" numa macro.',
+            },
+          ],
+        },
         abrirApp: {
           rotulo: 'Abrir programa',
           parametros: [
@@ -143,6 +167,16 @@ class IntegracaoAtalhos extends EventEmitter {
         this._garantirDisponivel();
         if (!parametros.combo) throw new Error('Parâmetro "combo" é obrigatório.');
         return this.controlador.enviarTeclas(parametros.combo);
+      },
+      focarProcesso: (parametros = {}) => {
+        this._garantirDisponivel();
+        if (!parametros.processo) throw new Error('Parâmetro "processo" é obrigatório.');
+        return this.controlador.focarProcesso(parametros.processo);
+      },
+      digitarTexto: (parametros = {}) => {
+        this._garantirDisponivel();
+        if (parametros.texto == null) throw new Error('Parâmetro "texto" é obrigatório.');
+        return this.controlador.digitarTexto(String(parametros.texto));
       },
 
       abrirUrl: (parametros = {}) => {

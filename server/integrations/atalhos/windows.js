@@ -24,6 +24,8 @@ class ControladorAtalhos {
   // Combo livre ("CTRL+SHIFT+M"). É o que permite acionar atalhos globais de
   // outros programas — a integração do Discord é feita inteiramente disto.
   enviarTeclas(combo) { return executarScript(this.caminhoScript, 'enviar_teclas', combo); }
+  focarProcesso(nome) { return executarScript(this.caminhoScript, 'focar_processo', nome); }
+  digitarTexto(texto) { return executarScript(this.caminhoScript, 'digitar_texto', texto); }
 
   // Abrir coisas
   abrirUrl(url, navegador) { return executarScript(this.caminhoScript, 'abrir_url', url, navegador); }

@@ -1,4 +1,4 @@
-<#
+﻿<#
   Controla volume e teclas de mídia do Windows sem depender de utilitários
   externos (ex.: nircmd) — usa P/Invoke direto na API do Windows.
 

@@ -458,16 +458,43 @@ e sem dependência nova.
 ninguém se você está mudo, então não há estado para refletir. Você aperta e
 alterna, sem confirmação visual no deck.
 
-### Configurar
+### Configurar: nada, na maioria dos casos
 
-1. No Discord: **Configurações do Usuário** (engrenagem) → **Teclas de
-   Atalho** → **Gravar Atalho**.
-2. Crie um atalho para cada ação que quiser: *Alternar Mudo*, *Alternar
-   Surdo*, *Alternar Câmera*. **Eles não vêm configurados de fábrica.**
-3. Na aba **Integrações** do deck, informe exatamente as mesmas combinações.
+Já vem apontando para os atalhos **padrão do Discord** — `CTRL+SHIFT+M` para
+o microfone, `CTRL+SHIFT+D` para o áudio, `ALT+↑/↓` para canais, e assim por
+diante. Funciona sem você configurar nada.
 
-Sugestões que não conflitam com atalhos do Windows: `CTRL+SHIFT+F1`,
-`CTRL+SHIFT+F2`, `CTRL+SHIFT+F3`.
+### As duas telas de atalho do Discord (a parte que confunde)
+
+O Discord tem duas, e elas fazem coisas diferentes:
+
+| Tela | O que é | Funciona com o Discord em segundo plano? |
+|---|---|---|
+| **Atalhos de teclado** | Lista dos atalhos embutidos. **Só de leitura** — não dá para editar | **Não.** Só com o Discord em foco |
+| **Teclas de Atalho** | Onde você **cria** os seus | **Sim** |
+
+Como o padrão são os embutidos, cada ação **traz o Discord para frente antes
+de mandar a tecla**. O efeito colateral é perder o foco do que estiver aberto
+— um jogo, por exemplo.
+
+Se isso incomodar: crie os seus em **Teclas de Atalho**, informe-os na aba
+Integrações e desligue **"Trazer o Discord para frente antes"**. Aí nada
+rouba o foco.
+
+### O seletor "Ir para…"
+
+Um botão que lista canais e servidores e leva você direto a eles. Por baixo
+ele usa o **Quick Switcher** do Discord (`CTRL+K`): foca o Discord, digita o
+nome e confirma.
+
+Os nomes vêm de **"Ir para (canais e servidores)"** na aba Integrações,
+separados por vírgula (ex.: `Geral, Bate-papo, Estudos`). Precisam ser
+digitados por você porque listar os canais de verdade exigiria um bot dentro
+de cada servidor — e permissão de administrador para colocá-lo lá, o que
+ninguém tem nos servidores dos outros.
+
+Vale para canais de texto e de voz; num canal de voz, confirmar entra na
+chamada.
 
 ### E "transmitir" (Go Live)?
 

@@ -215,10 +215,33 @@ caminho que funciona para quem recebe o `.exe`:
 - Consequência aceita: **os botões de Discord não acendem**. Sem RPC não há
   estado, e o catálogo declara `estados: []` de propósito.
 
-Isso trouxe a ação genérica `atalhos.enviarTeclas` (combo livre tipo
-`CTRL+SHIFT+M`), com `Converter-Combo` no `windows-atalhos.ps1` traduzindo
-nomes para códigos de tecla virtual. Qualquer programa com atalho global
-pode ser acionado assim, sem integração nova.
+**As duas telas de atalho do Discord são diferentes, e isso decide o foco:**
+
+- *Atalhos de teclado* — os embutidos (`CTRL+SHIFT+M` etc). Lista só de
+  leitura, e **só funcionam com o Discord em foco**.
+- *Teclas de Atalho* — os que a pessoa cria. Valem **globalmente**.
+
+Os padrões da integração são os embutidos, então cada ação chama
+`focarProcesso('Discord')` antes (`DISCORD_FOCAR_ANTES`, ligado por padrão).
+Isso rouba o foco de propósito: é o preço de funcionar sem configuração.
+Quem criar atalhos globais próprios desliga a flag.
+
+O seletor "Ir para…" usa o **Quick Switcher** (`CTRL+K` → digita → ENTER),
+com a pausa de 450ms antes do ENTER porque a busca é assíncrona — sem ela o
+ENTER chega antes do resultado. A lista de nomes vem de `DISCORD_DESTINOS`
+(separada por vírgula) via `GET /discord/destinos`, e não do Discord: listar
+canais de verdade exigiria um bot dentro de cada servidor, com permissão de
+administrador que ninguém tem nos servidores dos outros.
+
+Isso trouxe três ações genéricas em `atalhos`: `enviarTeclas` (combo livre,
+com `Converter-Combo` traduzindo nomes para códigos de tecla virtual),
+`focarProcesso` (por nome, porque handle de janela muda a cada execução e
+não dá para guardar num botão) e `digitarTexto`.
+
+**Os `.ps1` têm BOM de UTF-8, e precisam continuar tendo.** O PowerShell 5.1
+lê arquivo sem BOM como ANSI, e aí toda mensagem de erro com acento sai
+como `NÃ£o`. O `[Console]::OutputEncoding` resolve a saída, não a leitura do
+próprio script.
 
 ## Empacotamento (.exe) e resolução de caminhos
 

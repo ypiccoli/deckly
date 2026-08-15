@@ -1,4 +1,4 @@
-<#
+﻿<#
   Atalhos de sistema/janelas do Windows, abrir apps/sites, listar e focar
   janelas abertas, e listar/abrir jogos da Steam — chamado pelo servidor
   Node via powershell.exe (WSL2 interop ou nativo).
@@ -20,7 +20,9 @@
     abrir_app    -Valor <caminho/comando/atalho .lnk>
     abrir_uwp    -Valor <AppUserModelID>   (apps da Store/MSIX, ex.: Claude)
     abrir_jogo   -Valor <appid da Steam>
-    focar_janela -Valor <handle da janela>
+    focar_janela   -Valor <handle da janela>
+    focar_processo -Valor <nome do processo, ex.: Discord>
+    digitar_texto  -Valor <texto a digitar na janela em foco>
   Ações de listagem (devolvem JSON array):
     listar_janelas | listar_jogos
 
@@ -44,6 +46,9 @@ $ErrorActionPreference = 'Stop'
 # dentro do JSON, que o JSON.parse do Node rejeita. Forçar UTF-8 aqui
 # mantém o JSON válido de ponta a ponta.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# SendKeys (usado por digitar_texto) vive aqui. Só isto precisa do assembly.
+Add-Type -AssemblyName System.Windows.Forms
 
 Add-Type @"
 using System;
@@ -216,6 +221,31 @@ switch ($Acao) {
     'focar_janela' {
         if ([string]::IsNullOrEmpty($Valor)) { throw 'Parametro -Valor (handle) é obrigatório para focar_janela' }
         [Janelas]::TrazerParaFrente([IntPtr][int64]$Valor)
+    }
+
+    # Focar pelo NOME DO PROCESSO (e não por handle) porque o handle muda a
+    # cada execução do programa — não dá para guardar num botão. Usado antes
+    # de mandar atalhos embutidos de um app (ex.: os do Discord, que só
+    # valem com ele em foco).
+    'focar_processo' {
+        if ([string]::IsNullOrEmpty($Valor)) { throw 'Parametro -Valor (nome do processo) é obrigatório para focar_processo' }
+        $proc = Get-Process -Name $Valor -ErrorAction SilentlyContinue |
+                Where-Object { $_.MainWindowHandle -ne 0 } |
+                Select-Object -First 1
+        if (-not $proc) { throw "Não achei uma janela aberta de '$Valor'. O programa está rodando?" }
+        [Janelas]::TrazerParaFrente($proc.MainWindowHandle)
+        # A janela precisa terminar de vir para frente antes de receber
+        # teclas; sem esta pausa o atalho seguinte chega na janela antiga.
+        Start-Sleep -Milliseconds 250
+    }
+
+    'digitar_texto' {
+        if ($null -eq $Valor) { throw 'Parametro -Valor (texto) é obrigatório para digitar_texto' }
+        # SendKeys trata estes como sintaxe própria; escapar com chaves faz
+        # cada um ser digitado literalmente.
+        $escapado = [regex]::Replace($Valor, '[+^%~(){}\[\]]', { '{' + $args[0].Value + '}' })
+        [System.Windows.Forms.SendKeys]::SendWait($escapado)
+        Start-Sleep -Milliseconds 120
     }
 
     'listar_janelas' {
