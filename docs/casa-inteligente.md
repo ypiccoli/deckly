@@ -92,7 +92,24 @@ paralelo ao deck, sem uma coisa depender da outra.
 | Qualquer um dos acima | — | Home Assistant cobre todos |
 
 Se a dúvida for "meu dispositivo é Tuya?": se ele funciona no app **Smart
-Life**, é.
+Life**, é. E se ele só funciona no app da marca, provavelmente também é —
+veja a armadilha abaixo.
+
+## A armadilha dos apps de marca
+
+Os apps das marcas (Positivo Casa Inteligente, Intelbras Izy, Multilaser
+Liv…) são *white-labels* da Tuya: mesmo aplicativo, outro logo. Só que cada
+um costuma ter **seu próprio conjunto de contas**, separado do Smart Life.
+
+Consequência prática: a integração Tuya do Home Assistant pede um **Código
+de usuário** que fica em *Conta e segurança* — tela que muitos desses apps
+**não têm**. Quem tenta seguir um tutorial genérico trava exatamente aí, sem
+entender por quê.
+
+A saída que sempre funciona é **re-parear os dispositivos no Smart Life**: o
+hardware é Tuya e aceita qualquer app da família. O passo a passo completo,
+com as tentativas mais rápidas antes dessa, está em
+[passo-a-passo.md](passo-a-passo.md#13-conectar-seus-dispositivos-tuya-positivo-intelbras-multilaser).
 
 ## Recomendação para este projeto
 

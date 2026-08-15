@@ -63,21 +63,65 @@ No navegador do PC, abra `http://IP-DO-SEU-PI:8123`.
 3. Na tela de dispositivos encontrados, pode pular — vamos adicionar a Tuya
    no passo seguinte.
 
-### 1.3 Conectar seus dispositivos Positivo
+### 1.3 Conectar seus dispositivos Tuya (Positivo, Intelbras, Multilaser…)
 
-Eles são Tuya por baixo. Duas opções:
+A integração **Tuya** do Home Assistant pede um **User Code**, que fica em
+**Eu → Configurações → Conta e segurança → Código de usuário** — mas **só no
+app Smart Life ou Tuya Smart**.
 
-**Opção A — Tuya oficial (mais simples):**
+> ### ⚠️ Se você usa o app da marca (Positivo, Izy, Liv…), leia isto
+>
+> Esses apps são *white-labels* da Tuya: mesmo aplicativo, outra marca. O
+> problema é que cada um costuma ter **seu próprio conjunto de contas**, e a
+> tela do Código de usuário frequentemente nem existe neles.
+>
+> **Não é motivo para desistir** — o hardware é Tuya e funciona. Só é preciso
+> descobrir por qual porta entrar.
+
+Siga na ordem, do mais rápido para o mais trabalhoso. Pare no primeiro que
+funcionar.
+
+**Tentativa 1 — a conta pode ser a mesma (2 min).**
+Instale o **Smart Life** e tente entrar com o **mesmo e-mail e senha** do app
+da marca, país **Brasil**. Alguns OEMs compartilham o conjunto de contas com
+a Tuya. Se entrar e os dispositivos estiverem lá, pegue o Código de usuário
+e siga para o 1.4.
+
+**Tentativa 2 — o código pode estar no próprio app (2 min).**
+No app da marca, procure **Eu / Perfil → Configurações → Conta e segurança**.
+Se houver **Código de usuário**, use esse — a integração aceita.
+
+**Tentativa 3 — re-parear no Smart Life (~10 min, a que sempre funciona).**
+O dispositivo **não pertence** ao app da marca; ele é Tuya e pode ser pareado
+por qualquer app da família:
+
+1. Instale o **Smart Life** e crie uma conta (país Brasil).
+2. Resete o dispositivo: segure o botão até a luz **piscar rápido** (numa
+   lâmpada, ligue e desligue no interruptor 3× seguidas).
+3. No Smart Life, **+ → Adicionar dispositivo**, e siga o pareamento.
+4. Repita para cada dispositivo.
+
+O custo é passar a usar o Smart Life no lugar do app da marca. O ganho é uma
+conta que o Home Assistant entende de verdade.
+
+> **Sobre compartilhar em vez de re-parear:** dá para compartilhar o
+> dispositivo da conta antiga para a nova, mas a integração Tuya lista o que
+> a conta **possui**, e dispositivo compartilhado costuma não aparecer.
+> Só tente se quiser economizar o re-pareamento, sem contar com isso.
+
+**O que não vale a pena:** existe uma integração comunitária específica para
+a Positivo (`rgsilva/homeassistant-positivo`), mas ela está **arquivada desde
+2022**, sem manutenção, e cobre só tomada de 10A e controle infravermelho.
+
+### 1.3.1 Adicionar a integração
+
+Com o Código de usuário em mãos:
 
 1. **Configurações → Dispositivos e serviços → Adicionar integração**.
 2. Busque por **Tuya**.
-3. Ele pede login: use a **mesma conta do app Positivo/Smart Life**,
-   escolhendo o país **Brasil**.
-4. Os dispositivos aparecem sozinhos.
-
-**Opção B — LocalTuya (sem nuvem, mais rápido):** exige extrair a chave local
-de cada dispositivo pelo portal de desenvolvedor da Tuya. Vale a pena depois,
-se a latência da nuvem incomodar. Comece pela A.
+3. Cole o **Código de usuário** (é sensível a maiúsculas) e confirme.
+4. Aparece um **QR code**: escaneie com o app (Smart Life/Tuya Smart) e toque
+   em **Confirmar login**.
 
 Anote o nome de cada dispositivo — em **Ferramentas de desenvolvedor →
 Estados** você vê o `entity_id` real (ex.: `light.luz_sala`).
