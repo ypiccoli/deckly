@@ -1,5 +1,5 @@
 {
-  "_nota": "Deck inicial do Stream Deck Web. É o que aparece na primeira execução, e serve de ponto de partida: tudo aqui pode ser mudado pela tela de configuração (o ⚙️ no canto do deck), sem editar este arquivo. As duas primeiras páginas funcionam sem configurar nada; a de OBS precisa do OBS aberto. A lista completa do que dá para colocar num botão está em docs/acoes.md.",
+  "_nota": "Deck inicial do Deckly. É o que aparece na primeira execução, e serve de ponto de partida: tudo aqui pode ser mudado pela tela de configuração (o ⚙️ no canto do deck), sem editar este arquivo. As duas primeiras páginas funcionam sem configurar nada; a de OBS precisa do OBS aberto. A lista completa do que dá para colocar num botão está em docs/acoes.md.",
   "paginas": [
     {
       "id": "midia",

@@ -4,7 +4,7 @@
 //   1. Descubra o IP da bridge na sua rede (app oficial Hue, ou https://discovery.meethue.com/)
 //      e preencha HUE_BRIDGE_IP no .env
 //   2. Aperte o botão físico da bridge e, em seguida, gere uma application key
-//      (POST https://<bridge>/api com {"devicetype":"stream-deck-web"}) e preencha
+//      (POST https://<bridge>/api com {"devicetype":"deckly"}) e preencha
 //      HUE_APPLICATION_KEY no .env
 //   3. Implemente os TODOs abaixo usando a CLIP API v2 (https://<bridge>/clip/v2/resource/*)
 

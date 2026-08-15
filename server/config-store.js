@@ -90,6 +90,23 @@ function validar(novoConfig, integracoes) {
     else idsPagina.add(pagina.id);
 
     if (!pagina.titulo) erros.push(`${ondePagina}: falta o campo "titulo".`);
+
+    // Layout da página. Os limites existem para o deck não virar algo
+    // impossível de tocar: 12 colunas já é pequeno demais num tablet, e
+    // botão de 60px é o mínimo confortável para o dedo.
+    if (pagina.colunas != null) {
+      const n = Number(pagina.colunas);
+      if (!Number.isInteger(n) || n < 1 || n > 12) {
+        erros.push(`${ondePagina}: "colunas" precisa ser um inteiro entre 1 e 12.`);
+      }
+    }
+    if (pagina.alturaBotao != null) {
+      const n = Number(pagina.alturaBotao);
+      if (!Number.isFinite(n) || n < 60 || n > 260) {
+        erros.push(`${ondePagina}: "alturaBotao" precisa estar entre 60 e 260 (pixels).`);
+      }
+    }
+
     if (!Array.isArray(pagina.botoes)) {
       erros.push(`${ondePagina}: "botoes" precisa ser uma lista.`);
       return;
@@ -107,6 +124,21 @@ function validar(novoConfig, integracoes) {
       const tipo = botao.tipo || 'botao';
       if (!TIPOS_VALIDOS.includes(tipo)) {
         erros.push(`${onde}: tipo "${tipo}" não existe (use ${TIPOS_VALIDOS.join(', ')}).`);
+      }
+
+      // Tamanho do botão, em células da grade.
+      for (const campo of ['largura', 'altura']) {
+        if (botao[campo] == null) continue;
+        const n = Number(botao[campo]);
+        if (!Number.isInteger(n) || n < 1 || n > 6) {
+          erros.push(`${onde}: "${campo}" precisa ser um inteiro entre 1 e 6.`);
+        }
+      }
+
+      // Cor livre, mas validada: um valor inválido não quebraria a página
+      // (o CSS ignora), e o botão ficaria sem cor sem ninguém entender por quê.
+      if (botao.cor != null && !/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(String(botao.cor))) {
+        erros.push(`${onde}: "cor" precisa ser um hexadecimal como #6c5ce7.`);
       }
 
       if (tipo === 'lista' && !botao.fonte) {

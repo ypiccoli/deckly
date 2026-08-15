@@ -1,12 +1,12 @@
-# Stream Deck Web
+# Deckly
 
-Um "Stream Deck" caseiro: um servidor Node.js roda no seu PC e serve uma
-grade de botões táteis que você abre no **navegador do tablet** (na mesma
-rede Wi-Fi). Cada botão dispara uma ação no PC — mídia/volume, cenas e
+Transforma um tablet parado num **painel de botões táteis para o seu PC**.
+Um servidor Node.js roda na sua máquina e serve a grade de botões para o
+**navegador do tablet**, na mesma rede Wi-Fi. Cada botão dispara uma ação no PC — mídia/volume, cenas e
 gravação do OBS, Spotify, Discord e a casa inteligente via Home Assistant.
 
-Feito para substituir o Touch Portal: sem limites de plugin, com visual
-próprio, e configurável por uma tela de configuração no próprio navegador.
+Feito para substituir o Touch Portal e os decks pagos: sem limite de botões
+ou páginas, visual próprio, e configurável por uma tela no próprio navegador.
 
 ## O que baixar
 
@@ -14,7 +14,7 @@ Há dois caminhos, e a maioria das pessoas quer o primeiro.
 
 ### 🎛️ Só quero usar o deck
 
-**Baixe um arquivo só: `stream-deck-web.exe`**, na aba
+**Baixe um arquivo só: `deckly.exe`**, na aba
 [Releases](../../releases).
 
 - **Não precisa clonar o repositório.**
@@ -25,7 +25,7 @@ Há dois caminhos, e a maioria das pessoas quer o primeiro.
   com a sua configuração e o seu token.
 - **Nada é instalado no tablet.** Ele só abre uma página no navegador.
 
-Junto, baixe o **[Guia de Primeiro Acesso (PDF)](docs/Guia-Stream-Deck-Web.pdf)**
+Junto, baixe o **[Guia de Primeiro Acesso (PDF)](docs/Guia-Deckly.pdf)**
 e leia antes de rodar — são uns 10 minutos, do arquivo baixado até o deck
 funcionando no tablet, sem jargão.
 
@@ -44,6 +44,8 @@ O resto deste README é a documentação técnica. Veja também:
 
 - **[docs/acoes.md](docs/acoes.md)** — tudo que dá para colocar num botão
 - **[docs/urls.md](docs/urls.md)** — todas as URLs e rotas da API
+- **[docs/passo-a-passo.md](docs/passo-a-passo.md)** — Home Assistant, Discord RPC e autostart, do começo ao fim
+- **[docs/casa-inteligente.md](docs/casa-inteligente.md)** — que marcas dão para integrar e como
 
 ## Sumário
 
@@ -63,6 +65,7 @@ O resto deste README é a documentação técnica. Veja também:
 - [Editar páginas e botões](#editar-páginas-e-botões)
 - [Todas as ações disponíveis](docs/acoes.md)
 - [Todas as URLs e rotas](docs/urls.md)
+- [Passo a passo das configurações manuais](docs/passo-a-passo.md)
 - [Gerar o executável (.exe)](#gerar-o-executável-exe)
 - [Rodando em segundo plano](#rodando-em-segundo-plano)
 - [Estrutura de pastas](#estrutura-de-pastas)
@@ -111,7 +114,7 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
 ## Instalação
 
 ```bash
-cd ~/projetos/stream-deck-web
+cd ~/projetos/deckly
 npm install
 cp .env.example .env
 cp config/pages.config.example.json config/pages.config.json
@@ -134,7 +137,7 @@ npm run dev       # desenvolvimento, reinicia sozinho a cada alteração (nodemo
 Ao subir, o terminal mostra algo como:
 
 ```
-Stream Deck Web rodando na porta 3000
+Deckly rodando na porta 3000
 
   Neste PC          http://127.0.0.1:3000
   Configurar        http://127.0.0.1:3000/config/
@@ -209,7 +212,7 @@ Windows/WSL.
 
 3. Libere a porta no Firewall do Windows (rede privada):
    ```powershell
-   New-NetFirewallRule -DisplayName "Stream Deck Web" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow -Profile Private
+   New-NetFirewallRule -DisplayName "Deckly" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow -Profile Private
    ```
 
 4. No navegador do tablet, acesse `http://<IP-do-Windows-na-LAN>:3000`
@@ -272,7 +275,7 @@ digitável (sem letras ambíguas, e maiúscula/minúscula e hífen não importam
 a página pede ele numa tela de pareamento.
 
 O token fica em `config/token.json` (ignorado pelo Git). Para trocar, apague
-esse arquivo e reinicie — ou fixe um valor seu em `STREAM_DECK_TOKEN` no
+esse arquivo e reinicie — ou fixe um valor seu em `DECKLY_TOKEN` no
 `.env`.
 
 ### A tela de configuração é mais restrita
@@ -375,7 +378,7 @@ Detalhes que valem saber:
 - **O `.env` continua editável à mão** e é a mesma fonte de verdade — a tela
   reescreve só a linha da chave alterada e preserva os comentários do arquivo.
 - **Só grava chaves que a integração declarou** no getter `configuracao`. Um
-  PUT tentando escrever `PATH` ou `STREAM_DECK_TOKEN` é recusado.
+  PUT tentando escrever `PATH` ou `DECKLY_TOKEN` é recusado.
 - Como o resto da tela de configuração, responde **só no próprio PC** (veja
   `CONFIG_REMOTO`).
 
@@ -581,7 +584,7 @@ com a bridge sem um Home Assistant no meio.
    <https://discovery.meethue.com/>).
 2. Aperte o **botão físico** da bridge e, nos 30s seguintes, gere uma
    *application key* fazendo um `POST` para `https://<IP-da-bridge>/api`
-   com corpo `{"devicetype":"stream-deck-web"}`.
+   com corpo `{"devicetype":"deckly"}`.
 3. Preencha `HUE_BRIDGE_IP` e `HUE_APPLICATION_KEY` no `.env`.
 4. Implemente os `TODO`s em `server/integrations/hue/index.js` usando a
    CLIP API v2 (`https://<bridge>/clip/v2/resource/grouped_light/...`).
@@ -662,7 +665,7 @@ de WSL, nem de instalar nada**:
 npm run build
 ```
 
-Sai um `build/stream-deck-web.exe` (~90 MB — a maior parte é o próprio Node
+Sai um `build/deckly.exe` (~90 MB — a maior parte é o próprio Node
 embutido). O build roda tanto do WSL quanto do Windows: ele baixa o
 `node.exe` do Windows e injeta o app dentro.
 
@@ -692,13 +695,13 @@ se já não há uma instância no ar, sobe o servidor destacado, imprime o
 token/QR e sai.
 
 - **Para encerrar**, use o botão **Encerrar servidor** na tela de
-  boas-vindas (ou `taskkill /IM stream-deck-web.exe /F`).
-- **Os logs** vão para `dados/stream-deck.log`, já que não há console para
+  boas-vindas (ou `taskkill /IM deckly.exe /F`).
+- **Os logs** vão para `dados/deckly.log`, já que não há console para
   escrever. O arquivo é zerado quando passa de 512 KB.
 - **Clicar duas vezes no `.exe` com ele já rodando** não sobe uma segunda
   cópia: abre a tela de boas-vindas da instância existente.
 - **Para acompanhar na tela** (diagnóstico), rode
-  `stream-deck-web.exe --console`, ou ponha `SEGUNDO_PLANO=false` no `.env`.
+  `deckly.exe --console`, ou ponha `SEGUNDO_PLANO=false` no `.env`.
 
 Rodando do código-fonte (`npm start` / `npm run dev`) nada disso se aplica: o
 console continua sendo o lugar dos logs.
@@ -706,7 +709,7 @@ console continua sendo o lugar dos logs.
 Junto do `.exe` é criada uma pasta `dados/`:
 
 ```
-stream-deck-web.exe
+deckly.exe
 dados/
 ├── .env                  # porta, credenciais de OBS/Spotify/Hue
 ├── config/
@@ -735,14 +738,14 @@ assim mesmo**). Assinar exigiria um certificado pago.
 ## Estrutura de pastas
 
 ```
-stream-deck-web/
+deckly/
 ├── config/
 │   ├── pages.config.example.json  # template inicial versionado (vai no .exe)
 │   └── pages.config.json          # SEU layout real — gitignored, edite aqui
 ├── docs/
 │   ├── acoes.md                    # GERADO por npm run docs — todas as ações
 │   ├── guia-primeiro-acesso.html   # fonte do guia (edite este)
-│   └── Guia-Stream-Deck-Web.pdf    # GERADO por npm run docs:pdf
+│   └── Guia-Deckly.pdf    # GERADO por npm run docs:pdf
 ├── scripts/
 │   ├── windows-media.ps1     # volume e mute do Windows (P/Invoke)
 │   ├── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam
@@ -792,7 +795,7 @@ stream-deck-web/
 |-----------------|-------------------------------------------------------|
 | `npm start`     | Sobe o servidor uma vez (produção)                    |
 | `npm run dev`   | Sobe com `nodemon`, reiniciando a cada alteração      |
-| `npm run build` | Gera `build/stream-deck-web.exe` para Windows         |
+| `npm run build` | Gera `build/deckly.exe` para Windows         |
 | `npm run docs`  | Regenera `docs/acoes.md` a partir do catálogo das integrações |
 | `npm run docs:pdf` | Regenera o guia em PDF a partir de `docs/guia-primeiro-acesso.html` |
 

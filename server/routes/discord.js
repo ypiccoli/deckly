@@ -17,7 +17,7 @@ function pagina(titulo, blocos) {
   return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${titulo} — Stream Deck Web</title></head>
+<title>${titulo} — Deckly</title></head>
 <body style="font-family:'Segoe UI',system-ui,sans-serif;background:#0f1115;color:#eef0f4;margin:0;padding:40px 24px">
 <div style="max-width:560px;margin:0 auto;background:#1b1e27;border:1px solid #2a2e3a;border-radius:18px;padding:28px">
 <h1 style="margin:0 0 14px;font-size:1.3rem">${titulo}</h1>

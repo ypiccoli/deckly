@@ -1,4 +1,4 @@
-// Gera docs/Guia-Stream-Deck-Web.pdf a partir de docs/guia-primeiro-acesso.html
+// Gera docs/Guia-Deckly.pdf a partir de docs/guia-primeiro-acesso.html
 // (npm run docs:pdf).
 //
 // Por que Chrome em vez de uma biblioteca de PDF: o guia é uma página HTML
@@ -15,7 +15,7 @@ const { execFileSync, spawnSync } = require('child_process');
 
 const RAIZ = path.join(__dirname, '..');
 const ORIGEM = path.join(RAIZ, 'docs', 'guia-primeiro-acesso.html');
-const DESTINO = path.join(RAIZ, 'docs', 'Guia-Stream-Deck-Web.pdf');
+const DESTINO = path.join(RAIZ, 'docs', 'Guia-Deckly.pdf');
 
 const NO_WSL = process.platform !== 'win32' && Boolean(process.env.WSL_DISTRO_NAME);
 

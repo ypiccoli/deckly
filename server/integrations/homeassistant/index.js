@@ -280,7 +280,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
       resumo: 'Luzes, tomadas e cenas de qualquer marca — Positivo, Tuya, Hue e outras.',
       comoObter: [
         'No Home Assistant, clique no seu usuário (canto inferior esquerdo) e vá até o fim da página.',
-        'Em "Tokens de acesso de longa duração", clique em "Criar token" e dê um nome (ex.: Stream Deck).',
+        'Em "Tokens de acesso de longa duração", clique em "Criar token" e dê um nome (ex.: Deckly).',
         'Copie o token — ele só aparece uma vez — e cole abaixo.',
         'O endereço é o mesmo que você usa no navegador, ex.: http://192.168.0.50:8123',
       ],

@@ -232,10 +232,41 @@
     });
   }
 
+  // Tamanho e cor vêm do config e viram estilo inline: são valores livres
+  // por botão, então não dá para pré-declarar classes para cada combinação.
+  function aplicarLayout(el, botao) {
+    const largura = Number(botao.largura) || 1;
+    const altura = Number(botao.altura) || 1;
+
+    // O slider já nasce com 2 de altura no CSS; só sobrescreve quem pediu
+    // um tamanho explícito.
+    if (largura > 1 || botao.largura) el.style.gridColumn = `span ${Math.min(largura, 6)}`;
+    if (altura > 1 || botao.altura) el.style.gridRow = `span ${Math.min(altura, 6)}`;
+
+    if (botao.cor) {
+      // Uma variável só: o CSS deriva borda e brilho dela, então o botão
+      // continua coerente com o resto do tema.
+      el.style.setProperty('--cor-botao', botao.cor);
+      el.classList.add('tem-cor');
+    }
+  }
+
   function renderizarGrade() {
     elGrade.innerHTML = '';
     const pagina = paginas.find((p) => p.id === paginaAtivaId);
     if (!pagina) return;
+
+    // Colunas da página: em branco, mantém o preenchimento automático que
+    // se adapta à largura da tela.
+    const colunas = Number(pagina.colunas) || 0;
+    elGrade.style.gridTemplateColumns = colunas
+      ? `repeat(${Math.min(colunas, 12)}, minmax(0, 1fr))`
+      : '';
+    if (pagina.alturaBotao) {
+      elGrade.style.gridAutoRows = `${Math.max(60, Math.min(Number(pagina.alturaBotao), 260))}px`;
+    } else {
+      elGrade.style.gridAutoRows = '';
+    }
 
     pagina.botoes.forEach((botao) => {
       let el;
@@ -243,6 +274,7 @@
       else if (botao.tipo === 'info') el = criarBotaoInfo(botao);
       else if (botao.tipo === 'lista') el = criarBotaoLista(botao);
       else el = criarBotaoNormal(botao);
+      aplicarLayout(el, botao);
       elGrade.appendChild(el);
     });
 

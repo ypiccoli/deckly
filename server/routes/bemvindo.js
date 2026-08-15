@@ -42,7 +42,7 @@ module.exports = function criarRotaBemVindo(porta) {
   // além de ser local: um POST de formulário vindo de outro site abriria a
   // porta para derrubarem o servidor de fora, e o token corta isso.
   router.post('/bemvindo/encerrar', exigirLocal, exigirToken, (req, res) => {
-    res.json({ ok: true, mensagem: 'Encerrando o Stream Deck Web…' });
+    res.json({ ok: true, mensagem: 'Encerrando o Deckly…' });
     // Um respiro para a resposta chegar antes do processo morrer.
     setTimeout(() => process.exit(0), 250);
   });

@@ -1,4 +1,4 @@
-// Servidor do Stream Deck Web: Express (HTTP + API) + WebSocket (estado ao vivo).
+// Servidor do Deckly: Express (HTTP + API) + WebSocket (estado ao vivo).
 
 const http = require('http');
 const express = require('express');
@@ -125,7 +125,7 @@ function iniciarServidor() {
   // segundo plano, dentro do log, onde ninguém acha.
   servidorHttp.on('error', (erro) => {
     if (erro.code === 'EADDRINUSE') {
-      console.error(`Porta ${PORTA} já está em uso — o Stream Deck Web já está rodando?`);
+      console.error(`Porta ${PORTA} já está em uso — o Deckly já está rodando?`);
       console.error('Encerre a instância anterior ou mude PORT no .env.');
     } else {
       console.error(`Falha ao subir o servidor: ${erro.message}`);

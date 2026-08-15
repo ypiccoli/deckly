@@ -20,7 +20,7 @@ const esbuild = require('esbuild');
 const RAIZ = path.join(__dirname, '..');
 const BUILD = path.join(RAIZ, 'build');
 const VERSAO_NODE = `v${process.versions.node}`;
-const NOME_EXE = 'stream-deck-web.exe';
+const NOME_EXE = 'deckly.exe';
 
 // Marca que o postject procura dentro do binário para saber onde injetar.
 const FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';

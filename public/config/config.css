@@ -415,3 +415,25 @@ details.avancado > div { display: flex; flex-direction: column; gap: 12px; paddi
 }
 .toast.erro { border-color: var(--cor-perigo); color: var(--cor-perigo); }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* Layout: três campos por linha (largura, altura, cor) */
+.linha-tripla { grid-template-columns: 1fr 1fr 1.2fr; }
+
+.secao-form {
+  margin: 18px 0 2px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--cor-texto-fraco);
+}
+
+.campo-cor { display: flex; align-items: center; gap: 8px; }
+.campo-cor input[type="color"] {
+  width: 46px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: var(--cor-fundo);
+  cursor: pointer;
+}

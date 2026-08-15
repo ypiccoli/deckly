@@ -1,7 +1,7 @@
 {
-  "name": "stream-deck-web",
+  "name": "deckly",
   "version": "1.0.0",
-  "description": "Stream Deck web caseiro: grade de botões táteis servida na LAN para controlar mídia, OBS, Spotify e Hue.",
+  "description": "Deckly — transforma um tablet num painel de botões táteis para o seu PC, pela rede local.",
   "private": true,
   "type": "commonjs",
   "main": "server/index.js",

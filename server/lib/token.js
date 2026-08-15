@@ -5,7 +5,7 @@
 // PC. O token é a tranca principal do app.
 //
 // De onde vem, nesta ordem:
-//   1. STREAM_DECK_TOKEN no .env (para fixar um valor seu)
+//   1. DECKLY_TOKEN no .env (para fixar um valor seu)
 //   2. config/token.json, gerado na primeira execução
 //
 // O formato é pensado para ser DIGITADO num tablet quando não der para
@@ -41,8 +41,12 @@ function normalizar(valor) {
 }
 
 function carregar() {
-  if (process.env.STREAM_DECK_TOKEN) {
-    return { token: process.env.STREAM_DECK_TOKEN, origem: '.env' };
+  // STREAM_DECK_TOKEN é o nome antigo, de quando o projeto se chamava
+  // "Stream Deck Web". Continua valendo para não invalidar um .env que já
+  // existe — quem atualizar o executável não deveria perder o token.
+  const fixado = process.env.DECKLY_TOKEN || process.env.STREAM_DECK_TOKEN;
+  if (fixado) {
+    return { token: fixado, origem: '.env' };
   }
 
   if (fs.existsSync(CAMINHO_TOKEN)) {

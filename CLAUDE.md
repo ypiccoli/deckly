@@ -245,7 +245,7 @@ próprio script.
 
 ## Empacotamento (.exe) e resolução de caminhos
 
-`npm run build` gera `build/stream-deck-web.exe` — Node SEA (Single
+`npm run build` gera `build/deckly.exe` — Node SEA (Single
 Executable Application). Roda a partir do WSL: baixa o `node.exe` do
 Windows e injeta o app dentro dele com `postject`.
 
@@ -274,7 +274,7 @@ gerado pode ser executado direto do WSL via interop, e aí reporta
 **Ao testar o `.exe` a partir do WSL, variáveis de ambiente do shell não
 chegam nele** (é um processo Windows; só passa o que estiver em `WSLENV`).
 Para mudar porta ou qualquer opção no teste, edite o `dados/.env` que ele
-cria — não adianta `PORT=3555 ./stream-deck-web.exe`.
+cria — não adianta `PORT=3555 ./deckly.exe`.
 
 ## Segundo plano (o .exe se solta do console)
 
@@ -283,7 +283,7 @@ do console a que ele já pertence, então o executável **relança a si mesmo**
 destacado e o processo original vira só um lançador.
 
 - Pai e filho são o mesmo binário; o que os separa é a variável de ambiente
-  `STREAM_DECK_SEGUNDO_PLANO=1`, posta no filho. Sem essa marca o filho
+  `DECKLY_SEGUNDO_PLANO=1`, posta no filho. Sem essa marca o filho
   relançaria a si mesmo para sempre.
 - **O pai é quem imprime o token/QR e abre o navegador**, não o filho: o
   filho não tem console, e quando ele sobe o token já foi criado pelo pai —
@@ -313,7 +313,7 @@ Duas peças de documentação **não** são escritas à mão:
   de cada integração. Rode depois de mexer em qualquer ação. Uma ação que não
   aparece ali é uma ação que também não aparece no editor — o que falta é a
   entrada no catálogo.
-- `docs/Guia-Stream-Deck-Web.pdf` sai de `scripts/gerar-pdf.js`, que imprime
+- `docs/Guia-Deckly.pdf` sai de `scripts/gerar-pdf.js`, que imprime
   `docs/guia-primeiro-acesso.html` com o Chrome do Windows em headless. **A
   fonte é o HTML** — editar o PDF não faz sentido, ele é regenerado.
 
@@ -379,7 +379,7 @@ Detalhes que importam ao mexer aqui:
 - Comparação do token é `timingSafeEqual`, e normaliza hífen/caixa antes —
   quem digita não deve ser barrado por formatação.
 - O token vai para `config/token.json` (gitignored) ou vem de
-  `STREAM_DECK_TOKEN`. Formato pensado para ser digitado num tablet:
+  `DECKLY_TOKEN`. Formato pensado para ser digitado num tablet:
   alfabeto sem caracteres ambíguos, agrupado de 4 em 4.
 
 No frontend, `public/js/token.js` é compartilhado pelo deck e pelo editor:
@@ -428,7 +428,7 @@ Decisões que importam ao mexer aqui:
   true/false` para campos `tipo: 'senha'`, nunca o valor. Por isso campo de
   senha vazio no PUT significa "não mexi"; apagar de verdade manda `null`.
 - **Só grava chaves declaradas pela própria integração.** Sem essa lista, um
-  PUT escreveria qualquer variável de ambiente (`PATH`, `STREAM_DECK_TOKEN`).
+  PUT escreveria qualquer variável de ambiente (`PATH`, `DECKLY_TOKEN`).
 - **`reconfigurar()`** é o que evita "reinicie o servidor": relê o `.env` e
   reconecta. Quem adiciona `configuracao` deveria adicionar isso também. No
   OBS há o detalhe do `_reconfigurando`: o `disconnect()` que nós mesmos
@@ -467,7 +467,15 @@ estruturada, que é como a tela de configuração monta os formulários.
 | `fonte` | `lista` | Endpoint GET que devolve `{ ok, opcoes: [...] }` (obrigatório) |
 | `iconeItem` / `mensagemVazia` | `lista` | Ícone padrão dos itens e texto de lista vazia |
 | `estadoTexto` / `…Secundario` / `…Terciario` | `info` | Dot-paths das linhas de texto exibidas |
+| `largura` / `altura` | todos | Tamanho em células da grade (1–6). Ausente = 1 |
+| `cor` | todos | Cor de destaque do botão, hex (`#6c5ce7`). Ausente = segue o tema |
 | `_nota` | todos | Comentário livre — substitui os comentários que o JSON não tem |
+
+Campos de **página**: `id`, `titulo`, `icone`, `botoes`, `_nota`, e o layout
+— `colunas` (1–12, ausente = automático) e `alturaBotao` (60–260 px).
+O tamanho vira `grid-column/row: span N` inline no `app.js`, e a cor vira a
+variável `--cor-botao`, de onde o CSS deriva borda e fundo — assim um botão
+colorido continua parecendo parte do tema, e não um adesivo por cima.
 
 A validação em `server/config-store.js` (`validar()`) cobre tudo isso e
 devolve erros já legíveis, apontando página e botão.

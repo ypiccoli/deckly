@@ -1,6 +1,6 @@
 {
-  "name": "Stream Deck Web",
-  "short_name": "StreamDeck",
+  "name": "Deckly",
+  "short_name": "Deckly",
   "description": "Painel de botões táteis para controlar mídia, OBS, Spotify e Hue no PC.",
   "start_url": "/",
   "scope": "/",

@@ -18,7 +18,7 @@ module.exports = function mostrarBoasVindas(porta) {
   const urlPareamento = urlLan ? `${urlLan}/?token=${encodeURIComponent(TOKEN)}` : null;
 
   console.log('');
-  console.log(`Stream Deck Web rodando na porta ${porta}`);
+  console.log(`Deckly rodando na porta ${porta}`);
   console.log('');
   console.log(`  Esta tela, no navegador   ${urlLocal}/bemvindo/`);
   console.log(`  Abrir o deck              ${urlLocal}`);

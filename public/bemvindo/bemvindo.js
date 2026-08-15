@@ -32,7 +32,7 @@
     var botao = document.getElementById('encerrar');
     if (!botao) return;
     botao.addEventListener('click', function () {
-      if (!window.confirm('Encerrar o Stream Deck Web? O deck para de responder no tablet.')) return;
+      if (!window.confirm('Encerrar o Deckly? O deck para de responder no tablet.')) return;
       botao.disabled = true;
       botao.textContent = 'Encerrando…';
       // O token vai junto: sem ele qualquer página aberta no navegador

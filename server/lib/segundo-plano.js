@@ -12,7 +12,7 @@
 //     e sai. É só um lançador — nunca sobe servidor.
 //   - FILHO (marcado pela variável de ambiente abaixo): é o servidor de
 //     verdade. Como não tem console, tudo que ele escreveria na tela vai
-//     para `stream-deck.log` na pasta de dados.
+//     para `deckly.log` na pasta de dados.
 //
 // Só vale para o .exe. Rodando do código-fonte (`npm start`, `npm run dev`)
 // o console é exatamente onde os logs devem aparecer, então nada disso liga.
@@ -26,9 +26,9 @@ const caminhos = require('./caminhos');
 
 // Marca que separa o pai do filho: o filho tem essa variável no ambiente, e
 // é por isso que ele não fica relançando a si mesmo para sempre.
-const MARCA_FILHO = 'STREAM_DECK_SEGUNDO_PLANO';
+const MARCA_FILHO = 'DECKLY_SEGUNDO_PLANO';
 
-const ARQUIVO_LOG = path.join(caminhos.raiz, 'stream-deck.log');
+const ARQUIVO_LOG = path.join(caminhos.raiz, 'deckly.log');
 const LIMITE_LOG_BYTES = 512 * 1024;
 const ESPERA_MAXIMA_MS = 20000;
 const INTERVALO_TENTATIVA_MS = 300;
@@ -117,7 +117,7 @@ async function lancar(porta) {
   // brigaria pela porta), abre a tela da instância que já está rodando.
   if (await portaRespondendo(porta)) {
     console.log('');
-    console.log(`  O Stream Deck Web já está rodando na porta ${porta}.`);
+    console.log(`  O Deckly já está rodando na porta ${porta}.`);
     console.log(`  Abrindo ${urlBemVindo}`);
     console.log('');
     abrirNoNavegador(urlBemVindo);

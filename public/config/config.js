@@ -217,6 +217,46 @@
     return wrap;
   }
 
+  // Cor é opcional: sem cor o botão segue o tema, e é assim que a maioria
+  // deve ficar. Por isso o seletor vem acompanhado de um "limpar" — sem ele
+  // não haveria como voltar atrás depois de escolher uma cor.
+  function campoCor(rotulo, valor, aoMudar) {
+    var wrap = document.createElement('div');
+    wrap.className = 'campo-grupo';
+
+    var label = document.createElement('label');
+    label.textContent = rotulo;
+    wrap.appendChild(label);
+
+    var caixa = document.createElement('div');
+    caixa.className = 'campo-cor';
+
+    var input = document.createElement('input');
+    input.type = 'color';
+    input.value = valor || '#6c5ce7';
+    input.addEventListener('input', function () {
+      aoMudar(input.value);
+      marcarSujo();
+    });
+    caixa.appendChild(input);
+
+    var limpar = document.createElement('button');
+    limpar.type = 'button';
+    limpar.className = 'btn btn-fantasma btn-pequeno';
+    limpar.textContent = valor ? 'Limpar' : 'Sem cor';
+    limpar.disabled = !valor;
+    limpar.addEventListener('click', function () {
+      aoMudar('');
+      limpar.disabled = true;
+      limpar.textContent = 'Sem cor';
+      marcarSujo();
+    });
+    caixa.appendChild(limpar);
+
+    wrap.appendChild(caixa);
+    return wrap;
+  }
+
   function campoSelect(rotulo, valor, opcoes, aoMudar, extras) {
     extras = extras || {};
     var wrap = document.createElement('div');
@@ -392,6 +432,27 @@
     linha.appendChild(campoTexto('Título', botao.titulo, function (v) { botao.titulo = v; renderListaBotoes(); }));
     linha.appendChild(campoIcone('Ícone', botao.icone, function (v) { botao.icone = v; renderListaBotoes(); }));
     el.form.appendChild(linha);
+
+    // --- tamanho e cor ---
+    var linhaTamanho = document.createElement('div');
+    linhaTamanho.className = 'linha linha-tripla';
+    var tamanhos = [1, 2, 3, 4].map(function (n) {
+      return { valor: String(n), rotulo: n === 1 ? '1 (normal)' : String(n) };
+    });
+    linhaTamanho.appendChild(
+      campoSelect('Largura', String(botao.largura || 1), tamanhos, function (v) {
+        if (Number(v) > 1) botao.largura = Number(v); else delete botao.largura;
+      }, { ajuda: 'Em colunas da grade.' }),
+    );
+    linhaTamanho.appendChild(
+      campoSelect('Altura', String(botao.altura || 1), tamanhos, function (v) {
+        if (Number(v) > 1) botao.altura = Number(v); else delete botao.altura;
+      }, { ajuda: 'Em linhas da grade.' }),
+    );
+    linhaTamanho.appendChild(campoCor('Cor', botao.cor, function (v) {
+      if (v) botao.cor = v; else delete botao.cor;
+    }));
+    el.form.appendChild(linhaTamanho);
 
     el.form.appendChild(
       campoSelect(
@@ -609,6 +670,47 @@
     }));
     linha.appendChild(campoIcone('Ícone', pagina.icone, function (v) { pagina.icone = v; renderListaPaginas(); }));
     el.form.appendChild(linha);
+
+    // --- layout da página ---
+    var tituloLayout = document.createElement('h3');
+    tituloLayout.className = 'secao-form';
+    tituloLayout.textContent = 'Layout';
+    el.form.appendChild(tituloLayout);
+
+    var linhaLayout = document.createElement('div');
+    linhaLayout.className = 'linha';
+    linhaLayout.appendChild(
+      campoSelect(
+        'Colunas',
+        pagina.colunas == null ? '' : String(pagina.colunas),
+        [{ valor: '', rotulo: 'Automático (adapta à tela)' }].concat(
+          [2, 3, 4, 5, 6, 7, 8, 10, 12].map(function (n) {
+            return { valor: String(n), rotulo: n + ' colunas' };
+          }),
+        ),
+        function (v) {
+          if (v) pagina.colunas = Number(v);
+          else delete pagina.colunas;
+        },
+        { ajuda: 'Automático encaixa quantos couberem. Fixar é útil se você quer o mesmo desenho em qualquer tela.' },
+      ),
+    );
+    linhaLayout.appendChild(
+      campoSelect(
+        'Altura dos botões',
+        pagina.alturaBotao == null ? '' : String(pagina.alturaBotao),
+        [{ valor: '', rotulo: 'Padrão (120px)' }].concat(
+          [80, 100, 120, 140, 160, 200].map(function (n) {
+            return { valor: String(n), rotulo: n + ' px' };
+          }),
+        ),
+        function (v) {
+          if (v) pagina.alturaBotao = Number(v);
+          else delete pagina.alturaBotao;
+        },
+      ),
+    );
+    el.form.appendChild(linhaLayout);
 
     var avancado = document.createElement('details');
     avancado.className = 'avancado';

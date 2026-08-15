@@ -5,7 +5,7 @@
 // Suba esta versão sempre que mexer em qualquer arquivo da lista abaixo: o
 // `activate` apaga os caches de nome diferente, e é só isso que faz um
 // aparelho já pareado largar o JS antigo.
-const CACHE_NOME = 'stream-deck-web-v11';
+const CACHE_NOME = 'deckly-v12';
 const ARQUIVOS_ESTATICOS = [
   '/',
   '/index.html',

@@ -193,7 +193,7 @@ class IntegracaoSpotify extends EventEmitter {
       aviso: 'Exige conta Spotify Premium — é limitação da API deles, não deste app.',
       comoObter: [
         'Entre em developer.spotify.com/dashboard com a sua conta e clique em "Create app".',
-        'Nome e descrição podem ser qualquer coisa ("Stream Deck", por exemplo).',
+        'Nome e descrição podem ser qualquer coisa ("Deckly", por exemplo).',
         'Em "Redirect URI", cole exatamente: ' + this.redirectUri,
         'Marque "Web API", salve, e copie o Client ID e o Client Secret para os campos abaixo.',
         'Salve aqui e clique em "Conectar ao Spotify" para autorizar.',

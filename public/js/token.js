@@ -19,7 +19,12 @@
 (function () {
   'use strict';
 
-  var CHAVE = 'streamdeck.token';
+  var CHAVE = 'deckly.token';
+  // O projeto se chamava "Stream Deck Web" e guardava o token com outro
+  // nome. Sem migrar, todo aparelho já pareado voltaria à tela de token
+  // depois da atualização — e o QR está no PC, não na mão de quem está com
+  // o tablet.
+  var CHAVE_ANTIGA = 'streamdeck.token';
 
   function lerDaUrl() {
     var params = new URLSearchParams(location.search);
@@ -39,7 +44,16 @@
 
   function lerGuardado() {
     try {
-      return localStorage.getItem(CHAVE);
+      var atual = localStorage.getItem(CHAVE);
+      if (atual) return atual;
+
+      var antigo = localStorage.getItem(CHAVE_ANTIGA);
+      if (antigo) {
+        localStorage.setItem(CHAVE, antigo);
+        localStorage.removeItem(CHAVE_ANTIGA);
+        return antigo;
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -141,10 +155,10 @@
       '<div class="pareamento-cartao">' +
       '<div class="pareamento-titulo"><span class="icone">🔌</span>' +
       '<h2>Servidor não encontrado</h2></div>' +
-      '<p>Esta tela abriu do cache do aparelho, mas o Stream Deck Web não está ' +
+      '<p>Esta tela abriu do cache do aparelho, mas o Deckly não está ' +
       'respondendo. Os botões não funcionariam.</p>' +
       '<ul class="pareamento-lista">' +
-      '<li>O programa está rodando no PC? Abra o <code>stream-deck-web.exe</code>.</li>' +
+      '<li>O programa está rodando no PC? Abra o <code>deckly.exe</code>.</li>' +
       '<li>O PC está ligado e na mesma rede Wi-Fi que este aparelho?</li>' +
       '</ul>' +
       '<button type="button" id="offline-tentar">Tentar de novo</button>' +

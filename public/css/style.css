@@ -556,3 +556,22 @@ body {
     grid-auto-rows: 104px;
   }
 }
+
+/* ---------------- cor personalizada por botão ----------------
+   O layout (tamanho em colunas/linhas) é aplicado inline pelo app.js, porque
+   é valor livre por botão. Já a cor entra como variável para o resto do
+   estilo derivar borda e brilho dela — assim um botão colorido continua
+   parecendo parte do mesmo tema, e não um adesivo colado por cima. */
+.botao.tem-cor {
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--cor-botao) 26%, var(--cor-cartao)),
+    var(--cor-cartao));
+  border-color: color-mix(in srgb, var(--cor-botao) 45%, var(--cor-cartao-borda));
+}
+.botao.tem-cor .botao-icone { filter: saturate(1.1); }
+.botao.tem-cor.ativo {
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--cor-botao) 55%, var(--cor-cartao)),
+    color-mix(in srgb, var(--cor-botao) 22%, var(--cor-cartao)));
+  border-color: var(--cor-botao);
+}

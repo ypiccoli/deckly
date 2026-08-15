@@ -1,4 +1,4 @@
-# URLs do Stream Deck Web
+# URLs do Deckly
 
 Tudo roda em `http://<host>:<PORT>`, com `PORT=3000` por padrão (`.env`).
 Onde aparecer `3000` abaixo, troque pela sua porta se você a mudou.
@@ -99,7 +99,7 @@ Rodando pelo `.exe`, tudo mora na pasta `dados/`, ao lado dele:
 | `dados/.env` | Porta, credenciais e opções |
 | `dados/config/pages.config.json` | Seu deck |
 | `dados/config/token.json` | O token de acesso |
-| `dados/stream-deck.log` | Log (só existe rodando em segundo plano) |
+| `dados/deckly.log` | Log (só existe rodando em segundo plano) |
 | `dados/public/`, `dados/scripts/` | Código, reescrito a cada inicialização |
 
 Rodando do código-fonte, os mesmos arquivos ficam na raiz do repositório.
