@@ -3,7 +3,7 @@
 Um "Stream Deck" caseiro: um servidor Node.js roda no seu PC e serve uma
 grade de botões táteis que você abre no **navegador do tablet** (na mesma
 rede Wi-Fi). Cada botão dispara uma ação no PC — mídia/volume, cenas e
-gravação do OBS, e (opcionalmente) Spotify e Philips Hue.
+gravação do OBS, Spotify, Discord e a casa inteligente via Home Assistant.
 
 Feito para substituir o Touch Portal: sem limites de plugin, com visual
 próprio, e configurável por uma tela de configuração no próprio navegador.
@@ -55,15 +55,14 @@ O resto deste README é a documentação técnica. Veja também:
 - [Token de acesso](#token-de-acesso)
 - [Controle de mídia (Windows via WSL2)](#controle-de-mídia-windows-via-wsl2)
 - [Atalhos: apps, sites, jogos e janelas](#atalhos-apps-sites-jogos-e-janelas)
-- [Habilitar o OBS](#habilitar-o-obs)
 - [Configurar as integrações (aba Integrações)](#configurar-as-integrações-aba-integrações)
+- [Habilitar o OBS](#habilitar-o-obs)
 - [Habilitar o Spotify](#habilitar-o-spotify)
-- [Habilitar o Hue](#habilitar-o-hue-ainda-não-conectado)
+- [Habilitar o Discord](#habilitar-o-discord)
+- [Casa inteligente com Home Assistant](#casa-inteligente-com-home-assistant)
 - [Editar páginas e botões](#editar-páginas-e-botões)
-- [Tela de configuração](#pela-tela-de-configuração-recomendado)
 - [Todas as ações disponíveis](docs/acoes.md)
 - [Todas as URLs e rotas](docs/urls.md)
-- [Habilitar o Discord](#habilitar-o-discord)
 - [Gerar o executável (.exe)](#gerar-o-executável-exe)
 - [Rodando em segundo plano](#rodando-em-segundo-plano)
 - [Estrutura de pastas](#estrutura-de-pastas)
@@ -79,7 +78,9 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
                                                           ├── integrations/atalhos -> Windows (atalhos, apps, janelas, jogos)
                                                           ├── integrations/obs     -> obs-websocket-js
                                                           ├── integrations/spotify -> Web API oficial
-                                                          └── integrations/hue     -> CLIP API v2 (estrutura pronta, desativada)
+                                                          ├── integrations/discord -> atalhos de teclado ou RPC local
+                                                          ├── integrations/homeassistant -> REST + WebSocket (casa inteligente)
+                                                          └── integrations/hue     -> CLIP API v2 (esqueleto, superado pelo HA)
 ```
 
 - O frontend (`public/`) é HTML/CSS/JS puro, sem framework e sem build step.
@@ -103,8 +104,9 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
   da distro WSL2). Confira com `node --version`.
 - Tablet Android (ou qualquer navegador moderno) na **mesma rede Wi-Fi** do
   PC.
-- Opcional: OBS Studio 28+ (já vem com obs-websocket embutido), conta
-  Spotify e/ou uma Philips Hue Bridge.
+- Opcional, e só para as integrações que você quiser: OBS Studio 28+ (já vem
+  com obs-websocket embutido), conta Spotify **Premium**, Discord instalado,
+  e um Home Assistant na rede para a parte de casa inteligente.
 
 ## Instalação
 
@@ -505,19 +507,75 @@ o Discord adicionar um atalho de teclado para isso, o botão passa a ser
 possível com a ação genérica **Enviar atalho de teclado** (integração
 `atalhos`), sem precisar de código novo.
 
-## Casa inteligente (Hue e outras marcas)
+## Casa inteligente com Home Assistant
 
-Nenhuma integração de casa inteligente está funcionando ainda. Antes de
-escolher uma, leia **[docs/casa-inteligente.md](docs/casa-inteligente.md)** —
-ele explica por que quase todo dispositivo barato vendido no Brasil
-(Positivo, Intelbras, Multilaser, Elgin…) é **Tuya por baixo**, por que uma
-integração Tuya cobre quase tudo de uma vez, por que a Alexa não é um bom
-caminho, e o que cada marca exige.
+**Uma integração que cobre qualquer marca.** O Home Assistant fala com Tuya
+(Positivo, Intelbras, Multilaser…), Hue, Sonoff, Shelly, Xiaomi, Zigbee,
+Z-Wave e centenas de outras, e expõe uma API única. O deck fala só com ele —
+então dispositivo novo de marca nova funciona **sem código novo aqui**.
 
-### Hue (ainda não conectado)
+### É gratuito?
 
-Módulo estruturado em `server/integrations/hue/index.js`, faltando suas
-credenciais e a implementação das chamadas HTTP.
+Sim, e sem pegadinha: **Apache 2.0, sem assinatura, sem taxa por
+dispositivo**. Roda na sua casa e é seu.
+
+O único produto pago é o **Nabu Casa** (~US$ 6,50/mês), que serve para
+acessar sua casa **de fora** sem mexer no roteador. Para este projeto ele é
+**desnecessário** — o deck e o Home Assistant estão na mesma rede.
+
+### Instalar no Raspberry Pi (junto com Pi-hole e Uptime Kuma)
+
+Se o Pi já roda Docker, é um `docker-compose.yml`:
+
+```yaml
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    volumes:
+      - ./config:/config
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped
+    # network_mode: host é praticamente obrigatório: a descoberta automática
+    # de dispositivos usa mDNS/broadcast, que não atravessa a rede isolada
+    # de um container.
+    network_mode: host
+```
+
+`docker compose up -d` e abra `http://IP-DO-PI:8123`.
+
+**Consumo:** cerca de 1 GB de RAM e pouca CPU em repouso (sobe ao iniciar e
+ao rodar automações). Reserve ~5 GB de disco — o banco de histórico cresce
+com o tempo; dá para limitar com `recorder:` no `configuration.yaml`.
+
+### Conectar ao deck
+
+1. No Home Assistant, clique no seu usuário (canto inferior esquerdo) e
+   role até o fim.
+2. Em **Tokens de acesso de longa duração**, crie um token e copie
+   (ele só aparece uma vez).
+3. Na aba **Integrações** do deck, informe o endereço
+   (`http://IP-DO-PI:8123`) e o token, e salve.
+
+Os botões passam a acender conforme o estado real: apagar a luz pelo
+interruptor da parede apaga o botão no tablet, porque o estado chega por
+WebSocket.
+
+### Posso distribuir meu deck com essa integração?
+
+Pode — a integração vai no código e não carrega segredo nenhum. Mas note:
+**cada pessoa precisa do próprio Home Assistant e do próprio token**, e os
+`entity_id` dos botões (`light.sala`) são os *dela*, não os seus. Ao exportar
+seu layout, ou tire os botões de casa, ou avise que precisam ser reapontados.
+
+Detalhes de quais marcas exigem o quê: **[docs/casa-inteligente.md](docs/casa-inteligente.md)**.
+
+## Philips Hue (esqueleto antigo)
+
+Módulo estruturado em `server/integrations/hue/index.js`, com as chamadas
+HTTP ainda por escrever. **Foi superado pelo Home Assistant**, que cobre Hue
+junto com todo o resto — só faz sentido implementá-lo se você quiser falar
+com a bridge sem um Home Assistant no meio.
 
 1. Descubra o IP da sua bridge Hue (app oficial Philips Hue, ou
    <https://discovery.meethue.com/>).

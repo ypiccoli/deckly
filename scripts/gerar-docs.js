@@ -28,7 +28,7 @@ function semRuido(fn) {
   }
 }
 
-const NOMES = ['media', 'obs', 'spotify', 'hue', 'atalhos', 'discord'];
+const NOMES = ['media', 'obs', 'spotify', 'hue', 'atalhos', 'discord', 'homeassistant'];
 
 const { TIPOS_BOTAO, ESTILOS_ESTADO } = require(path.join(RAIZ, 'server', 'lib', 'catalogo-ui'));
 
@@ -41,6 +41,7 @@ const REQUISITOS = {
   obs: 'OBS Studio aberto, com **Ferramentas > WebSocket Server Settings > Enable WebSocket server** ligado.',
   spotify: 'Conta Spotify **Premium** e as chaves `SPOTIFY_*` no `.env` — veja "Habilitar o Spotify" no README.',
   hue: 'Bridge Philips Hue na rede e as chaves `HUE_*` no `.env`. **A integração ainda é um esqueleto** — os botões existem, mas as chamadas à bridge não estão implementadas.',
+  homeassistant: 'Um Home Assistant rodando na sua rede e um token de acesso de longa duração. Cobre qualquer marca que o Home Assistant suporte — veja docs/casa-inteligente.md.',
   discord: 'Discord aberto, com os atalhos globais cadastrados em **Configurações do Usuário > Teclas de Atalho** e as mesmas teclas informadas na aba Integrações. Os botões não acendem: o Discord não informa se você está mudo.',
 };
 

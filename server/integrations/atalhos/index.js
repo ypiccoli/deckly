@@ -135,7 +135,10 @@ class IntegracaoAtalhos extends EventEmitter {
               rotulo: 'Navegador específico (opcional)',
               tipo: 'texto',
               obrigatorio: false,
-              ajuda: 'Caminho do .exe. Em branco, abre no navegador padrão do Windows.',
+              ajuda:
+                'Caminho do .exe. Em branco, abre no navegador padrão do Windows — prefira ' +
+                'assim se for compartilhar seu deck com alguém, senão o botão quebra em quem ' +
+                'não tiver esse navegador instalado.',
             },
           ],
         },

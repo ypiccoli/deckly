@@ -143,7 +143,7 @@ Nas configurações do botão, esta é a integração **atalhos**.
 | `digitarTexto` | Digitar um texto | `texto` (texto, obrigatório) — Texto _Digitado na janela que estiver em foco. Combine com "Trazer um programa para frente" numa macro._ |
 | `abrirApp` | Abrir programa | `caminho` (texto, obrigatório) — Caminho, comando ou atalho .lnk _Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt)._ |
 | `abrirUwp` | Abrir app da Store (MSIX) | `appId` (texto, obrigatório) — AppUserModelID _Descubra com: Get-StartApps | Where-Object { $_.Name -like '*Nome*' }_ |
-| `abrirUrl` | Abrir site | `url` (texto, obrigatório) — Endereço<br />`navegador` (texto) — Navegador específico (opcional) _Caminho do .exe. Em branco, abre no navegador padrão do Windows._ |
+| `abrirUrl` | Abrir site | `url` (texto, obrigatório) — Endereço<br />`navegador` (texto) — Navegador específico (opcional) _Caminho do .exe. Em branco, abre no navegador padrão do Windows — prefira assim se for compartilhar seu deck com alguém, senão o botão quebra em quem não tiver esse navegador instalado._ |
 | `abrirJogo` | Abrir jogo da Steam | `appId` (texto) — AppID na Steam |
 | `focarJanela` | Ir para uma janela | `handle` (texto) — Identificador da janela |
 
@@ -168,4 +168,28 @@ Nas configurações do botão, esta é a integração **discord**.
 | `servidorProximo` | Próximo servidor | — |
 | `ligacaoAtual` | Ir para a ligação atual | — |
 | `abrirBusca` | Abrir a busca do Discord | — |
-| `irPara` | Ir para um canal ou servidor | `destino` (texto) — Nome do canal ou servidor _Em branco num botão do tipo Seletor: as opções vêm da lista configurada na aba Integrações._ |
+| `irPara` | Ir para um canal ou servidor | `destino` (texto) — Nome do canal ou servidor |
+
+## Home Assistant
+
+Nas configurações do botão, esta é a integração **homeassistant**.
+
+**Precisa de:** Um Home Assistant rodando na sua rede e um token de acesso de longa duração. Cobre qualquer marca que o Home Assistant suporte — veja docs/casa-inteligente.md.
+
+### Ações
+
+| Ação | O que faz | Parâmetros |
+| --- | --- | --- |
+| `alternar` | Ligar / desligar (alternar) | `entidade` (texto, obrigatório) — Entidade _Ex.: light.sala. Use o seletor de entidades para descobrir os nomes._ |
+| `ligar` | Ligar | `entidade` (texto, obrigatório) — Entidade _Ex.: light.sala. Use o seletor de entidades para descobrir os nomes._ |
+| `desligar` | Desligar | `entidade` (texto, obrigatório) — Entidade _Ex.: light.sala. Use o seletor de entidades para descobrir os nomes._ |
+| `definirBrilho` | Definir brilho da luz | `entidade` (texto, obrigatório) — Entidade _Ex.: light.sala. Use o seletor de entidades para descobrir os nomes._<br />`valor` (numero) — Brilho (0–100) |
+| `ativarCena` | Ativar cena | `entidade` (texto, obrigatório) — Cena _Ex.: scene.noite_ |
+
+### Informações ao vivo
+
+Servem para o botão acender sozinho (campo **Acende quando**) ou para mostrar texto num botão do tipo Mostrador.
+
+| Chave | O que é | Tipo |
+| --- | --- | --- |
+| `homeassistant.conectado` | Home Assistant conectado | booleano |

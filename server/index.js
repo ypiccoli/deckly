@@ -31,6 +31,7 @@ function iniciarServidor() {
   const criarRotaSpotifyAuth = require('./routes/spotify-auth');
   const criarRotaAtalhos = require('./routes/atalhos');
   const criarRotaDiscord = require('./routes/discord');
+  const criarRotaHomeAssistant = require('./routes/homeassistant');
   const criarRotaBemVindo = require('./routes/bemvindo');
   const criarRotaIntegracoes = require('./routes/integracoes');
   const { exigirToken } = require('./lib/auth');
@@ -44,8 +45,9 @@ function iniciarServidor() {
   const hue = require('./integrations/hue');
   const atalhos = require('./integrations/atalhos');
   const discord = require('./integrations/discord');
+  const homeassistant = require('./integrations/homeassistant');
 
-  const integracoes = { media, obs, spotify, hue, atalhos, discord };
+  const integracoes = { media, obs, spotify, hue, atalhos, discord, homeassistant };
 
   const app = express();
   app.use(express.json());
@@ -68,7 +70,11 @@ function iniciarServidor() {
   app.use('/api', exigirToken, criarRotaIntegracoes(integracoes));
   app.use('/action', exigirToken, criarRotaAcoes(integracoes));
   app.use('/atalhos', exigirToken, criarRotaAtalhos());
-  app.use('/discord', exigirToken, criarRotaDiscord());
+  // Mesmo caso do /spotify: a rota de autorização é aberta pelo navegador
+  // como link comum, sem header de token. Ela se protege por exigirLocal;
+  // as listagens exigem token dentro do próprio router.
+  app.use('/discord', criarRotaDiscord());
+  app.use('/homeassistant', criarRotaHomeAssistant());
   // O /spotify tem uma particularidade: as rotas de OAuth não podem exigir
   // token, porque o Spotify redireciona o navegador de volta para /callback
   // sem ele. Elas se protegem por outro caminho (só respondem no próprio PC),

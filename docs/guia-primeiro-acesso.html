@@ -242,6 +242,55 @@
     aparelhos de conversarem entre si. Se o seu tablet estiver nela, mude para
     a rede principal.</p>
   </div>
+
+  <h3>O que você <em>não</em> precisa instalar</h3>
+  <p>Nada. Vale a pena dizer isso explicitamente, porque programas assim
+  normalmente pedem meio mundo de coisa antes de funcionar:</p>
+  <table>
+    <tr>
+      <th style="width: 42mm">O que</th>
+      <th>Por que não precisa</th>
+    </tr>
+    <tr>
+      <td>Node.js</td>
+      <td>Vai <strong>embutido</strong> no <code>stream-deck-web.exe</code>. É a maior
+      parte dos ~90 MB do arquivo.</td>
+    </tr>
+    <tr>
+      <td>WSL, Docker, Python</td>
+      <td>Não são usados em nada. Aparecem no repositório porque é o ambiente
+      de quem desenvolve, não de quem usa.</td>
+    </tr>
+    <tr>
+      <td>Instalador, permissão de administrador</td>
+      <td>Não há instalador. O programa roda com o seu usuário comum e grava
+      só na pasta onde você o colocou.</td>
+    </tr>
+    <tr>
+      <td>Aplicativo no tablet</td>
+      <td>É uma página no navegador. O "instalar na tela inicial" do passo 4
+      é só um atalho, não um app baixado de loja.</td>
+    </tr>
+    <tr>
+      <td>Conta, cadastro, internet</td>
+      <td>O deck funciona na sua rede, sem conta e sem nuvem. Só o Spotify
+      exige conta — e só se você quiser usá-lo.</td>
+    </tr>
+  </table>
+
+  <h3>O que cada integração exige (tudo opcional)</h3>
+  <table>
+    <tr>
+      <th style="width: 42mm">Integração</th>
+      <th>Precisa de</th>
+    </tr>
+    <tr><td>Mídia e Atalhos</td><td>Nada. Funcionam assim que o programa abre.</td></tr>
+    <tr><td>OBS</td><td>OBS Studio aberto, com o servidor WebSocket ligado.</td></tr>
+    <tr><td>Spotify</td><td>Conta <strong>Premium</strong> e um app criado no site de
+    desenvolvedores deles (é gratuito e leva uns minutos).</td></tr>
+    <tr><td>Discord</td><td>Discord aberto. Nada a configurar no modo padrão.</td></tr>
+    <tr><td>Casa inteligente</td><td>Um Home Assistant rodando na sua rede — veja o README.</td></tr>
+  </table>
 </section>
 
 <!-- ===================== PASSO 2 ===================== -->

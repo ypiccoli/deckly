@@ -779,18 +779,32 @@
     label.textContent = campo.rotulo;
     wrap.appendChild(label);
 
-    if (campo.tipo === 'booleano') {
+    // Campos de escolha: booleano é uma lista de dois valores, e uma lista
+    // com opções declaradas pela integração usa o mesmo <select>.
+    if (campo.tipo === 'booleano' || campo.tipo === 'lista') {
+      var opcoes = campo.tipo === 'booleano'
+        ? [{ valor: 'true', rotulo: 'Sim' }, { valor: 'false', rotulo: 'Não' }]
+        : campo.opcoes || [];
+
       var sel = document.createElement('select');
       sel.className = 'campo';
       sel.id = id;
-      [['true', 'Sim'], ['false', 'Não']].forEach(function (par) {
+      opcoes.forEach(function (opcao) {
         var o = document.createElement('option');
-        o.value = par[0];
-        o.textContent = par[1];
+        o.value = opcao.valor;
+        o.textContent = opcao.rotulo;
         sel.appendChild(o);
       });
-      sel.value = (campo.valor || campo.padrao || 'true') === 'false' ? 'false' : 'true';
+      sel.value = campo.valor || campo.padrao || (opcoes[0] && opcoes[0].valor) || '';
       wrap.appendChild(sel);
+
+      if (campo.ajuda) {
+        var ajudaSel = document.createElement('p');
+        ajudaSel.className = 'campo-ajuda';
+        ajudaSel.textContent = campo.ajuda;
+        wrap.appendChild(ajudaSel);
+      }
+
       wrap.dataset.env = campo.env;
       return wrap;
     }
