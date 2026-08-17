@@ -277,9 +277,12 @@ class IntegracaoDiscord extends EventEmitter {
       emChamada: Boolean(canal?.id),
       // Acende o botão de AFK enquanto você está no canal de ausentes.
       noAfk: Boolean(canal?.id) && this._pareceAfk(canal.name),
-      // O "Voltar" só acende quando há de fato para onde voltar — antes
-      // usava emChamada e vivia aceso, prometendo o que não podia cumprir.
-      podeVoltar: Boolean(this._canalAnterior?.id && this._canalAnterior.id !== canal?.id),
+      // O "Voltar" acende só quando há de fato para onde voltar E você está
+      // numa chamada: ele existe para sair do AFK, não para religar num canal
+      // que você deixou de propósito.
+      podeVoltar:
+        Boolean(canal?.id) &&
+        Boolean(this._canalAnterior?.id && this._canalAnterior.id !== canal.id),
       canal: canal?.name || null,
       canalId: canal?.id || null,
       servidorId: canal?.guild_id || null,
@@ -377,6 +380,11 @@ class IntegracaoDiscord extends EventEmitter {
   // alterna entre os dois — é o que se espera de um "voltar".
   async _voltarAoCanalAnterior() {
     this._garantirRpc();
+    // Coerente com o botão, que fica apagado fora de chamada: este "voltar"
+    // é para sair do AFK, não para religar num canal que você largou.
+    if (!this.estado.emChamada) {
+      throw new Error('Você não está em nenhum canal de voz.');
+    }
     if (!this._canalAnterior?.id) {
       throw new Error('Ainda não há canal anterior nesta sessão — entre em dois canais para o botão ter para onde voltar.');
     }

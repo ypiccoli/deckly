@@ -457,6 +457,7 @@ body {
 /* Cabeçalho de seção do seletor ("★ Favoritos" / "Todos"). Só aparece
    quando há favorito — sem eles a lista não ganha divisão nenhuma. */
 .lista-secao {
+  flex-shrink: 0;
   margin: 10px 2px 2px;
   font-size: 0.72rem;
   font-weight: 700;
@@ -471,10 +472,20 @@ body {
 
 /* O item é uma linha com dois alvos de toque: escolher e favoritar. A borda
    e o fundo ficam nele, e os filhos são transparentes, para a linha inteira
-   continuar parecendo um botão só. */
+   continuar parecendo um botão só.
+
+   `flex-shrink: 0` é obrigatório, não estético. A lista é um flex column, e
+   normalmente o tamanho mínimo automático impediria um item de encolher
+   abaixo do próprio conteúdo — mas `overflow: hidden` (que existe aqui para
+   o border-radius cortar o fundo dos filhos) desliga exatamente essa
+   proteção. Sem isto, uma lista que não cabe na tela — 97 canais de voz, no
+   caso que revelou o problema — tem TODOS os itens esmagados até a altura
+   das bordas: linhas finas e vazias, sem erro nenhum no console. Com poucos
+   itens não acontece, porque não falta espaço. */
 .item-lista {
   display: flex;
   align-items: stretch;
+  flex-shrink: 0;
   border-radius: var(--raio-pequeno);
   border: 1px solid var(--cor-cartao-borda);
   background: var(--cor-fundo-cabecalho);
