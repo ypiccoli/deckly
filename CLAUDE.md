@@ -19,6 +19,15 @@ português.** Mantenha esse padrão em qualquer código novo.
   framework de frontend, sem build step, sem TypeScript.
 - **Frontend**: HTML/CSS/JS puro em `public/`, instalável como PWA
   (manifest + service worker mínimo).
+  - **O service worker é rede-primeiro, cache como reserva** — e precisa
+    continuar assim. Ele já foi cache-primeiro, dependendo de subir o
+    `CACHE_NOME` à mão a cada mudança em `public/`. Quando isso é esquecido, o
+    aparelho serve **CSS novo com JS antigo** (ou o contrário) e a interface
+    quebra sem um único erro no console: o sintoma foi uma lista de opções
+    achatada em linhas finas, porque o CSS tinha movido o padding para uma
+    classe que o JS antigo não criava. O servidor está na mesma LAN, então
+    buscar da rede custa milissegundos, e o cache continua cobrindo o caso que
+    motivou o service worker (Wi-Fi caindo, PC ainda subindo).
 - **Integrações**: cada uma em `server/integrations/<nome>/`, isolada.
 - Segredos em `.env` (nunca commitado — só `.env.example`).
 

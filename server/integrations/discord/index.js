@@ -62,6 +62,8 @@ class IntegracaoDiscord extends EventEmitter {
       mudo: false,
       surdo: false,
       emChamada: false,
+      noAfk: false,
+      podeVoltar: false,
       canal: null,
       canalId: null,
       servidor: null,
@@ -273,6 +275,11 @@ class IntegracaoDiscord extends EventEmitter {
 
     this._atualizarEstado({
       emChamada: Boolean(canal?.id),
+      // Acende o botão de AFK enquanto você está no canal de ausentes.
+      noAfk: Boolean(canal?.id) && this._pareceAfk(canal.name),
+      // O "Voltar" só acende quando há de fato para onde voltar — antes
+      // usava emChamada e vivia aceso, prometendo o que não podia cumprir.
+      podeVoltar: Boolean(this._canalAnterior?.id && this._canalAnterior.id !== canal?.id),
       canal: canal?.name || null,
       canalId: canal?.id || null,
       servidorId: canal?.guild_id || null,
@@ -324,6 +331,14 @@ class IntegracaoDiscord extends EventEmitter {
       .replace(/[^a-z0-9]/g, '');
   }
 
+  // Uma regra só, usada pela ação de AFK e pelo estado que acende o botão —
+  // senão o botão poderia levar a um canal que ele não reconhece como AFK.
+  _pareceAfk(nomeDoCanal) {
+    const nome = this._normalizar(nomeDoCanal);
+    if (!nome) return false;
+    return this._nomesAfk.some((termo) => nome.includes(termo));
+  }
+
   // Canais de voz do servidor atual, em ordem de exibição. Usado tanto pela
   // navegação quanto pela busca do AFK.
   async _canaisDeVozDoServidor(guildId) {
@@ -344,11 +359,7 @@ class IntegracaoDiscord extends EventEmitter {
     }
 
     const vozes = await this._canaisDeVozDoServidor(atual.guild_id);
-    const termos = this._nomesAfk;
-    const afk = vozes.find((c) => {
-      const nome = this._normalizar(c.name);
-      return termos.some((termo) => nome.includes(termo));
-    });
+    const afk = vozes.find((c) => this._pareceAfk(c.name));
 
     if (!afk) {
       const servidor = (await this._nomeServidor(atual.guild_id)) || 'este servidor';
@@ -469,10 +480,13 @@ class IntegracaoDiscord extends EventEmitter {
       this.rpc = null;
     }
     this._nomesServidores.clear();
+    this._canalAnterior = null;
     this._atualizarEstado({
       modo: this.modo,
       conectado: false,
       emChamada: false,
+      noAfk: false,
+      podeVoltar: false,
       canal: null,
       canalId: null,
       servidor: null,
@@ -661,6 +675,8 @@ class IntegracaoDiscord extends EventEmitter {
             { chave: 'discord.mudo', rotulo: 'Microfone mudo', tipo: 'booleano' },
             { chave: 'discord.surdo', rotulo: 'Áudio desligado (surdo)', tipo: 'booleano' },
             { chave: 'discord.emChamada', rotulo: 'Em canal de voz', tipo: 'booleano' },
+            { chave: 'discord.noAfk', rotulo: 'No canal de ausentes (AFK)', tipo: 'booleano' },
+            { chave: 'discord.podeVoltar', rotulo: 'Tem canal anterior para voltar', tipo: 'booleano' },
             { chave: 'discord.canal', rotulo: 'Canal de voz atual', tipo: 'texto' },
             { chave: 'discord.servidor', rotulo: 'Servidor atual', tipo: 'texto' },
             // Não serve para mostrar em tela; é o que a estrela de favoritar
