@@ -30,6 +30,7 @@ function iniciarServidor() {
   const criarRotaConfig = require('./routes/config');
   const criarRotaSpotifyAuth = require('./routes/spotify-auth');
   const criarRotaAtalhos = require('./routes/atalhos');
+  const criarRotaMedia = require('./routes/media');
   const criarRotaDiscord = require('./routes/discord');
   const criarRotaHomeAssistant = require('./routes/homeassistant');
   const criarRotaBemVindo = require('./routes/bemvindo');
@@ -70,6 +71,7 @@ function iniciarServidor() {
   app.use('/api', exigirToken, criarRotaIntegracoes(integracoes));
   app.use('/action', exigirToken, criarRotaAcoes(integracoes));
   app.use('/atalhos', exigirToken, criarRotaAtalhos());
+  app.use('/media', exigirToken, criarRotaMedia());
   // Mesmo caso do /spotify: a rota de autorização é aberta pelo navegador
   // como link comum, sem header de token. Ela se protege por exigirLocal;
   // as listagens exigem token dentro do próprio router.

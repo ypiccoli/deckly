@@ -166,6 +166,35 @@ O modo vem de `MEDIA_BACKEND` (`.env`, padrão `auto`): `win32` → `nativo`
 O nome da variável ficou de quando só a integração de mídia existia — hoje
 vale para as duas.
 
+#### Trocar a saída de áudio (`SaidasDeAudio`)
+
+O seletor "Saída" (`GET /media/saidas` + ação `definirSaida`) troca o
+dispositivo padrão do Windows. Três coisas a saber antes de mexer:
+
+- **`IPolicyConfig` não é documentada pela Microsoft.** É a única forma de
+  trocar a saída padrão sem instalar utilitário externo, e é o que o nircmd
+  e o AudioDeviceCmdlets usam por baixo. Há duas variantes com IID
+  diferente, e a posição de `SetDefaultEndpoint` na vtable **muda entre
+  elas** (índice 10 na moderna, 9 na do Vista) — por isso as duas estão
+  declaradas, com a moderna tentada primeiro.
+- **Trocar só o papel `eConsole` não basta.** O Windows guarda "padrão",
+  "multimídia" e "comunicação" separadamente; mudando só o primeiro, a
+  chamada de voz continua tocando no dispositivo antigo — justamente o caso
+  de quem alterna entre fone e caixa. `Definir()` aplica os três.
+- **A lista traz só dispositivos ativos** (`DEVICE_STATE_ACTIVE`): fone
+  desconectado não aparece, o que é o comportamento desejado num seletor.
+
+Cada dispositivo tem volume e mudo próprios, então `definir_saida` devolve o
+estado do dispositivo **novo** — é o que mantém o slider honesto depois da
+troca.
+
+**O cache do `.dll` leva um hash do código C#.** Ele existe porque compilar
+via `Add-Type` custa 1–2s a cada clique. Antes o nome era fixo, e editar o
+bloco C# deixava o `.dll` velho ser carregado no lugar do novo: o sintoma é
+"método não encontrado" numa função que está claramente escrita no script.
+Com o hash no nome, uma edição gera outro arquivo e as versões anteriores
+são apagadas na subida.
+
 ### O script de atalhos especificamente
 
 Trazer uma janela para frente a partir de um processo em segundo plano

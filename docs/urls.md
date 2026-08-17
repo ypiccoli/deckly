@@ -72,7 +72,11 @@ que podem se acumular:
 | `POST /action/:id` | token | Dispara o botão de `id`. O corpo JSON vira parâmetro extra (ex.: `{"valor":30}` num slider) |
 | `GET /atalhos/janelas` | token | Janelas abertas agora (alimenta o seletor "Janelas") |
 | `GET /atalhos/jogos` | token | Jogos instalados na Steam (alimenta o "Jogar…") |
-| `GET /discord/destinos` | token | Canais e servidores configurados (alimenta o "Ir para…") |
+| `GET /media/saidas` | token | Saídas de áudio ativas do Windows (alimenta o seletor "Saída") |
+| `GET /discord/destinos` | token | Canais e servidores configurados (alimenta o "Ir para…", modo teclado) |
+| `GET /discord/canais` | token | Canais de voz de verdade, via RPC (alimenta o seletor "Canais") |
+| `GET /discord/autorizar` | local | Aprova o app no Discord e grava o token do modo RPC |
+| `GET /homeassistant/entidades` | token | Entidades do Home Assistant (alimenta os seletores de casa inteligente) |
 | `GET /spotify/login` | local | Redireciona para a autorização do Spotify |
 | `GET /spotify/callback` | local | Retorno do Spotify. **Não exige token** — o Spotify redireciona o navegador sem ele |
 | `GET /spotify/dispositivos` | token | Aparelhos Spotify ativos (alimenta o "Tocar em…") |

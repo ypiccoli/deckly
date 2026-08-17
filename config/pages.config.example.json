@@ -39,6 +39,19 @@
           "_nota": "estadoChave + estiloEstado deixam o botão vermelho sozinho quando o PC está mudo, mesmo que o mudo tenha sido feito pelo teclado."
         },
         {
+          "id": "midia.saida_audio",
+          "titulo": "Saída",
+          "icone": "🔈",
+          "tipo": "lista",
+          "fonte": "/media/saidas",
+          "iconeItem": "🔈",
+          "mensagemVazia": "Nenhuma saída de áudio ativa encontrada.",
+          "integracao": "media",
+          "acao": "definirSaida",
+          "estadoChave": "media.saida",
+          "_nota": "Lista as saídas de áudio ativas do Windows e troca a padrão. Não precisa configurar nada."
+        },
+        {
           "id": "midia.volume",
           "titulo": "Volume",
           "icone": "🎚️",
@@ -125,7 +138,9 @@
           "icone": "📁",
           "integracao": "atalhos",
           "acao": "abrirApp",
-          "parametros": { "caminho": "explorer" }
+          "parametros": {
+            "caminho": "explorer"
+          }
         },
         {
           "id": "atalhos.bloco_notas",
@@ -133,7 +148,9 @@
           "icone": "🗒️",
           "integracao": "atalhos",
           "acao": "abrirApp",
-          "parametros": { "caminho": "notepad" }
+          "parametros": {
+            "caminho": "notepad"
+          }
         },
         {
           "id": "atalhos.calculadora",
@@ -141,7 +158,9 @@
           "icone": "🧮",
           "integracao": "atalhos",
           "acao": "abrirApp",
-          "parametros": { "caminho": "calc" }
+          "parametros": {
+            "caminho": "calc"
+          }
         },
         {
           "id": "atalhos.site_exemplo",
@@ -149,7 +168,9 @@
           "icone": "🌐",
           "integracao": "atalhos",
           "acao": "abrirUrl",
-          "parametros": { "url": "https://www.google.com" },
+          "parametros": {
+            "url": "https://www.google.com"
+          },
           "_nota": "Sem o parâmetro 'navegador', abre no navegador padrão do Windows. Preencha o caminho de um navegador específico se quiser forçar um."
         },
         {
@@ -178,7 +199,9 @@
           "icone": "🎬",
           "integracao": "obs",
           "acao": "trocarCena",
-          "parametros": { "cena": "Cena" },
+          "parametros": {
+            "cena": "Cena"
+          },
           "estadoChave": "obs.cenaAtual",
           "estadoComparar": "cena",
           "estiloEstado": "destaque",
@@ -190,7 +213,9 @@
           "icone": "🎮",
           "integracao": "obs",
           "acao": "trocarCena",
-          "parametros": { "cena": "Cena 2" },
+          "parametros": {
+            "cena": "Cena 2"
+          },
           "estadoChave": "obs.cenaAtual",
           "estadoComparar": "cena",
           "estiloEstado": "destaque",

@@ -19,6 +19,11 @@ class ControladorWindows {
   diminuirVolume() { return executarScript(this.caminhoScript, 'volume_descer'); }
   definirVolume(valor) { return executarScript(this.caminhoScript, 'definir_volume', valor); }
   status() { return executarScript(this.caminhoScript, 'status'); }
+
+  // Saída de áudio (fone, caixa, monitor…). A listagem é a única chamada
+  // deste script que devolve um array em vez do estado de volume.
+  listarSaidas() { return executarScript(this.caminhoScript, 'listar_saidas'); }
+  definirSaida(id) { return executarScript(this.caminhoScript, 'definir_saida', id); }
 }
 
 module.exports = { ControladorWindows };

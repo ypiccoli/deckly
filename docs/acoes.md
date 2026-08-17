@@ -44,6 +44,7 @@ Nas configurações do botão, esta é a integração **media**.
 | `aumentarVolume` | Aumentar volume | — |
 | `diminuirVolume` | Diminuir volume | — |
 | `definirVolume` | Definir volume | `valor` (numero) — Volume (0–100) |
+| `definirSaida` | Trocar a saída de áudio | `dispositivoId` (texto) — Dispositivo _Em branco num botão do tipo Seletor: a saída é escolhida na hora, na lista._ |
 
 ### Informações ao vivo
 
@@ -53,6 +54,7 @@ Servem para o botão acender sozinho (campo **Acende quando**) ou para mostrar t
 | --- | --- | --- |
 | `media.volume` | Volume do Windows (0–100) | numero |
 | `media.mudo` | Windows está mudo | booleano |
+| `media.saida` | Saída de áudio em uso | texto |
 
 ## OBS Studio
 

@@ -13,7 +13,7 @@ class IntegracaoMedia extends EventEmitter {
   constructor() {
     super();
     this.nome = 'media';
-    this.estado = { volume: 50, mudo: false };
+    this.estado = { volume: 50, mudo: false, saida: null };
 
     const modo = detectarModo();
     if (!modo) {
@@ -47,6 +47,21 @@ class IntegracaoMedia extends EventEmitter {
     }
   }
 
+  // Saídas de áudio ativas, para o seletor. O formato { id, nome, ativo } é
+  // o mesmo de todas as listagens — veja routes/atalhos.js.
+  async listarSaidas() {
+    if (!this.controlador) {
+      throw new Error('Integração de mídia não está disponível nesta plataforma.');
+    }
+    const saidas = await this.controlador.listarSaidas();
+    return (saidas || []).map((s) => ({
+      id: s.id,
+      nome: s.nome,
+      detalhe: s.padrao ? 'Em uso' : null,
+      ativo: Boolean(s.padrao),
+    }));
+  }
+
   // Descreve o que esta integração oferece, para a tela de configuração
   // conseguir montar os formulários sozinha (veja GET /api/catalogo).
   get catalogo() {
@@ -57,7 +72,9 @@ class IntegracaoMedia extends EventEmitter {
       estados: [
         { chave: 'media.volume', rotulo: 'Volume do Windows (0–100)', tipo: 'numero' },
         { chave: 'media.mudo', rotulo: 'Windows está mudo', tipo: 'booleano' },
+        { chave: 'media.saida', rotulo: 'Saída de áudio em uso', tipo: 'texto' },
       ],
+      listas: [{ fonte: '/media/saidas', rotulo: 'Saídas de áudio', acaoSugerida: 'definirSaida' }],
       acoes: {
         playPause: { rotulo: 'Play / Pause', parametros: [] },
         faixaAnterior: { rotulo: 'Faixa anterior', parametros: [] },
@@ -69,6 +86,19 @@ class IntegracaoMedia extends EventEmitter {
           rotulo: 'Definir volume',
           paraSlider: true,
           parametros: [{ nome: 'valor', rotulo: 'Volume (0–100)', tipo: 'numero', obrigatorio: false }],
+        },
+        definirSaida: {
+          rotulo: 'Trocar a saída de áudio',
+          parametros: [
+            {
+              nome: 'dispositivoId',
+              rotulo: 'Dispositivo',
+              tipo: 'texto',
+              obrigatorio: false,
+              ajuda: 'Em branco num botão do tipo Seletor: a saída é escolhida na hora, na lista.',
+            },
+          ],
+          aceitaLista: true,
         },
       },
     };
@@ -85,6 +115,15 @@ class IntegracaoMedia extends EventEmitter {
       definirVolume: (parametros = {}) => {
         const valor = parametros.valor ?? parametros.value;
         return this._executarEAtualizar(this.controlador.definirVolume(valor));
+      },
+      definirSaida: (parametros = {}) => {
+        // "opcaoId" vem da escolha no seletor; "dispositivoId" de um botão
+        // fixo numa saída específica.
+        const id = parametros.opcaoId || parametros.dispositivoId;
+        if (!id) throw new Error('Nenhuma saída de áudio informada.');
+        // O script já devolve o estado do dispositivo novo — cada saída tem
+        // seu próprio volume e mudo, então isso mantém o slider honesto.
+        return this._executarEAtualizar(this.controlador.definirSaida(id));
       },
     };
   }
