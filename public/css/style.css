@@ -142,6 +142,177 @@ body {
   background: var(--cor-cartao);
 }
 
+/* O ✏️ é um <button>, e não um <a> como o ⚙️ — precisa dos zeramentos que o
+   link não precisava. */
+button.link-config {
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.link-config.ligado {
+  opacity: 1;
+  background: var(--cor-acento-1);
+}
+
+/* ================= modo de edição de layout ================= */
+
+.barra-edicao {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--cor-fundo-cabecalho);
+  border-bottom: 1px solid var(--cor-cartao-borda);
+}
+
+.edicao-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.edicao-pagina {
+  font-size: 0.95rem;
+}
+
+.edicao-dica,
+.edicao-rotulo {
+  font-size: 0.75rem;
+  color: var(--cor-texto-fraco);
+}
+
+/* Empurra Salvar/Descartar para a direita sem depender da ordem do markup. */
+.edicao-acoes {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edicao,
+.chip {
+  border: 1px solid var(--cor-cartao-borda);
+  background: var(--cor-cartao);
+  color: var(--cor-texto);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  /* Alvo de toque: no tablet estes chips são acertados com o polegar. */
+  min-width: 40px;
+  min-height: 36px;
+}
+
+.btn-edicao.primario {
+  background: var(--cor-acento-1);
+  border-color: var(--cor-acento-1);
+}
+
+.btn-edicao:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.edicao-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip.ligado {
+  background: var(--cor-acento-1);
+  border-color: var(--cor-acento-1);
+}
+
+.chip-valor {
+  font-size: 0.8rem;
+  min-width: 46px;
+  text-align: center;
+}
+
+.edicao-faixa {
+  flex: 1;
+  min-width: 120px;
+  max-width: 260px;
+}
+
+.altura-valor {
+  font-size: 0.8rem;
+  min-width: 52px;
+}
+
+.edicao-aviso {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #f5c542;
+}
+
+.barra-edicao.sujo .btn-edicao.primario::after {
+  content: ' •';
+}
+
+/* Botões durante a edição.
+
+   `touch-action: none` é o que faz o arraste funcionar no tablet: sem ele o
+   navegador entende o gesto como rolagem da grade e nunca entrega os
+   pointermove. O preço é não dar para rolar arrastando em cima de um botão
+   enquanto edita — por isso existe o auto-scroll de borda no editor, e a
+   rolagem pela área de respiro entre os botões continua valendo. */
+body.modo-edicao .grade .botao {
+  touch-action: none;
+  cursor: grab;
+}
+
+/* Desliga os filhos para o polegar do slider e a estrela do mostrador não
+   capturarem o gesto. De quebra, o elementFromPoint do arraste passa a
+   devolver sempre o .botao, e nunca um filho dele. */
+body.modo-edicao .grade .botao > *:not(.alca-tamanho) {
+  pointer-events: none;
+}
+
+body.modo-edicao .grade .botao.selecionado {
+  outline: 2px solid var(--cor-acento-1);
+  outline-offset: 2px;
+}
+
+body.modo-edicao .grade .botao.arrastando {
+  opacity: 0.85;
+  cursor: grabbing;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  z-index: 5;
+}
+
+.alca-tamanho {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 18px;
+  height: 18px;
+  border-right: 3px solid var(--cor-acento-1);
+  border-bottom: 3px solid var(--cor-acento-1);
+  border-bottom-right-radius: 6px;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: nwse-resize;
+}
+
+/* Amplia a área de toque da alça sem aumentar o desenho dela: 18px seria
+   pequeno demais para o dedo. */
+.alca-tamanho::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 44px;
+  height: 44px;
+}
+
 .grade {
   flex: 1;
   overflow-y: auto;

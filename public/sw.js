@@ -7,13 +7,14 @@
 // mais abaixo. Depender de subir isto à mão já falhou uma vez, e o sintoma é
 // péssimo de diagnosticar — CSS novo com JS antigo deixa a tela meio
 // quebrada, sem erro nenhum no console.
-const CACHE_NOME = 'deckly-v13';
+const CACHE_NOME = 'deckly-v14';
 const ARQUIVOS_ESTATICOS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/css/style.css',
   '/js/app.js',
+  '/js/editor-layout.js',
   '/js/token.js',
   '/js/ws-client.js',
   '/icons/icon.svg',

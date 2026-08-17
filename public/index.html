@@ -22,8 +22,13 @@
         <span class="status-ponto"></span>
         <span class="status-texto">conectando…</span>
       </div>
+      <button type="button" class="link-config" id="btn-editar-layout"
+              title="Editar layout" aria-pressed="false" hidden>✏️</button>
       <a class="link-config" href="config/" title="Configurar botões">⚙️</a>
     </header>
+
+    <!-- Preenchida por js/editor-layout.js; fica fora do modo de edição. -->
+    <div class="barra-edicao" id="barra-edicao" hidden></div>
 
     <main class="grade" id="grade"></main>
   </div>
@@ -39,5 +44,7 @@
   <script src="js/token.js"></script>
   <script src="js/ws-client.js"></script>
   <script src="js/app.js"></script>
+  <!-- Depois do app.js: é ele quem publica window.deck. -->
+  <script src="js/editor-layout.js"></script>
 </body>
 </html>

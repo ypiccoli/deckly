@@ -26,6 +26,15 @@
     return Boolean(valor);
   }
 
+  // Registrados por window.deck.aoRenderizar — é como o editor de layout
+  // readorna a grade (alças, atributos) depois de qualquer re-render, sem que
+  // renderizarGrade precise saber que ele existe.
+  const ganchosDeRender = [];
+
+  // Preenchido pelo editor de layout enquanto ele está ativo: recarregar a
+  // config no meio de uma edição apagaria o trabalho em andamento.
+  let desvioDeRecarga = null;
+
   async function enviarAcao(id, corpo) {
     const resposta = await window.acesso.buscar(`/action/${encodeURIComponent(id)}`, {
       method: 'POST',
@@ -397,13 +406,13 @@
     }
   }
 
-  function renderizarGrade() {
-    elGrade.innerHTML = '';
-    const pagina = paginas.find((p) => p.id === paginaAtivaId);
-    if (!pagina) return;
-
-    // Colunas da página: em branco, mantém o preenchimento automático que
-    // se adapta à largura da tela.
+  // Colunas e altura de linha da página. Separado de renderizarGrade porque o
+  // editor de layout precisa aplicar isso a cada toque no controle, e chamar
+  // o render inteiro ali recriaria todos os botões — inclusive refazendo o
+  // fetch de favoritos que criarBotaoInfo dispara.
+  function aplicarLayoutDaPagina(pagina) {
+    // Colunas em branco mantêm o preenchimento automático, que se adapta à
+    // largura da tela.
     const colunas = Number(pagina.colunas) || 0;
     elGrade.style.gridTemplateColumns = colunas
       ? `repeat(${Math.min(colunas, 12)}, minmax(0, 1fr))`
@@ -413,6 +422,14 @@
     } else {
       elGrade.style.gridAutoRows = '';
     }
+  }
+
+  function renderizarGrade() {
+    elGrade.innerHTML = '';
+    const pagina = paginas.find((p) => p.id === paginaAtivaId);
+    if (!pagina) return;
+
+    aplicarLayoutDaPagina(pagina);
 
     pagina.botoes.forEach((botao) => {
       let el;
@@ -425,6 +442,7 @@
     });
 
     atualizarEstadosNaGrade();
+    ganchosDeRender.forEach((gancho) => gancho(pagina));
   }
 
   function atualizarEstadosNaGrade() {
@@ -475,7 +493,12 @@
     } else if (mensagem.tipo === 'config_atualizado') {
       // O layout mudou (alguém salvou na tela de configuração): rebusca e
       // re-renderiza sem reiniciar nada nem recarregar a página.
-      carregarConfig();
+      //
+      // A exceção é o modo de edição: recarregar ali apagaria o que a pessoa
+      // está arrastando neste instante. Quem estiver editando decide o que
+      // fazer com o aviso.
+      if (desvioDeRecarga) desvioDeRecarga();
+      else carregarConfig();
     }
   }
 
@@ -550,6 +573,40 @@
 
     window.clienteWs.conectar();
   }
+
+  // Superfície mínima para o editor de layout (js/editor-layout.js), no mesmo
+  // padrão de window.acesso e window.clienteWs: um objeto global pequeno e
+  // documentado, em vez de espalhar `if (editando)` pelos criadores de botão.
+  //
+  //   paginas()                 array vivo das páginas (o editor edita ele mesmo)
+  //   paginaAtiva()             a página da aba aberta
+  //   definirPaginas(novas)     troca tudo e re-renderiza (usado no descartar)
+  //   elGrade                   o elemento da grade
+  //   renderizarGrade()         render completo
+  //   aplicarLayoutDaPagina(p)  só colunas e altura de linha, sem recriar botões
+  //   aoRenderizar(fn)          chamado ao fim de cada render, com a página
+  //   desviarRecarga(fn|null)   intercepta o config_atualizado do WebSocket
+  //   recarregarConfig()        rebusca do servidor e re-renderiza
+  window.deck = {
+    paginas: () => paginas,
+    paginaAtiva: () => paginas.find((p) => p.id === paginaAtivaId) || null,
+    definirPaginas(novas) {
+      paginas = novas;
+      if (!paginas.some((p) => p.id === paginaAtivaId)) paginaAtivaId = paginas[0]?.id || null;
+      renderizarAbas();
+      renderizarGrade();
+    },
+    elGrade,
+    renderizarGrade,
+    aplicarLayoutDaPagina,
+    aoRenderizar(fn) {
+      ganchosDeRender.push(fn);
+    },
+    desviarRecarga(fn) {
+      desvioDeRecarga = fn || null;
+    },
+    recarregarConfig: carregarConfig,
+  };
 
   // Só começa depois que houver token — sem ele, toda chamada volta 401.
   window.acesso.garantir(iniciar);
