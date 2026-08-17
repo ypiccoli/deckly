@@ -417,7 +417,6 @@ details.avancado > div { display: flex; flex-direction: column; gap: 12px; paddi
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 
 /* Layout: três campos por linha (largura, altura, cor) */
-.linha-tripla { grid-template-columns: 1fr 1fr 1.2fr; }
 
 .secao-form {
   margin: 18px 0 2px;
@@ -436,4 +435,15 @@ details.avancado > div { display: flex; flex-direction: column; gap: 12px; paddi
   border-radius: 8px;
   background: var(--cor-fundo);
   cursor: pointer;
+}
+
+/* Aponta para o modo de edição do deck, que substituiu os controles de
+   tamanho e posição que ficavam nesta tela. */
+.dica-layout {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--cor-cartao-borda);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--cor-texto-fraco);
 }

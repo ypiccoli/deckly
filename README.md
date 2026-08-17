@@ -298,9 +298,17 @@ forwarding.
 
 ## Controle de mídia (Windows via WSL2)
 
-A integração `media` (play/pause, próxima/anterior faixa, mute, volume)
-precisa executar ações no **Windows**, mesmo rodando o servidor dentro do
-WSL2. Isso é feito via **interop do WSL2**: o Node chama o `powershell.exe`
+A integração `media` (play/pause, próxima/anterior faixa, mute, volume e
+**troca da saída de áudio**) precisa executar ações no **Windows**, mesmo
+rodando o servidor dentro do WSL2.
+
+> **Trocar a saída de áudio** (o botão "Saída"): lista os dispositivos ativos
+> — fone, caixa, monitor — e troca o padrão do Windows num toque, sem abrir o
+> painel de som. Ele muda os **três** papéis de uma vez (padrão, multimídia e
+> comunicação): mudando só o primeiro, a chamada de voz continuaria tocando no
+> dispositivo antigo, que é justamente o caso de quem alterna entre fone e
+> caixa. Como cada dispositivo tem volume próprio no Windows, o slider do deck
+> acompanha a troca. Isso é feito via **interop do WSL2**: o Node chama o `powershell.exe`
 do Windows (disponível automaticamente dentro do WSL, sem instalar nada) e
 esse PowerShell manipula o volume master e envia teclas de mídia virtuais
 usando a API do próprio Windows — sem depender de utilitários externos como
@@ -442,26 +450,49 @@ acontecer, clique em **Reconectar ao Spotify** na aba Integrações.
 
 ## Habilitar o Discord
 
-Mudo do microfone, surdo (mudo total) e câmera. **Funciona por atalho global
-de teclado**, não pela API do Discord — e isso tem consequências que vale
-entender antes de configurar.
+Mudo do microfone, surdo, entrar e sair de canal de voz. Há **dois modos**, e
+eles resolvem problemas diferentes — escolha na aba Integrações.
 
-### Por que atalho de teclado
+### Modo `teclado` (padrão): funciona para todo mundo, sem cadastro
 
-O Discord tem um canal local (RPC, por named pipe) com um comando
-`SET_VOICE_SETTINGS` que faria exatamente isto e ainda devolveria o estado
-atual, permitindo o botão acender sozinho. O problema é o acesso: o escopo
-`rpc` vale só para o dono do app e uma lista de até 50 testadores até a
-Discord aprovar o app manualmente. Funcionaria para quem criasse um app no
-portal de desenvolvedores — e para mais ninguém.
+Simula os atalhos que já vêm no Discord. Não exige criar nada, e é o que vem
+configurado no programa que você baixa.
 
-Como este projeto é distribuído como um `.exe` para quem não vai criar app
-nenhum, o atalho global ganha: funciona para todo mundo, hoje, sem cadastro
-e sem dependência nova.
+**O preço:** os botões **não acendem**. O Discord não conta para ninguém se
+você está mudo, então não há estado para refletir. E como os atalhos embutidos
+só funcionam com o Discord em foco, cada botão traz ele para frente antes —
+roubando o foco do que estiver aberto.
 
-**O preço:** os botões de Discord **não acendem**. O Discord não conta para
-ninguém se você está mudo, então não há estado para refletir. Você aperta e
-alterna, sem confirmação visual no deck.
+### Modo `rpc`: os botões acendem e os canais são de verdade
+
+Fala com o Discord pelo canal local (named pipe). Com ele:
+
+- **Mudo e Surdo acendem** conforme o seu estado real, e mudam sozinhos se
+  você usar o atalho do teclado ou clicar no próprio Discord.
+- **"Canais"** lista os seus canais de voz de verdade, por servidor, com o
+  atual marcado. Uma **estrela** em cada item põe os que você mais usa no topo
+  — favoritar fica guardado no servidor, então vale para o tablet e o PC.
+- **"Em chamada"** mostra onde você está, e tem a mesma estrela para favoritar
+  o canal atual sem abrir a lista.
+- **AFK** vai para o canal de ausentes do servidor em que você está, e **acende**
+  enquanto você estiver nele. **Voltar** retorna ao canal anterior — apertar
+  duas vezes alterna entre os dois.
+- **Desligar** sai do canal de voz.
+
+O preço é criar um app no portal do Discord (o passo a passo aparece na aba
+Integrações). O escopo `rpc` vale só para o dono do app e até 50 testadores
+até a Discord aprovar manualmente — ou seja: **serve para o seu deck, não para
+distribuir**. É por isso que o padrão continua sendo o modo teclado.
+
+Como o AFK é encontrado: o RPC não informa qual é o canal de ausentes oficial
+do servidor, então ele é reconhecido **pelo nome** (`afk`, `ausente`, `away`…,
+ignorando acento, caixa e emoji, para `🔇 AUSENTES 🔇` casar). A lista fica em
+`DISCORD_NOMES_AFK`, na aba Integrações, se algum servidor seu chamar de outra
+coisa.
+
+Mesmo no modo RPC, algumas ações não existem no protocolo e continuam saindo
+por atalho de teclado: atender, recusar, painel de som e a busca. Elas trazem o
+Discord para frente antes, porque é a única forma de funcionarem.
 
 ### Configurar: nada, na maioria dos casos
 
@@ -591,11 +622,41 @@ com a bridge sem um Home Assistant no meio.
 
 ## Editar páginas e botões
 
-### Pela tela de configuração (recomendado)
+São **duas telas, com papéis diferentes**, e vale saber qual abrir:
+
+| Quero… | Onde | Como chegar |
+|--------|------|-------------|
+| Mover, redimensionar, mudar colunas | **No próprio deck** | ✏️ no cabeçalho |
+| Criar botão, escolher ação, integração, ícone, cor | Tela de configuração | ⚙️ no cabeçalho |
+
+### Ajustar o layout: no próprio deck (✏️)
+
+Toque no **✏️** do cabeçalho e o deck entra em modo de edição — **no aparelho
+em que você está**, tablet ou PC.
+
+- **Arraste** um botão para movê-lo. Os outros se acomodam; nunca sobra buraco.
+- **Toque rápido** seleciona: aparece uma alça no canto para arrastar e
+  redimensionar, e os controles `± col / ± lin` na barra (mais fáceis de
+  acertar com o dedo do que a alça, num botão pequeno).
+- **Colunas** e **Altura** dos botões, na barra, mudam a tela na hora.
+- **Salvar** ou **Descartar**. Enquanto não salvar, ninguém mais vê.
+
+Enquanto o modo está ligado, tocar num botão **não dispara a ação** — dá para
+arrastar o botão de desligar o PC sem susto.
+
+Isto existe porque montar o deck era editar no PC, salvar, pegar o tablet e
+olhar: a grade se comporta de um jeito no monitor e de outro numa tela de 10
+polegadas. Editando na tela real, o resultado é o que você já está vendo.
+
+> Salvar layout funciona **de qualquer aparelho com o token**, e só isso — a
+> rota que grava aceita apenas posição, tamanho e colunas, e lê a ação de cada
+> botão do disco. Trocar o que um botão faz continua exigindo estar no PC.
+
+### Criar e configurar botões: tela de configuração (⚙️)
 
 Abra **`http://localhost:3000/config/`** — ou toque na engrenagem ⚙️ no canto
-do deck. Dá para criar, editar, reordenar e remover páginas e botões sem
-tocar em arquivo nenhum:
+do deck. Dá para criar, editar e remover páginas e botões sem tocar em arquivo
+nenhum:
 
 - Escolha a integração e a ação numa lista, e os campos de parâmetro
   aparecem sozinhos (o caminho do programa, a URL, o nome da cena…).

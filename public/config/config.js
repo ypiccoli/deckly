@@ -160,30 +160,20 @@
         ? 'macro · ' + botao.acoes.length + ' ações'
         : (botao.tipo && botao.tipo !== 'botao' ? botao.tipo + ' · ' : '') + (botao.acao || '—');
 
+      // Sem setinhas de ordem aqui: a posição do botão na grade se ajusta
+      // arrastando, no modo de edição do próprio deck (✏️ no cabeçalho). Duas
+      // formas de fazer a mesma coisa, uma delas às cegas, era só confusão —
+      // e a lista abaixo nem mostra o tamanho ou a posição real.
       var li = document.createElement('li');
       li.className = 'item' + (i === estado.botaoIdx ? ' ativo' : '');
       li.innerHTML =
         '<span class="item-icone">' + esc(botao.icone || '⬛') + '</span>' +
         '<span class="item-texto"><span class="item-nome">' + esc(botao.titulo) + '</span>' +
-        '<span class="item-sub">' + esc(descricao) + '</span></span>' +
-        '<span class="item-ordem">' +
-        '<button type="button" class="mini" data-mover="-1"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
-        '<button type="button" class="mini" data-mover="1"' + (i === pagina.botoes.length - 1 ? ' disabled' : '') + '>▼</button>' +
-        '</span>';
+        '<span class="item-sub">' + esc(descricao) + '</span></span>';
 
-      li.addEventListener('click', function (ev) {
-        if (ev.target.closest('[data-mover]')) return;
+      li.addEventListener('click', function () {
         estado.botaoIdx = i;
         renderTudo();
-      });
-      li.querySelectorAll('[data-mover]').forEach(function (b) {
-        b.addEventListener('click', function () {
-          var destino = i + Number(b.getAttribute('data-mover'));
-          if (!mover(pagina.botoes, i, destino)) return;
-          if (estado.botaoIdx === i) estado.botaoIdx = destino;
-          marcarSujo();
-          renderTudo();
-        });
       });
       el.listaBotoes.appendChild(li);
     });
@@ -433,26 +423,18 @@
     linha.appendChild(campoIcone('Ícone', botao.icone, function (v) { botao.icone = v; renderListaBotoes(); }));
     el.form.appendChild(linha);
 
-    // --- tamanho e cor ---
-    var linhaTamanho = document.createElement('div');
-    linhaTamanho.className = 'linha linha-tripla';
-    var tamanhos = [1, 2, 3, 4].map(function (n) {
-      return { valor: String(n), rotulo: n === 1 ? '1 (normal)' : String(n) };
-    });
-    linhaTamanho.appendChild(
-      campoSelect('Largura', String(botao.largura || 1), tamanhos, function (v) {
-        if (Number(v) > 1) botao.largura = Number(v); else delete botao.largura;
-      }, { ajuda: 'Em colunas da grade.' }),
-    );
-    linhaTamanho.appendChild(
-      campoSelect('Altura', String(botao.altura || 1), tamanhos, function (v) {
-        if (Number(v) > 1) botao.altura = Number(v); else delete botao.altura;
-      }, { ajuda: 'Em linhas da grade.' }),
-    );
-    linhaTamanho.appendChild(campoCor('Cor', botao.cor, function (v) {
+    // --- cor ---
+    //
+    // Tamanho e posição saíram daqui: escolher "largura 3" num select sem ver
+    // a grade era chutar. Isso agora se faz arrastando, no modo de edição do
+    // próprio deck, onde o resultado aparece na hora e na tela de verdade.
+    // A cor fica, porque não tem equivalente lá.
+    var linhaCor = document.createElement('div');
+    linhaCor.className = 'linha';
+    linhaCor.appendChild(campoCor('Cor', botao.cor, function (v) {
       if (v) botao.cor = v; else delete botao.cor;
     }));
-    el.form.appendChild(linhaTamanho);
+    el.form.appendChild(linhaCor);
 
     el.form.appendChild(
       campoSelect(
@@ -698,45 +680,16 @@
     el.form.appendChild(linha);
 
     // --- layout da página ---
-    var tituloLayout = document.createElement('h3');
-    tituloLayout.className = 'secao-form';
-    tituloLayout.textContent = 'Layout';
-    el.form.appendChild(tituloLayout);
-
-    var linhaLayout = document.createElement('div');
-    linhaLayout.className = 'linha';
-    linhaLayout.appendChild(
-      campoSelect(
-        'Colunas',
-        pagina.colunas == null ? '' : String(pagina.colunas),
-        [{ valor: '', rotulo: 'Automático (adapta à tela)' }].concat(
-          [2, 3, 4, 5, 6, 7, 8, 10, 12].map(function (n) {
-            return { valor: String(n), rotulo: n + ' colunas' };
-          }),
-        ),
-        function (v) {
-          if (v) pagina.colunas = Number(v);
-          else delete pagina.colunas;
-        },
-        { ajuda: 'Automático encaixa quantos couberem. Fixar é útil se você quer o mesmo desenho em qualquer tela.' },
-      ),
-    );
-    linhaLayout.appendChild(
-      campoSelect(
-        'Altura dos botões',
-        pagina.alturaBotao == null ? '' : String(pagina.alturaBotao),
-        [{ valor: '', rotulo: 'Padrão (120px)' }].concat(
-          [80, 100, 120, 140, 160, 200].map(function (n) {
-            return { valor: String(n), rotulo: n + ' px' };
-          }),
-        ),
-        function (v) {
-          if (v) pagina.alturaBotao = Number(v);
-          else delete pagina.alturaBotao;
-        },
-      ),
-    );
-    el.form.appendChild(linhaLayout);
+    // Colunas e altura dos botões saíram daqui pelo mesmo motivo do tamanho:
+    // são decisões visuais, e escolhê-las sem ver a grade é chutar. Ficam no
+    // modo de edição do deck, onde mudam a tela enquanto você arrasta o
+    // controle.
+    var dicaLayout = document.createElement('p');
+    dicaLayout.className = 'dica-layout';
+    dicaLayout.innerHTML =
+      'Para mover, redimensionar botões e ajustar as colunas desta página, ' +
+      'abra o deck e toque no <b>✏️</b> do cabeçalho.';
+    el.form.appendChild(dicaLayout);
 
     var avancado = document.createElement('details');
     avancado.className = 'avancado';
