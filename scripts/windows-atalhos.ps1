@@ -206,7 +206,14 @@ switch ($Acao) {
     }
     'abrir_app' {
         if ([string]::IsNullOrEmpty($Valor)) { throw 'Parametro -Valor (caminho ou comando) é obrigatório para abrir_app' }
-        Start-Process $Valor
+        if ([string]::IsNullOrEmpty($Extra)) {
+            Start-Process $Valor
+        } else {
+            # -Extra = argumentos de linha de comando. Necessário para
+            # lançadores como o Update.exe do Squirrel (Discord), que só
+            # abrem o programa quando recebem --processStart.
+            Start-Process -FilePath $Valor -ArgumentList $Extra
+        }
     }
     'abrir_uwp' {
         if ([string]::IsNullOrEmpty($Valor)) { throw 'Parametro -Valor (AppUserModelID) é obrigatório para abrir_uwp' }

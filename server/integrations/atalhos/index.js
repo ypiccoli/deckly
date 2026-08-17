@@ -112,6 +112,13 @@ class IntegracaoAtalhos extends EventEmitter {
               obrigatorio: true,
               ajuda: 'Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt).',
             },
+            {
+              nome: 'argumentos',
+              rotulo: 'Argumentos (opcional)',
+              tipo: 'texto',
+              obrigatorio: false,
+              ajuda: 'Passados na linha de comando, para programas que precisam deles.',
+            },
           ],
         },
         abrirUwp: {
@@ -191,7 +198,7 @@ class IntegracaoAtalhos extends EventEmitter {
       abrirApp: (parametros = {}) => {
         this._garantirDisponivel();
         if (!parametros.caminho) throw new Error('Parâmetro "caminho" é obrigatório.');
-        return this.controlador.abrirApp(parametros.caminho);
+        return this.controlador.abrirApp(parametros.caminho, parametros.argumentos);
       },
       abrirUwp: (parametros = {}) => {
         this._garantirDisponivel();

@@ -200,38 +200,86 @@ Reproduzir a recusa de conexão do WSL exige cuidado: nesta máquina uma porta
 fechada em `127.0.0.1` **pendura** em vez de recusar, então testes de
 "servidor fora do ar" não se comportam como no Windows.
 
-## Discord: por que não usa a API do Discord
+## Discord: dois modos, e por que os dois existem
 
-`server/integrations/discord/` não fala com o Discord — ele **envia atalhos
-globais de teclado** pela integração `atalhos`. Não é preguiça, é o único
-caminho que funciona para quem recebe o `.exe`:
+`server/integrations/discord/` tem dois modos, escolhidos por `DISCORD_MODO`.
+Não é indecisão — eles resolvem problemas diferentes e nenhum dos dois
+sozinho serve para tudo:
 
-- O RPC local do Discord tem `SET_VOICE_SETTINGS`, que faria isso direito e
-  ainda devolveria o estado (botão acendendo). Mas o escopo `rpc` só vale
-  para o **dono do app** e até 50 testadores até a Discord aprovar o app
-  manualmente. Serviria para uma pessoa, não para quem baixa o programa.
-- **Go Live não existe em lugar nenhum**: nem API, nem tecla de atalho. Só o
-  botão na interface. Não tente implementar — não há por onde.
-- Consequência aceita: **os botões de Discord não acendem**. Sem RPC não há
-  estado, e o catálogo declara `estados: []` de propósito.
+- **`teclado` (padrão)** — simula os atalhos do Discord pela integração
+  `atalhos`. Funciona para qualquer pessoa, sem cadastro nenhum, mas é cego:
+  o Discord não conta se você está mudo, então os botões não acendem, e
+  navegar entre canais depende de digitar nomes no Quick Switcher. **É o que
+  vai no template público**, porque é o único que funciona para quem baixa o
+  `.exe`.
+- **`rpc`** — fala com o Discord pelo named pipe local (`rpc.js`). Sabe o
+  estado de verdade, então os botões acendem, e lista canais de voz reais.
+  O preço é criar um app no portal do Discord: o escopo `rpc` só vale para o
+  **dono do app** e até 50 testadores até a Discord aprovar manualmente.
+  Serve para o próprio deck, **não** para distribuir.
 
-**As duas telas de atalho do Discord são diferentes, e isso decide o foco:**
+**Go Live não existe em nenhum dos dois**: nem API, nem RPC, nem tecla de
+atalho. Só o botão na interface. Não tente implementar — não há por onde.
+
+### O foco é decidido por atalho, não globalmente
+
+**As duas telas de atalho do Discord são diferentes, e é isso que decide:**
 
 - *Atalhos de teclado* — os embutidos (`CTRL+SHIFT+M` etc). Lista só de
   leitura, e **só funcionam com o Discord em foco**.
 - *Teclas de Atalho* — os que a pessoa cria. Valem **globalmente**.
 
-Os padrões da integração são os embutidos, então cada ação chama
-`focarProcesso('Discord')` antes (`DISCORD_FOCAR_ANTES`, ligado por padrão).
-Isso rouba o foco de propósito: é o preço de funcionar sem configuração.
-Quem criar atalhos globais próprios desliga a flag.
+Por isso `DISCORD_FOCAR_ANTES` **não** vale para todas as ações: `_precisaFocar()`
+só respeita a flag quando a pessoa definiu `DISCORD_TECLA_*` própria (aí
+presume-se atalho global). Com a variável em branco vale o embutido, que
+sempre foca. Uma versão anterior aplicava a flag a tudo, e quem a desligava
+ficava com metade dos botões **silenciosamente inertes** — as teclas iam
+para a janela que estivesse na frente.
 
-O seletor "Ir para…" usa o **Quick Switcher** (`CTRL+K` → digita → ENTER),
-com a pausa de 450ms antes do ENTER porque a busca é assíncrona — sem ela o
-ENTER chega antes do resultado. A lista de nomes vem de `DISCORD_DESTINOS`
-(separada por vírgula) via `GET /discord/destinos`, e não do Discord: listar
-canais de verdade exigiria um bot dentro de cada servidor, com permissão de
-administrador que ninguém tem nos servidores dos outros.
+### O que o RPC cobre, e o que sobra para o teclado
+
+Cobre: mudo, surdo, entrar/sair de canal de voz, e canal anterior/próximo.
+`_navegarCanalDeVoz()` lista os canais de voz do servidor atual e entra no
+vizinho — no modo teclado isso era `ALT+UP`/`ALT+DOWN`, que move a seleção
+na lista de canais **de texto** e nunca trocou canal de voz, nem com foco.
+
+**Gotcha do `SELECT_VOICE_CHANNEL`: `force: true` é obrigatório para TROCAR
+de canal.** O nome engana — não é entrar à força onde você não pode. Sem ele
+o Discord responde `User is already joined to a voice channel` e a troca só
+funciona quando você já está fora de qualquer canal, que é justamente quando
+não se precisa dela. Sair (`channel_id: null`) não precisa de `force`.
+
+Não cobre, e continua por teclado nos dois modos: atender, recusar, painel
+de som, ligação atual, busca, servidor anterior/próximo. Por isso os campos
+`DISCORD_TECLA_*` e `DISCORD_FOCAR_ANTES` aparecem na aba Integrações
+**também no modo RPC**.
+
+O seletor "Ir para…" (só no modo teclado) usa o **Quick Switcher**
+(`CTRL+K` → digita → ENTER), com a pausa de 450ms antes do ENTER porque a
+busca é assíncrona — sem ela o ENTER chega antes do resultado. A lista de
+nomes vem de `DISCORD_DESTINOS` via `GET /discord/destinos`, e não do
+Discord: listar canais de verdade pela API exigiria um bot dentro de cada
+servidor, com permissão de administrador que ninguém tem nos servidores dos
+outros. **É exatamente isso que o modo RPC resolve** — `GET /discord/canais`
+lista os canais de voz reais, sem bot nenhum, porque fala pelo seu cliente.
+
+### Abrir o Discord: nada de `abrirUwp`
+
+**O Discord não é um app da Store.** Ele é instalado pelo Squirrel, numa
+pasta `%LOCALAPPDATA%\Discord\app-1.0.xxxx` que **muda a cada atualização
+automática** — apontar um botão para o `Discord.exe` de dentro dela quebra
+sozinho na semana seguinte.
+
+A integração usava `abrirUwp` com `com.squirrel.Discord.Discord`, que
+funcionava **às vezes**: o Squirrel registra um AppUserModelID no shell (para
+jump list e notificações), mas como não é um app empacotado, o
+`shell:AppsFolder` do Explorer acertava ou não conforme o estado do cache.
+O certo é `_focarOuAbrir()`: tenta `focarProcesso('Discord')` e, se não houver
+janela, lança `Update.exe --processStart Discord.exe` — o `Update.exe` fica
+fora das pastas versionadas e sempre inicia a mais nova. Depois espera a
+janela aparecer (o Discord demora a desenhar; sem esperar, o `focarProcesso`
+seguinte não acha nada). Foi isso que trouxe o parâmetro `argumentos` para
+`atalhos.abrirApp`.
 
 Isso trouxe três ações genéricas em `atalhos`: `enviarTeclas` (combo livre,
 com `Converter-Combo` traduzindo nomes para códigos de tecla virtual),

@@ -29,7 +29,9 @@ class ControladorAtalhos {
 
   // Abrir coisas
   abrirUrl(url, navegador) { return executarScript(this.caminhoScript, 'abrir_url', url, navegador); }
-  abrirApp(caminho) { return executarScript(this.caminhoScript, 'abrir_app', caminho); }
+  // "argumentos" existe para lançadores que exigem parâmetro — o caso do
+  // Update.exe do Squirrel, usado pelo Discord (veja integrations/discord).
+  abrirApp(caminho, argumentos) { return executarScript(this.caminhoScript, 'abrir_app', caminho, argumentos); }
   abrirUwp(appId) { return executarScript(this.caminhoScript, 'abrir_uwp', appId); }
   abrirJogo(appId) { return executarScript(this.caminhoScript, 'abrir_jogo', appId); }
 

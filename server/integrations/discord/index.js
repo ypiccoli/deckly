@@ -41,6 +41,12 @@ const ESCOPOS_RPC = ['rpc', 'rpc.voice.read', 'rpc.voice.write'];
 const ATRASO_RECONEXAO_INICIAL_MS = 5000;
 const ATRASO_RECONEXAO_MAXIMO_MS = 60000;
 
+// O Discord é instalado pelo Squirrel, não pela Store: o caminho real é uma
+// pasta `app-1.0.xxxx` que muda a cada atualização automática. O Update.exe
+// fica fora dela e sempre lança a versão mais nova — é o único alvo estável.
+const LANCADOR_DISCORD = '%LOCALAPPDATA%\\Discord\\Update.exe';
+const ARGUMENTOS_LANCADOR = '--processStart Discord.exe';
+
 class IntegracaoDiscord extends EventEmitter {
   constructor() {
     super();
@@ -50,11 +56,15 @@ class IntegracaoDiscord extends EventEmitter {
       conectado: false,
       mudo: false,
       surdo: false,
+      emChamada: false,
       canal: null,
+      canalId: null,
       servidor: null,
+      servidorId: null,
     };
 
     this.rpc = null;
+    this._nomesServidores = new Map(); // guild_id -> nome, preenchido sob demanda
     this._timeoutReconexao = null;
     this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
     this._avisouFalha = false;
@@ -79,11 +89,50 @@ class IntegracaoDiscord extends EventEmitter {
     return process.env[chave] || PADROES[chave];
   }
 
+  // Desligar o foco só é seguro para atalhos GLOBAIS, que a pessoa criou em
+  // "Teclas de Atalho". Os embutidos (o que vale quando a variável está em
+  // branco) só funcionam com o Discord em foco: mandá-los sem focar não faz
+  // nada — pior, aciona o atalho na janela que estiver aberta. Por isso a
+  // flag vale por atalho, e não global: quem não configurou nada sempre foca.
+  _precisaFocar(chave) {
+    const temAtalhoProprio = Boolean(process.env[chave]);
+    return temAtalhoProprio ? this._focarAntes : true;
+  }
+
   async _tecla(chave) {
     const combo = this._combo(chave);
     if (!combo) throw new Error(`Atalho ${chave} não configurado.`);
-    if (this._focarAntes) await atalhos.acoes.focarProcesso({ processo: PROCESSO });
+    if (this._precisaFocar(chave)) await this._focarOuAbrir();
     return atalhos.acoes.enviarTeclas({ combo });
+  }
+
+  // Traz o Discord para frente; se ele não estiver aberto, lança e espera a
+  // janela aparecer. O `abrirUwp` que este projeto usava antes só funcionava
+  // por acaso: o Squirrel registra um AppUserModelID no shell, mas ele não é
+  // um app empacotado, então `shell:AppsFolder` acertava ou não conforme o
+  // estado do cache do Explorer — daí o "às vezes abre".
+  async _focarOuAbrir() {
+    try {
+      await atalhos.acoes.focarProcesso({ processo: PROCESSO });
+      return { ok: true, resultado: 'focado' };
+    } catch {
+      await atalhos.acoes.abrirApp({
+        caminho: LANCADOR_DISCORD,
+        argumentos: ARGUMENTOS_LANCADOR,
+      });
+      // O Discord demora a desenhar a janela; sem esperar, um focarProcesso
+      // logo em seguida ainda não acharia nada.
+      for (let tentativa = 0; tentativa < 10; tentativa++) {
+        await new Promise((r) => setTimeout(r, 800));
+        try {
+          await atalhos.acoes.focarProcesso({ processo: PROCESSO });
+          return { ok: true, resultado: 'aberto' };
+        } catch {
+          // ainda subindo
+        }
+      }
+      return { ok: true, resultado: 'aberto', aviso: 'Abri o Discord, mas a janela demorou a aparecer.' };
+    }
   }
 
   get destinos() {
@@ -183,22 +232,48 @@ class IntegracaoDiscord extends EventEmitter {
     }
   }
 
+  // Fora de canal de voz o Discord responde erro em vez de devolver null.
+  async _canalAtual() {
+    try {
+      return await this.rpc.obterCanalAtual();
+    } catch {
+      return null;
+    }
+  }
+
+  // O canal só traz o guild_id; o nome do servidor vem de GET_GUILDS, que é
+  // caro para chamar a cada troca de canal — daí o cache.
+  async _nomeServidor(guildId) {
+    if (!guildId) return null;
+    if (this._nomesServidores.has(guildId)) return this._nomesServidores.get(guildId);
+    try {
+      const { guilds } = await this.rpc.listarServidores();
+      for (const g of guilds || []) this._nomesServidores.set(g.id, g.name);
+    } catch {
+      return null;
+    }
+    return this._nomesServidores.get(guildId) || null;
+  }
+
+  async _aplicarCanal(canal) {
+    this._atualizarEstado({
+      emChamada: Boolean(canal?.id),
+      canal: canal?.name || null,
+      canalId: canal?.id || null,
+      servidorId: canal?.guild_id || null,
+      servidor: await this._nomeServidor(canal?.guild_id),
+    });
+  }
+
   async _sincronizarEstadoRpc() {
     const voz = await this.rpc.obterConfiguracaoVoz();
-    let canal = null;
-    try {
-      canal = await this.rpc.obterCanalAtual();
-    } catch {
-      // Fora de canal de voz o Discord responde erro em vez de null.
-    }
     this._atualizarEstado({
       modo: 'rpc',
       conectado: true,
       mudo: Boolean(voz.mute),
       surdo: Boolean(voz.deaf),
-      canal: canal?.name || null,
-      servidor: canal?.guild_id || null,
     });
+    await this._aplicarCanal(await this._canalAtual());
   }
 
   _tratarEventoRpc(evento, dados) {
@@ -207,14 +282,38 @@ class IntegracaoDiscord extends EventEmitter {
     } else if (evento === 'VOICE_CHANNEL_SELECT') {
       // channel_id null = saiu do canal.
       if (!dados.channel_id) {
-        this._atualizarEstado({ canal: null, servidor: null });
+        this._aplicarCanal(null).catch(() => {});
       } else {
-        this.rpc
-          .obterCanalAtual()
-          .then((c) => this._atualizarEstado({ canal: c?.name || null, servidor: c?.guild_id || null }))
+        this._canalAtual()
+          .then((c) => this._aplicarCanal(c))
           .catch(() => {});
       }
     }
+  }
+
+  // Canal anterior/próximo de verdade: anda pela lista de canais de VOZ do
+  // servidor em que você está e entra no vizinho. No modo teclado isto era
+  // ALT+UP/ALT+DOWN, que move a seleção na lista de canais de TEXTO da barra
+  // lateral — nunca trocou de canal de voz, mesmo com o Discord em foco.
+  async _navegarCanalDeVoz(passo) {
+    this._garantirRpc();
+    const atual = await this._canalAtual();
+    if (!atual?.id) {
+      throw new Error('Você não está em nenhum canal de voz. Entre em um pelo botão "Canais".');
+    }
+
+    const { channels } = await this.rpc.listarCanais(atual.guild_id);
+    const vozes = (channels || [])
+      .filter((c) => c.type === 2)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+    if (vozes.length < 2) throw new Error('Este servidor não tem outro canal de voz.');
+
+    const indice = vozes.findIndex((c) => c.id === atual.id);
+    const alvo = vozes[(((indice + passo) % vozes.length) + vozes.length) % vozes.length];
+    // Sempre `forcar`: por definição já estamos num canal aqui.
+    await this.rpc.entrarNoCanal(String(alvo.id), { forcar: true });
+    return { ok: true, canal: alvo.name };
   }
 
   // Chamada pela rota de autorização. Conecta sem token só para pedir a
@@ -254,7 +353,9 @@ class IntegracaoDiscord extends EventEmitter {
           id: canal.id,
           nome: canal.name,
           detalhe: servidor.name,
-          ativo: this.estado.canal === canal.name,
+          // Por id, não por nome: "Geral" existe em metade dos servidores, e
+          // comparar por nome acendia o canal errado.
+          ativo: this.estado.canalId === canal.id,
         });
       }
     }
@@ -280,7 +381,16 @@ class IntegracaoDiscord extends EventEmitter {
       this.rpc.desconectar();
       this.rpc = null;
     }
-    this._atualizarEstado({ modo: this.modo, conectado: false, canal: null, servidor: null });
+    this._nomesServidores.clear();
+    this._atualizarEstado({
+      modo: this.modo,
+      conectado: false,
+      emChamada: false,
+      canal: null,
+      canalId: null,
+      servidor: null,
+      servidorId: null,
+    });
     await this.inicializar();
   }
 
@@ -316,31 +426,43 @@ class IntegracaoDiscord extends EventEmitter {
         },
       );
     } else {
+      campos.push({
+        env: 'DISCORD_DESTINOS',
+        rotulo: 'Ir para (canais e servidores)',
+        tipo: 'texto',
+        ajuda: 'Separados por vírgula. No modo RPC isto não é necessário — os canais são listados sozinhos.',
+      });
+    }
+
+    // Mesmo no modo RPC sobram ações sem equivalente no protocolo (atender,
+    // recusar, painel de som, busca), que continuam saindo por atalho de
+    // teclado. Por isso estes campos valem nos dois modos.
+    campos.push(
+      {
+        env: 'DISCORD_FOCAR_ANTES',
+        rotulo: 'Trazer o Discord para frente antes',
+        tipo: 'booleano',
+        padrao: 'true',
+        ajuda:
+          'Só desligue se você tiver criado atalhos GLOBAIS próprios em Discord > Teclas de ' +
+          'Atalho. Os atalhos embutidos exigem foco, e para eles o Discord é trazido para ' +
+          'frente de qualquer jeito.',
+      },
+      { env: 'DISCORD_TECLA_MUDO', rotulo: 'Ativar/desativar microfone', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_MUDO },
+      { env: 'DISCORD_TECLA_SURDO', rotulo: 'Ativar/desativar áudio (surdo)', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_SURDO },
+      { env: 'DISCORD_TECLA_ATENDER', rotulo: 'Atender chamada', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_ATENDER },
+      { env: 'DISCORD_TECLA_RECUSAR', rotulo: 'Recusar chamada', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_RECUSAR },
+      { env: 'DISCORD_TECLA_PAINEL_SOM', rotulo: 'Alternar painel de som', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_PAINEL_SOM },
+      { env: 'DISCORD_TECLA_SERVIDOR_ANTERIOR', rotulo: 'Servidor anterior', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_SERVIDOR_ANTERIOR },
+      { env: 'DISCORD_TECLA_SERVIDOR_PROXIMO', rotulo: 'Próximo servidor', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_SERVIDOR_PROXIMO },
+      { env: 'DISCORD_TECLA_LIGACAO_ATUAL', rotulo: 'Ir para a ligação atual', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_LIGACAO_ATUAL },
+      { env: 'DISCORD_TECLA_BUSCA', rotulo: 'Abrir a busca (Quick Switcher)', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_BUSCA },
+    );
+
+    if (!ehRpc) {
       campos.push(
-        {
-          env: 'DISCORD_FOCAR_ANTES',
-          rotulo: 'Trazer o Discord para frente antes',
-          tipo: 'booleano',
-          padrao: 'true',
-          ajuda: 'Necessário para os atalhos padrão, que só valem com o Discord em foco.',
-        },
-        {
-          env: 'DISCORD_DESTINOS',
-          rotulo: 'Ir para (canais e servidores)',
-          tipo: 'texto',
-          ajuda: 'Separados por vírgula. No modo RPC isto não é necessário — os canais são listados sozinhos.',
-        },
-        { env: 'DISCORD_TECLA_MUDO', rotulo: 'Ativar/desativar microfone', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_MUDO },
-        { env: 'DISCORD_TECLA_SURDO', rotulo: 'Ativar/desativar áudio (surdo)', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_SURDO },
-        { env: 'DISCORD_TECLA_ATENDER', rotulo: 'Atender chamada', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_ATENDER },
-        { env: 'DISCORD_TECLA_RECUSAR', rotulo: 'Recusar chamada', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_RECUSAR },
-        { env: 'DISCORD_TECLA_PAINEL_SOM', rotulo: 'Alternar painel de som', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_PAINEL_SOM },
         { env: 'DISCORD_TECLA_CANAL_ANTERIOR', rotulo: 'Canal anterior', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_CANAL_ANTERIOR },
         { env: 'DISCORD_TECLA_CANAL_PROXIMO', rotulo: 'Próximo canal', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_CANAL_PROXIMO },
-        { env: 'DISCORD_TECLA_SERVIDOR_ANTERIOR', rotulo: 'Servidor anterior', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_SERVIDOR_ANTERIOR },
-        { env: 'DISCORD_TECLA_SERVIDOR_PROXIMO', rotulo: 'Próximo servidor', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_SERVIDOR_PROXIMO },
-        { env: 'DISCORD_TECLA_LIGACAO_ATUAL', rotulo: 'Ir para a ligação atual', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_LIGACAO_ATUAL },
-        { env: 'DISCORD_TECLA_BUSCA', rotulo: 'Abrir a busca (Quick Switcher)', tipo: 'texto', padrao: PADROES.DISCORD_TECLA_BUSCA },
       );
     }
 
@@ -385,14 +507,26 @@ class IntegracaoDiscord extends EventEmitter {
     const disponivel = ehRpc ? this.estado.conectado : Boolean(atalhos.catalogo.disponivel);
     const acao = (rotulo) => ({ rotulo, parametros: [] });
 
+    // Valem nos dois modos. As que dependem de atalho de teclado trazem o
+    // Discord para frente antes, porque os atalhos embutidos exigem foco.
     const acoes = {
       alternarMudo: acao('Ativar/desativar microfone'),
       alternarSurdo: acao('Ativar/desativar áudio (surdo)'),
+      abrirDiscord: acao('Abrir o Discord'),
+      canalAnterior: acao(ehRpc ? 'Canal de voz anterior' : 'Canal anterior (na lista)'),
+      canalProximo: acao(ehRpc ? 'Próximo canal de voz' : 'Próximo canal (na lista)'),
+      atenderChamada: acao('Atender chamada'),
+      recusarChamada: acao('Recusar chamada'),
+      painelSom: acao('Alternar painel de som'),
+      servidorAnterior: acao('Servidor anterior'),
+      servidorProximo: acao('Próximo servidor'),
+      ligacaoAtual: acao('Ir para a ligação atual'),
+      abrirBusca: acao('Abrir a busca do Discord'),
     };
 
     if (ehRpc) {
       Object.assign(acoes, {
-        sairDoCanal: acao('Sair do canal de voz'),
+        sairDoCanal: acao('Sair do canal de voz (desligar)'),
         entrarNoCanal: {
           rotulo: 'Entrar num canal de voz',
           parametros: [
@@ -403,15 +537,6 @@ class IntegracaoDiscord extends EventEmitter {
       });
     } else {
       Object.assign(acoes, {
-        atenderChamada: acao('Atender chamada'),
-        recusarChamada: acao('Recusar chamada'),
-        painelSom: acao('Alternar painel de som'),
-        canalAnterior: acao('Canal anterior'),
-        canalProximo: acao('Próximo canal'),
-        servidorAnterior: acao('Servidor anterior'),
-        servidorProximo: acao('Próximo servidor'),
-        ligacaoAtual: acao('Ir para a ligação atual'),
-        abrirBusca: acao('Abrir a busca do Discord'),
         irPara: {
           rotulo: 'Ir para um canal ou servidor',
           parametros: [
@@ -437,7 +562,9 @@ class IntegracaoDiscord extends EventEmitter {
         ? [
             { chave: 'discord.mudo', rotulo: 'Microfone mudo', tipo: 'booleano' },
             { chave: 'discord.surdo', rotulo: 'Áudio desligado (surdo)', tipo: 'booleano' },
+            { chave: 'discord.emChamada', rotulo: 'Em canal de voz', tipo: 'booleano' },
             { chave: 'discord.canal', rotulo: 'Canal de voz atual', tipo: 'texto' },
+            { chave: 'discord.servidor', rotulo: 'Servidor atual', tipo: 'texto' },
             { chave: 'discord.conectado', rotulo: 'Discord conectado', tipo: 'booleano' },
           ]
         : [],
@@ -468,26 +595,37 @@ class IntegracaoDiscord extends EventEmitter {
         return this.estado;
       },
 
+      // Vale nos dois modos: foca o Discord, e o abre se estiver fechado.
+      abrirDiscord: () => this._focarOuAbrir(),
+
       // Só no modo RPC
       entrarNoCanal: async (parametros = {}) => {
         this._garantirRpc();
         const id = parametros.opcaoId || parametros.canalId;
         if (!id) throw new Error('Nenhum canal informado.');
-        await this.rpc.entrarNoCanal(String(id));
+        // Já estando num canal, trocar exige `forcar` — senão o Discord
+        // recusa e o seletor só funcionaria fora de chamada.
+        await this.rpc.entrarNoCanal(String(id), { forcar: this.estado.emChamada });
         return this.estado;
       },
       sairDoCanal: async () => {
         this._garantirRpc();
+        if (!this.estado.emChamada) throw new Error('Você não está em nenhum canal de voz.');
         await this.rpc.entrarNoCanal(null);
         return this.estado;
       },
 
-      // Só no modo teclado
+      // No modo RPC trocam de canal de voz de verdade; no modo teclado
+      // continuam sendo ALT+UP/ALT+DOWN, que só movem a seleção na lista.
+      canalAnterior: () =>
+        ehRpc() ? this._navegarCanalDeVoz(-1) : this._tecla('DISCORD_TECLA_CANAL_ANTERIOR'),
+      canalProximo: () =>
+        ehRpc() ? this._navegarCanalDeVoz(1) : this._tecla('DISCORD_TECLA_CANAL_PROXIMO'),
+
+      // Sem equivalente no RPC: seguem por atalho de teclado nos dois modos.
       atenderChamada: () => this._tecla('DISCORD_TECLA_ATENDER'),
       recusarChamada: () => this._tecla('DISCORD_TECLA_RECUSAR'),
       painelSom: () => this._tecla('DISCORD_TECLA_PAINEL_SOM'),
-      canalAnterior: () => this._tecla('DISCORD_TECLA_CANAL_ANTERIOR'),
-      canalProximo: () => this._tecla('DISCORD_TECLA_CANAL_PROXIMO'),
       servidorAnterior: () => this._tecla('DISCORD_TECLA_SERVIDOR_ANTERIOR'),
       servidorProximo: () => this._tecla('DISCORD_TECLA_SERVIDOR_PROXIMO'),
       ligacaoAtual: () => this._tecla('DISCORD_TECLA_LIGACAO_ATUAL'),

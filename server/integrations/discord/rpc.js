@@ -295,8 +295,13 @@ class ClienteRpcDiscord {
   }
 
   // channel_id null sai do canal de voz atual.
-  entrarNoCanal(idCanal) {
-    return this._comando('SELECT_VOICE_CHANNEL', { channel_id: idCanal, force: false });
+  //
+  // `force` não é "entrar à força" num canal sem permissão: é o que autoriza
+  // TROCAR de canal estando em outro. Sem ele o Discord recusa com "User is
+  // already joined to a voice channel" — e um botão de trocar de canal só
+  // funcionaria quando você já estivesse fora de qualquer canal.
+  entrarNoCanal(idCanal, { forcar = false } = {}) {
+    return this._comando('SELECT_VOICE_CHANNEL', { channel_id: idCanal, force: forcar });
   }
 
   irParaCanalDeTexto(idCanal) {

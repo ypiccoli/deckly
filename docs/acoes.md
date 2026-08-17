@@ -141,7 +141,7 @@ Nas configurações do botão, esta é a integração **atalhos**.
 | `enviarTeclas` | Enviar atalho de teclado | `combo` (texto, obrigatório) — Combinação de teclas _Ex.: CTRL+SHIFT+M. Vale CTRL, SHIFT, ALT, WIN, letras, números, F1–F24 e teclas como ENTER, ESC, TAB, setas._ |
 | `focarProcesso` | Trazer um programa para frente | `processo` (texto, obrigatório) — Nome do processo _Sem o .exe (ex.: Discord, vivaldi, Code). Falha se o programa não estiver aberto._ |
 | `digitarTexto` | Digitar um texto | `texto` (texto, obrigatório) — Texto _Digitado na janela que estiver em foco. Combine com "Trazer um programa para frente" numa macro._ |
-| `abrirApp` | Abrir programa | `caminho` (texto, obrigatório) — Caminho, comando ou atalho .lnk _Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt)._ |
+| `abrirApp` | Abrir programa | `caminho` (texto, obrigatório) — Caminho, comando ou atalho .lnk _Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt)._<br />`argumentos` (texto) — Argumentos (opcional) _Passados na linha de comando, para programas que precisam deles._ |
 | `abrirUwp` | Abrir app da Store (MSIX) | `appId` (texto, obrigatório) — AppUserModelID _Descubra com: Get-StartApps | Where-Object { $_.Name -like '*Nome*' }_ |
 | `abrirUrl` | Abrir site | `url` (texto, obrigatório) — Endereço<br />`navegador` (texto) — Navegador específico (opcional) _Caminho do .exe. Em branco, abre no navegador padrão do Windows — prefira assim se for compartilhar seu deck com alguém, senão o botão quebra em quem não tiver esse navegador instalado._ |
 | `abrirJogo` | Abrir jogo da Steam | `appId` (texto) — AppID na Steam |
@@ -159,11 +159,12 @@ Nas configurações do botão, esta é a integração **discord**.
 | --- | --- | --- |
 | `alternarMudo` | Ativar/desativar microfone | — |
 | `alternarSurdo` | Ativar/desativar áudio (surdo) | — |
+| `abrirDiscord` | Abrir o Discord | — |
+| `canalAnterior` | Canal anterior (na lista) | — |
+| `canalProximo` | Próximo canal (na lista) | — |
 | `atenderChamada` | Atender chamada | — |
 | `recusarChamada` | Recusar chamada | — |
 | `painelSom` | Alternar painel de som | — |
-| `canalAnterior` | Canal anterior | — |
-| `canalProximo` | Próximo canal | — |
 | `servidorAnterior` | Servidor anterior | — |
 | `servidorProximo` | Próximo servidor | — |
 | `ligacaoAtual` | Ir para a ligação atual | — |
