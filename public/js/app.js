@@ -128,27 +128,81 @@
       <div class="info-linha-terciaria"></div>
     `;
 
+    // Estrela para favoritar o que o mostrador está exibindo agora — é como
+    // se favorita o canal em que você já está, sem abrir o seletor.
+    if (botao.favoritoFonte && botao.favoritoId) {
+      const estrela = document.createElement('button');
+      estrela.type = 'button';
+      estrela.className = 'info-estrela';
+      estrela.title = 'Favoritar isto';
+      estrela.addEventListener('click', async () => {
+        const id = resolverEstado(estadoGlobal, botao.favoritoId);
+        if (!id) return;
+        estrela.disabled = true;
+        try {
+          await alternarFavorito(botao.favoritoFonte, id);
+          atualizarEstrelaInfo(botao, el);
+        } catch (erro) {
+          console.error(erro);
+        } finally {
+          estrela.disabled = false;
+        }
+      });
+      el.querySelector('.botao-info-cabecalho').appendChild(estrela);
+      // Sem os favoritos carregados a estrela nasceria vazia mesmo já
+      // favoritado; só acontece uma vez por fonte.
+      carregarFavoritos(botao.favoritoFonte).then(() => atualizarEstrelaInfo(botao, el));
+    }
+
     return el;
+  }
+
+  // Some quando não há nada exibido: favoritar "nenhum canal" não existe.
+  function atualizarEstrelaInfo(botao, el) {
+    const estrela = el.querySelector('.info-estrela');
+    if (!estrela) return;
+
+    const id = resolverEstado(estadoGlobal, botao.favoritoId);
+    estrela.hidden = !id;
+    if (!id) return;
+
+    const ligada = (favoritosPorFonte[botao.favoritoFonte] || []).includes(String(id));
+    estrela.textContent = ligada ? '★' : '☆';
+    estrela.classList.toggle('ligada', ligada);
+    estrela.setAttribute('aria-pressed', ligada ? 'true' : 'false');
   }
 
   function atualizarTextoInfo(botao, el) {
     const principal = botao.estadoTexto ? resolverEstado(estadoGlobal, botao.estadoTexto) : null;
     const secundaria = botao.estadoTextoSecundario ? resolverEstado(estadoGlobal, botao.estadoTextoSecundario) : null;
     const terciaria = botao.estadoTextoTerciario ? resolverEstado(estadoGlobal, botao.estadoTextoTerciario) : null;
-    el.querySelector('.info-linha-principal').textContent = principal || 'Nada tocando';
+    // "Nada tocando" era o padrão de quando o único mostrador era o do
+    // Spotify; textoVazio deixa cada botão dizer o que faz sentido nele.
+    el.querySelector('.info-linha-principal').textContent =
+      principal || botao.textoVazio || 'Nada tocando';
     el.querySelector('.info-linha-secundaria').textContent = secundaria || '';
     const elTerciaria = el.querySelector('.info-linha-terciaria');
     if (elTerciaria) elTerciaria.textContent = terciaria ? `em ${terciaria}` : '';
+    atualizarEstrelaInfo(botao, el);
   }
 
   // Ícone de cada item do seletor, escolhido pelo campo "detalhe" que a
   // listagem devolve (tipo do dispositivo Spotify, nome do processo, etc).
+  const ICONES_POR_DETALHE = {
+    Computer: '💻', Smartphone: '📱', Speaker: '🔊', TV: '📺',
+    Tablet: '📱', GameConsole: '🎮', CastVideo: '📺', CastAudio: '🔊',
+  };
+
   function iconeDoItem(detalhe, iconePadrao) {
-    const mapa = {
-      Computer: '💻', Smartphone: '📱', Speaker: '🔊', TV: '📺',
-      Tablet: '📱', GameConsole: '🎮', CastVideo: '📺', CastAudio: '🔊',
-    };
-    return mapa[detalhe] || iconePadrao || '•';
+    return ICONES_POR_DETALHE[detalhe] || iconePadrao || '•';
+  }
+
+  // O "detalhe" tem dois usos nas listagens: em algumas ele é um tipo que
+  // vira ícone (dispositivos do Spotify), em outras é informação que só
+  // existe ali — o servidor de um canal do Discord, por exemplo, que decide
+  // qual "Geral" é qual. Só o segundo caso vale escrever ao lado do nome.
+  function detalheVisivel(detalhe) {
+    return detalhe && !ICONES_POR_DETALHE[detalhe] ? detalhe : '';
   }
 
   function criarBotaoLista(botao) {
@@ -167,9 +221,91 @@
     return el;
   }
 
+  // Favoritos: quais ids de cada fonte a pessoa estrelou. Guardado no
+  // servidor (config/favoritos.json), espelhado aqui para a estrela do botão
+  // "info" saber como se desenhar sem uma ida ao servidor por render.
+  const favoritosPorFonte = {};
+
+  async function carregarFavoritos(fonte) {
+    try {
+      const resposta = await window.acesso.buscar(`/api/favoritos?fonte=${encodeURIComponent(fonte)}`);
+      const dados = await resposta.json();
+      if (dados.ok) favoritosPorFonte[fonte] = dados.ids.map(String);
+    } catch (erro) {
+      console.error(erro);
+    }
+    return favoritosPorFonte[fonte] || [];
+  }
+
+  async function alternarFavorito(fonte, id) {
+    const resposta = await window.acesso.buscar('/api/favoritos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fonte, id }),
+    });
+    const dados = await resposta.json();
+    if (!dados.ok) throw new Error(dados.erro || 'Falha ao favoritar');
+
+    const atuais = favoritosPorFonte[fonte] || [];
+    favoritosPorFonte[fonte] = dados.favorito
+      ? [...atuais.filter((x) => x !== String(id)), String(id)]
+      : atuais.filter((x) => x !== String(id));
+    return dados.favorito;
+  }
+
+  // Um item do seletor. É uma div, e não um button, porque tem DOIS alvos de
+  // toque: escolher a opção e estrelá-la — e button dentro de button é HTML
+  // inválido, que o navegador desmonta.
+  function criarItemSeletor(botao, opcao, aoEscolher) {
+    const item = document.createElement('div');
+    item.className = 'item-lista';
+    if (opcao.ativo) item.classList.add('ativo');
+
+    const escolher = document.createElement('button');
+    escolher.type = 'button';
+    escolher.className = 'item-lista-escolher';
+    escolher.innerHTML = `
+      <span class="item-lista-icone">${iconeDoItem(opcao.detalhe, botao.iconeItem)}</span>
+      <span class="item-lista-nome"></span>
+      <span class="item-lista-detalhe"></span>
+    `;
+    // textContent, não innerHTML: nome de canal é texto de terceiros.
+    escolher.querySelector('.item-lista-nome').textContent = opcao.nome;
+    escolher.querySelector('.item-lista-detalhe').textContent = detalheVisivel(opcao.detalhe);
+    escolher.addEventListener('click', aoEscolher);
+
+    const estrela = document.createElement('button');
+    estrela.type = 'button';
+    estrela.className = 'item-lista-estrela';
+    estrela.title = 'Favoritar';
+    estrela.setAttribute('aria-label', `Favoritar ${opcao.nome}`);
+    const pintar = (ligada) => {
+      estrela.textContent = ligada ? '★' : '☆';
+      estrela.classList.toggle('ligada', Boolean(ligada));
+      estrela.setAttribute('aria-pressed', ligada ? 'true' : 'false');
+    };
+    pintar(opcao.favorito);
+    estrela.addEventListener('click', async (evento) => {
+      // Sem isto, favoritar também escolheria o canal e fecharia o overlay.
+      evento.stopPropagation();
+      estrela.disabled = true;
+      try {
+        pintar(await alternarFavorito(botao.fonte, opcao.id));
+      } catch (erro) {
+        console.error(erro);
+      } finally {
+        estrela.disabled = false;
+      }
+    });
+
+    item.appendChild(escolher);
+    item.appendChild(estrela);
+    return item;
+  }
+
   // Seletor genérico: busca as opções em botao.fonte (que responde
-  // { ok, opcoes: [{ id, nome, detalhe, ativo }] }) e manda a escolha de
-  // volta como parametros.opcaoId na ação do próprio botão.
+  // { ok, opcoes: [{ id, nome, detalhe, ativo, favorito }] }) e manda a
+  // escolha de volta como parametros.opcaoId na ação do próprio botão.
   async function abrirSeletor(botao) {
     const overlay = document.getElementById('overlay-lista');
     const lista = document.getElementById('lista-opcoes');
@@ -184,31 +320,41 @@
       const dados = await resposta.json();
       if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'Falha ao buscar a lista');
 
+      // A listagem já vem com os favoritos no topo; o espelho local serve à
+      // estrela dos botões "info".
+      favoritosPorFonte[botao.fonte] = dados.opcoes.filter((o) => o.favorito).map((o) => String(o.id));
+
       lista.innerHTML = '';
       if (!dados.opcoes.length) {
         lista.innerHTML = `<p class="lista-mensagem">${botao.mensagemVazia || 'Nada encontrado.'}</p>`;
         return;
       }
 
-      dados.opcoes.forEach((opcao) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'item-lista';
-        if (opcao.ativo) item.classList.add('ativo');
-        item.innerHTML = `
-          <span class="item-lista-icone">${iconeDoItem(opcao.detalhe, botao.iconeItem)}</span>
-          <span class="item-lista-nome">${opcao.nome}</span>
-        `;
-        item.addEventListener('click', async () => {
-          overlay.classList.remove('aberto');
-          try {
-            await enviarAcao(botao.id, { opcaoId: opcao.id });
-          } catch (erro) {
-            console.error(erro);
-          }
-        });
-        lista.appendChild(item);
-      });
+      const escolher = (opcao) => async () => {
+        overlay.classList.remove('aberto');
+        try {
+          await enviarAcao(botao.id, { opcaoId: opcao.id });
+        } catch (erro) {
+          console.error(erro);
+        }
+      };
+
+      const favoritas = dados.opcoes.filter((o) => o.favorito);
+      const restantes = dados.opcoes.filter((o) => !o.favorito);
+
+      // Só separa em seções quando há favorito: uma lista sem nenhum não
+      // deve ganhar cabeçalho de seção nenhum.
+      const secao = (rotulo) => {
+        const el = document.createElement('p');
+        el.className = 'lista-secao';
+        el.textContent = rotulo;
+        lista.appendChild(el);
+      };
+
+      if (favoritas.length) secao('★ Favoritos');
+      favoritas.forEach((o) => lista.appendChild(criarItemSeletor(botao, o, escolher(o))));
+      if (favoritas.length && restantes.length) secao('Todos');
+      restantes.forEach((o) => lista.appendChild(criarItemSeletor(botao, o, escolher(o))));
     } catch (erro) {
       lista.innerHTML = `<p class="lista-mensagem">Erro: ${erro.message}</p>`;
     }

@@ -13,4 +13,7 @@ Thumbs.db
 config/pages.config.json
 config/pages.config.backup.json
 config/token.json
+# Favoritos dos seletores: preferência de uso pessoal, com ids de canais e
+# servidores reais. Nasce vazio na primeira execução.
+config/favoritos.json
 build/

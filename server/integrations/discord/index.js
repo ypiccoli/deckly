@@ -47,6 +47,11 @@ const ATRASO_RECONEXAO_MAXIMO_MS = 60000;
 const LANCADOR_DISCORD = '%LOCALAPPDATA%\\Discord\\Update.exe';
 const ARGUMENTOS_LANCADOR = '--processStart Discord.exe';
 
+// Como reconhecer o canal de ausentes. O RPC não expõe o `afk_channel_id`
+// que a guild tem na API HTTP, então só resta o nome — e na prática ele é
+// sempre uma variação destes. Ajustável por DISCORD_NOMES_AFK.
+const NOMES_AFK_PADRAO = 'afk, ausente, ausentes, away, inativo, inativos';
+
 class IntegracaoDiscord extends EventEmitter {
   constructor() {
     super();
@@ -65,6 +70,8 @@ class IntegracaoDiscord extends EventEmitter {
 
     this.rpc = null;
     this._nomesServidores = new Map(); // guild_id -> nome, preenchido sob demanda
+    // Último canal de voz diferente do atual, para o botão "Voltar".
+    this._canalAnterior = null; // { id, nome }
     this._timeoutReconexao = null;
     this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
     this._avisouFalha = false;
@@ -256,6 +263,14 @@ class IntegracaoDiscord extends EventEmitter {
   }
 
   async _aplicarCanal(canal) {
+    // Guarda de onde viemos antes de sobrescrever, para o botão "Voltar".
+    // Sair do canal (canal null) não conta como destino: senão "Voltar"
+    // depois de desligar tentaria entrar em lugar nenhum.
+    const anterior = this.estado;
+    if (anterior.canalId && anterior.canalId !== canal?.id) {
+      this._canalAnterior = { id: anterior.canalId, nome: anterior.canal };
+    }
+
     this._atualizarEstado({
       emChamada: Boolean(canal?.id),
       canal: canal?.name || null,
@@ -289,6 +304,78 @@ class IntegracaoDiscord extends EventEmitter {
           .catch(() => {});
       }
     }
+  }
+
+  get _nomesAfk() {
+    return String(process.env.DISCORD_NOMES_AFK || NOMES_AFK_PADRAO)
+      .split(',')
+      .map((n) => this._normalizar(n))
+      .filter(Boolean);
+  }
+
+  // Nomes de canal vêm cheios de emoji, caixa alta e enfeite —
+  // "🔇 AUSENTES 🔇", "┃💤・afk". Reduz a letras e números sem acento para
+  // comparar só o que importa.
+  _normalizar(texto) {
+    return String(texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  // Canais de voz do servidor atual, em ordem de exibição. Usado tanto pela
+  // navegação quanto pela busca do AFK.
+  async _canaisDeVozDoServidor(guildId) {
+    const { channels } = await this.rpc.listarCanais(guildId);
+    return (channels || [])
+      .filter((c) => c.type === 2)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  }
+
+  // Vai para o canal de ausentes do servidor em que você está. O RPC não
+  // entrega o afk_channel_id da guild (só a API HTTP tem, e ela exigiria um
+  // bot no servidor), então o canal é reconhecido pelo nome.
+  async _irParaAfk() {
+    this._garantirRpc();
+    const atual = await this._canalAtual();
+    if (!atual?.id) {
+      throw new Error('Entre num canal de voz primeiro — o AFK é procurado no servidor em que você está.');
+    }
+
+    const vozes = await this._canaisDeVozDoServidor(atual.guild_id);
+    const termos = this._nomesAfk;
+    const afk = vozes.find((c) => {
+      const nome = this._normalizar(c.name);
+      return termos.some((termo) => nome.includes(termo));
+    });
+
+    if (!afk) {
+      const servidor = (await this._nomeServidor(atual.guild_id)) || 'este servidor';
+      throw new Error(`Não achei um canal de ausentes em ${servidor}.`);
+    }
+    if (afk.id === atual.id) {
+      throw new Error('Você já está no canal de ausentes.');
+    }
+
+    await this.rpc.entrarNoCanal(String(afk.id), { forcar: true });
+    return { ok: true, canal: afk.name };
+  }
+
+  // Volta para o último canal de voz diferente do atual. Apertar duas vezes
+  // alterna entre os dois — é o que se espera de um "voltar".
+  async _voltarAoCanalAnterior() {
+    this._garantirRpc();
+    if (!this._canalAnterior?.id) {
+      throw new Error('Ainda não há canal anterior nesta sessão — entre em dois canais para o botão ter para onde voltar.');
+    }
+    if (this._canalAnterior.id === this.estado.canalId) {
+      throw new Error('Você já está no canal anterior.');
+    }
+
+    const destino = this._canalAnterior;
+    await this.rpc.entrarNoCanal(String(destino.id), { forcar: this.estado.emChamada });
+    return { ok: true, canal: destino.nome };
   }
 
   // Canal anterior/próximo de verdade: anda pela lista de canais de VOZ do
@@ -424,6 +511,15 @@ class IntegracaoDiscord extends EventEmitter {
           rotulo: 'Client Secret (Discord)',
           tipo: 'senha',
         },
+        {
+          env: 'DISCORD_NOMES_AFK',
+          rotulo: 'Nomes que valem como canal de ausentes',
+          tipo: 'texto',
+          padrao: NOMES_AFK_PADRAO,
+          ajuda:
+            'Separados por vírgula, usados pelo botão de AFK. A comparação ignora acento, ' +
+            'caixa e emoji, então "🔇 AUSENTES 🔇" casa com "ausentes".',
+        },
       );
     } else {
       campos.push({
@@ -527,6 +623,8 @@ class IntegracaoDiscord extends EventEmitter {
     if (ehRpc) {
       Object.assign(acoes, {
         sairDoCanal: acao('Sair do canal de voz (desligar)'),
+        irParaAfk: acao('Ir para o canal de ausentes (AFK)'),
+        voltarAoCanalAnterior: acao('Voltar ao canal anterior'),
         entrarNoCanal: {
           rotulo: 'Entrar num canal de voz',
           parametros: [
@@ -565,6 +663,9 @@ class IntegracaoDiscord extends EventEmitter {
             { chave: 'discord.emChamada', rotulo: 'Em canal de voz', tipo: 'booleano' },
             { chave: 'discord.canal', rotulo: 'Canal de voz atual', tipo: 'texto' },
             { chave: 'discord.servidor', rotulo: 'Servidor atual', tipo: 'texto' },
+            // Não serve para mostrar em tela; é o que a estrela de favoritar
+            // usa para saber qual item está sendo exibido.
+            { chave: 'discord.canalId', rotulo: 'ID do canal de voz atual', tipo: 'texto' },
             { chave: 'discord.conectado', rotulo: 'Discord conectado', tipo: 'booleano' },
           ]
         : [],
@@ -621,6 +722,9 @@ class IntegracaoDiscord extends EventEmitter {
         ehRpc() ? this._navegarCanalDeVoz(-1) : this._tecla('DISCORD_TECLA_CANAL_ANTERIOR'),
       canalProximo: () =>
         ehRpc() ? this._navegarCanalDeVoz(1) : this._tecla('DISCORD_TECLA_CANAL_PROXIMO'),
+
+      irParaAfk: () => this._irParaAfk(),
+      voltarAoCanalAnterior: () => this._voltarAoCanalAnterior(),
 
       // Sem equivalente no RPC: seguem por atalho de teclado nos dois modos.
       atenderChamada: () => this._tecla('DISCORD_TECLA_ATENDER'),

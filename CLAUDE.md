@@ -104,6 +104,18 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
   integração) e faz o broadcast via WebSocket. Ao conectar, um cliente
   recebe `{ tipo: 'estado_completo', dados: estadoGlobal }`; a partir daí,
   `{ tipo: 'estado', integracao, dados }` a cada mudança.
+- **Favoritos são do seletor, não de cada integração.**
+  `server/lib/favoritos-store.js` guarda `{ "<fonte>": [ids] }` em
+  `config/favoritos.json`, com a **URL da fonte como chave** — então qualquer
+  botão do tipo `lista` pode ganhar favoritos sem código novo. Só ids são
+  guardados: nome e ícone continuam vindo da listagem ao vivo, e um favorito
+  que não existe mais simplesmente não aparece. Quem quiser ativar chama
+  `favoritos.aplicar(fonte, opcoes)` na rota de listagem — isso marca
+  `favorito: true` e sobe as favoritas para o topo (hoje só
+  `/discord/canais`). Mora fora do `pages.config.json` de propósito:
+  favorito é preferência de uso, não layout, e não deveria sujar o arquivo
+  que a tela de configuração reescreve. `POST /api/favoritos` exige token mas
+  **não** `exigirLocal` — favoritar é uso normal, feito do tablet.
 - Botões do tipo `"lista"` são um **seletor genérico**: o frontend faz um GET
   na URL de `fonte`, que responde `{ ok, opcoes: [{ id, nome, detalhe, ativo }] }`,
   mostra as opções num overlay e manda a escolhida de volta para a ação do
@@ -271,6 +283,14 @@ Cobre: mudo, surdo, entrar/sair de canal de voz, e canal anterior/próximo.
 `_navegarCanalDeVoz()` lista os canais de voz do servidor atual e entra no
 vizinho — no modo teclado isso era `ALT+UP`/`ALT+DOWN`, que move a seleção
 na lista de canais **de texto** e nunca trocou canal de voz, nem com foco.
+
+Os botões de AFK e "Voltar" saíram daí. `_irParaAfk()` **reconhece o canal de
+ausentes pelo nome** (`DISCORD_NOMES_AFK`, normalizando acento, caixa e emoji,
+para "🔇 AUSENTES 🔇" casar com "ausentes"): o RPC não entrega o
+`afk_channel_id` que a guild tem na API HTTP, e chegar nele exigiria um bot
+dentro do servidor. `_voltarAoCanalAnterior()` usa o último canal diferente do
+atual, rastreado em `_aplicarCanal()` — apertar duas vezes alterna entre os
+dois, que é o que se espera de um "voltar".
 
 **Gotcha do `SELECT_VOICE_CHANNEL`: `force: true` é obrigatório para TROCAR
 de canal.** O nome engana — não é entrar à força onde você não pode. Sem ele
@@ -544,6 +564,8 @@ estruturada, que é como a tela de configuração monta os formulários.
 | `fonte` | `lista` | Endpoint GET que devolve `{ ok, opcoes: [...] }` (obrigatório) |
 | `iconeItem` / `mensagemVazia` | `lista` | Ícone padrão dos itens e texto de lista vazia |
 | `estadoTexto` / `…Secundario` / `…Terciario` | `info` | Dot-paths das linhas de texto exibidas |
+| `textoVazio` | `info` | Texto quando não há nada a mostrar. Ausente = "Nada tocando" |
+| `favoritoFonte` + `favoritoId` | `info` | Mostram uma estrela que favorita o item exibido agora: a URL da lista e o dot-path do id. **Andam juntos** |
 | `largura` / `altura` | todos | Tamanho em células da grade (1–6). Ausente = 1 |
 | `cor` | todos | Cor de destaque do botão, hex (`#6c5ce7`). Ausente = segue o tema |
 | `_nota` | todos | Comentário livre — substitui os comentários que o JSON não tem |

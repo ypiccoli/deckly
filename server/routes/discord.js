@@ -11,6 +11,7 @@
 const express = require('express');
 const discord = require('../integrations/discord');
 const envStore = require('../lib/env-store');
+const favoritos = require('../lib/favoritos-store');
 const { exigirLocal, exigirToken } = require('../lib/auth');
 
 function pagina(titulo, blocos) {
@@ -36,11 +37,13 @@ module.exports = function criarRotaDiscord() {
     });
   });
 
-  // Modo RPC: os canais de voz de verdade, por servidor.
+  // Modo RPC: os canais de voz de verdade, por servidor. Com dezenas de
+  // servidores a lista fica longa, então os favoritos sobem para o topo —
+  // veja lib/favoritos-store.js.
   router.get('/canais', exigirToken, async (req, res) => {
     try {
       const opcoes = await discord.listarCanaisDeVoz();
-      res.json({ ok: true, opcoes });
+      res.json({ ok: true, opcoes: favoritos.aplicar('/discord/canais', opcoes) });
     } catch (erro) {
       res.status(500).json({ ok: false, erro: erro.message });
     }

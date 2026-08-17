@@ -454,22 +454,52 @@ body {
   margin: 0;
 }
 
+/* Cabeçalho de seção do seletor ("★ Favoritos" / "Todos"). Só aparece
+   quando há favorito — sem eles a lista não ganha divisão nenhuma. */
+.lista-secao {
+  margin: 10px 2px 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cor-texto-fraco);
+}
+
+.lista-secao:first-child {
+  margin-top: 0;
+}
+
+/* O item é uma linha com dois alvos de toque: escolher e favoritar. A borda
+   e o fundo ficam nele, e os filhos são transparentes, para a linha inteira
+   continuar parecendo um botão só. */
 .item-lista {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  align-items: stretch;
   border-radius: var(--raio-pequeno);
   border: 1px solid var(--cor-cartao-borda);
   background: var(--cor-fundo-cabecalho);
   color: var(--cor-texto);
+  overflow: hidden;
+}
+
+.item-lista-escolher {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  color: inherit;
   font-size: 1rem;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
   text-align: left;
 }
 
-.item-lista:active {
+.item-lista-escolher:active {
   transform: scale(0.98);
 }
 
@@ -491,6 +521,53 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Onde o item vem de uma lista com repetição de nome — "Geral" existe em
+   quase todo servidor do Discord — é isto que diz qual é qual. */
+.item-lista-detalhe {
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--cor-texto-fraco);
+}
+
+/* Alvo largo de propósito: no tablet a estrela é acertada com o polegar, ao
+   lado de um alvo que faz outra coisa. */
+.item-lista-estrela,
+.info-estrela {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--cor-texto-fraco);
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0 16px;
+}
+
+.item-lista-estrela.ligada,
+.info-estrela.ligada {
+  color: #f5c542;
+}
+
+.item-lista-estrela:active,
+.info-estrela:active {
+  transform: scale(0.9);
+}
+
+.item-lista-estrela:disabled,
+.info-estrela:disabled {
+  opacity: 0.5;
+}
+
+.info-estrela {
+  padding: 0 4px;
+  font-size: 1.1rem;
 }
 
 .overlay-fechar {

@@ -144,6 +144,15 @@ function validar(novoConfig, integracoes) {
       if (tipo === 'lista' && !botao.fonte) {
         erros.push(`${onde}: botão do tipo "lista" precisa do campo "fonte".`);
       }
+
+      // A estrela de favoritar precisa dos dois: de qual lista o item é
+      // ("favoritoFonte") e onde está o id do item exibido agora
+      // ("favoritoId"). Com um só, a estrela apareceria sem funcionar.
+      if (Boolean(botao.favoritoFonte) !== Boolean(botao.favoritoId)) {
+        erros.push(
+          `${onde}: "favoritoFonte" e "favoritoId" andam juntos — informe os dois ou nenhum.`,
+        );
+      }
       if (tipo === 'slider') {
         for (const campo of ['min', 'max']) {
           if (typeof botao[campo] !== 'number') {

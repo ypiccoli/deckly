@@ -522,6 +522,32 @@
           })
         );
       });
+
+      fsInfo.appendChild(
+        campoTexto('Texto quando não há nada a mostrar', botao.textoVazio, function (v) {
+          if (v) botao.textoVazio = v; else delete botao.textoVazio;
+        }, { ajuda: 'Em branco, mostra "Nada tocando".' })
+      );
+
+      // Estrela de favoritar o que o mostrador exibe agora. Precisa saber de
+      // qual lista o item é e onde está o id dele no estado ao vivo.
+      var fontesInfo = [];
+      Object.keys(estado.catalogo).forEach(function (nome) {
+        (estado.catalogo[nome].listas || []).forEach(function (l) {
+          fontesInfo.push({ valor: l.fonte, rotulo: l.rotulo });
+        });
+      });
+      fsInfo.appendChild(
+        campoSelect('Estrela para favoritar (de qual lista)', botao.favoritoFonte, fontesInfo, function (v) {
+          if (v) botao.favoritoFonte = v; else delete botao.favoritoFonte;
+        }, { textoVazio: '— sem estrela —' })
+      );
+      fsInfo.appendChild(
+        campoSelect('Onde está o id do item exibido', botao.favoritoId, estadosDisponiveis, function (v) {
+          if (v) botao.favoritoId = v; else delete botao.favoritoId;
+        }, { textoVazio: '— sem estrela —' })
+      );
+
       el.form.appendChild(fsInfo);
     }
 
