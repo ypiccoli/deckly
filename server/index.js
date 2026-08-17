@@ -36,6 +36,7 @@ function iniciarServidor() {
   const criarRotaBemVindo = require('./routes/bemvindo');
   const criarRotaIntegracoes = require('./routes/integracoes');
   const criarRotaFavoritos = require('./routes/favoritos');
+  const criarRotaLayout = require('./routes/layout');
   const { exigirToken } = require('./lib/auth');
   const { conferir: conferirToken, ORIGEM: ORIGEM_TOKEN } = require('./lib/token');
   const mostrarBoasVindas = require('./lib/boas-vindas');
@@ -73,6 +74,9 @@ function iniciarServidor() {
   // Favoritar é uso normal do deck (vem do tablet), então só exige token —
   // não exigirLocal, ao contrário do que reconfigura o app.
   app.use('/api', exigirToken, criarRotaFavoritos());
+  // Mesma lógica: o modo de edição de layout roda no tablet, e esta rota não
+  // consegue mexer em ação nem integração — veja routes/layout.js.
+  app.use('/api', exigirToken, criarRotaLayout(integracoes, () => avisarConfigAtualizada()));
   app.use('/action', exigirToken, criarRotaAcoes(integracoes));
   app.use('/atalhos', exigirToken, criarRotaAtalhos());
   app.use('/media', exigirToken, criarRotaMedia());

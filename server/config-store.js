@@ -203,6 +203,91 @@ function validar(novoConfig, integracoes) {
   return erros;
 }
 
+// Aplica SÓ layout sobre o config que está em disco, e devolve
+// { config, erros }. É o que permite o modo de edição do deck salvar de
+// qualquer aparelho da rede, sem a trava de "só do próprio PC".
+//
+// A segurança aqui não vem de conferir se o corpo da requisição mudou apenas
+// layout — vem de nunca ler mais nada dele. Integração, ação, parâmetros,
+// fonte, estadoChave: tudo continua vindo do disco. O corpo só decide ORDEM,
+// `largura`, `altura`, `colunas` e `alturaBotao`. Assim não existe payload
+// capaz de criar um botão que abra um programa, que é o motivo de
+// PUT /api/config exigir 127.0.0.1.
+//
+// Pelo mesmo motivo o conjunto de ids precisa bater exatamente com o que já
+// existe: sem isso daria para remover um botão simplesmente omitindo-o.
+function aplicarLayout(paginasLayout) {
+  const erros = [];
+
+  if (!paginasLayout || !Array.isArray(paginasLayout)) {
+    return { config: null, erros: ['O corpo precisa ter uma lista "paginas".'] };
+  }
+
+  // Cópia profunda: nada é alterado até a validação passar por inteiro.
+  const novoConfig = JSON.parse(JSON.stringify(config));
+
+  const numeroOuNada = (valor) => (typeof valor === 'number' ? valor : undefined);
+
+  for (const paginaLayout of paginasLayout) {
+    const pagina = novoConfig.paginas.find((p) => p.id === paginaLayout?.id);
+    if (!pagina) {
+      erros.push(`Página "${paginaLayout?.id}" não existe.`);
+      continue;
+    }
+    const onde = `Página "${pagina.id}"`;
+
+    // Ausente ou null = "automático"/"padrão", que é um valor legítimo dos
+    // dois campos e precisa poder voltar a ser escolhido.
+    for (const [campo, valor] of [
+      ['colunas', numeroOuNada(paginaLayout.colunas)],
+      ['alturaBotao', numeroOuNada(paginaLayout.alturaBotao)],
+    ]) {
+      if (valor === undefined) delete pagina[campo];
+      else pagina[campo] = valor;
+    }
+
+    if (!Array.isArray(paginaLayout.botoes)) {
+      erros.push(`${onde}: "botoes" precisa ser uma lista.`);
+      continue;
+    }
+
+    const idsPedidos = paginaLayout.botoes.map((b) => b?.id);
+    const idsAtuais = pagina.botoes.map((b) => b.id);
+
+    if (idsPedidos.length !== idsAtuais.length) {
+      erros.push(
+        `${onde}: a lista tem ${idsPedidos.length} botões, mas a página tem ${idsAtuais.length}. ` +
+          'Esta rota só reordena e redimensiona — para adicionar ou remover, use a tela de configuração.',
+      );
+      continue;
+    }
+    const desconhecido = idsPedidos.find((id) => !idsAtuais.includes(id));
+    if (desconhecido !== undefined) {
+      erros.push(`${onde}: botão "${desconhecido}" não existe nesta página.`);
+      continue;
+    }
+    if (new Set(idsPedidos).size !== idsPedidos.length) {
+      erros.push(`${onde}: há ids repetidos na lista.`);
+      continue;
+    }
+
+    // A ordem do array É a posição na grade. Cada botão é o objeto do disco,
+    // com no máximo largura/altura trocadas.
+    pagina.botoes = paginaLayout.botoes.map((pedido) => {
+      const botao = pagina.botoes.find((b) => b.id === pedido.id);
+      for (const campo of ['largura', 'altura']) {
+        const valor = numeroOuNada(pedido[campo]);
+        // 1 é o padrão: gravar "largura: 1" só sujaria o arquivo.
+        if (valor === undefined || valor === 1) delete botao[campo];
+        else botao[campo] = valor;
+      }
+      return botao;
+    });
+  }
+
+  return { config: novoConfig, erros };
+}
+
 // Grava de forma atômica: escreve num temporário e renomeia por cima. Um
 // rename é atômico no mesmo sistema de arquivos, então uma queda no meio da
 // escrita nunca deixa um config pela metade. A versão anterior fica guardada
@@ -229,6 +314,7 @@ module.exports = {
   obterConfig,
   encontrarBotao,
   validar,
+  aplicarLayout,
   salvar,
   recarregar,
   get caminhoEmUso() {
