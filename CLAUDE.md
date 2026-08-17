@@ -494,6 +494,78 @@ da URL depois de guardar, injeta o header nas chamadas e mostra a tela de
 pareamento quando falta. Por isso `ws-client.js` **não** conecta sozinho no
 construtor — quem chama `conectar()` é o `app.js`, depois de garantir token.
 
+## Modo de edição de layout (no próprio deck)
+
+O ✏️ no cabeçalho do deck liga o modo de edição: arrasta para mover, toca para
+selecionar, alça de canto (ou os `±` da barra) para redimensionar, e chips de
+coluna e altura de linha. `public/js/editor-layout.js`.
+
+Ele vive **no deck**, e não no `/config/`, porque o problema era outro: montar
+o deck era editar no PC, salvar, pegar o tablet e olhar. Editando na tela real,
+o preview é a própria tela.
+
+- **Durante a interação, nada de re-render.** Arrastar move o nó com
+  `insertBefore` e redimensionar escreve `grid-column: span N` no elemento; a
+  grade CSS reflui sozinha. Chamar `renderizarGrade()` a cada `pointermove`
+  recriaria todos os botões — e `criarBotaoInfo` dispara um fetch de favoritos
+  a cada criação. O array de botões só é sincronizado com a ordem do DOM ao
+  soltar.
+- **`window.deck`** (exposto no fim da IIFE do `app.js`) é a superfície mínima
+  que o editor usa, no mesmo padrão de `window.acesso` e `window.clienteWs`.
+  Isso evitou espalhar `if (editando)` pelos criadores de botão — nenhum deles
+  precisou mudar.
+- **Ações inertes por dois caminhos**: listeners em fase de **captura** no
+  contêiner (rodam antes dos listeners do próprio botão, então nem o clique nem
+  o seletor de lista disparam) e `pointer-events: none` nos filhos (impede o
+  polegar do slider e a estrela do mostrador de capturarem o gesto, e faz o
+  `elementFromPoint` devolver sempre o `.botao`).
+- **`touch-action: none` nos botões, só no modo de edição.** É o que decide se
+  o arraste funciona no dedo: sem isso o navegador entende o gesto como rolagem
+  e nunca entrega os `pointermove`. O preço é não rolar arrastando sobre um
+  botão enquanto edita — daí o auto-scroll de borda.
+- **Pointer capture no contêiner, não no botão**: o botão é reinserido no DOM
+  várias vezes durante o arraste e a captura nele não sobreviveria.
+- **Histerese de 4px** antes de reavaliar o alvo, senão a grade oscila entre
+  duas posições com o dedo parado na fronteira entre dois botões.
+- **O tamanho vigente vem do DOM, não do config**: slider nasce 1x2 e mostrador
+  2x2 pelo CSS, sem campo no JSON. Sem ler do DOM, a primeira redimensionada de
+  um slider o jogaria para 1x1.
+
+### `PUT /api/layout` — por que pode dispensar `exigirLocal`
+
+`PUT /api/config` exige 127.0.0.1 porque um botão pode mandar abrir qualquer
+programa. Mas arrastar botão é justamente o que se quer fazer no tablet.
+
+A rota nova (`server/routes/layout.js` + `configStore.aplicarLayout()`) resolve
+isso **pela forma do payload, não por uma verificação**: ela lê integração,
+ação, parâmetros, fonte e `estadoChave` do **disco**, e do corpo só aceita ids,
+ordem, `largura`, `altura`, `colunas` e `alturaBotao`. Não existe payload capaz
+de criar um botão que abra um programa. O conjunto de ids precisa bater
+exatamente com o do disco, o que sozinho impede adicionar, remover e mover
+botão entre páginas por ali.
+
+A alternativa — aceitar o config inteiro e conferir se só o layout mudou — foi
+descartada: comparação profunda é frágil, e todo campo novo do schema passaria
+a entrar por omissão.
+
+### Posição de botão não vai para o CSS
+
+Havia sete regras em `style.css` posicionando botões por `data-id`
+(`[data-id="spotify.play_pause"] { grid-column: 1; grid-row: 1 }` e afins),
+resquício de um ajuste manual da página Mídia. Elas **quebravam o editor em
+silêncio**: arrastar esses botões não mudava nada na tela, porque a posição
+vinha da folha de estilo e não da ordem do array. Foram removidas junto com o
+`grid-auto-flow: dense` (que existia para servi-las, e que reordena
+visualmente, quebrando a previsibilidade do arraste).
+
+Se aparecer a tentação de fixar um botão numa posição, o lugar é o config —
+ordem + `largura`/`altura` — nunca o CSS.
+
+**Armadilha do `hidden`**, que apareceu duas vezes aqui: o `display: none` do
+atributo vem do navegador com especificidade mínima, então qualquer regra nossa
+com `display` o derrota em silêncio. Existe um `[hidden] { display: none
+!important }` no topo do `style.css` por causa disso.
+
 ## Tela de configuração (`public/config/`)
 
 Editor de páginas e botões servido em `/config/` (link ⚙️ no cabeçalho do

@@ -19,6 +19,15 @@
   box-sizing: border-box;
 }
 
+/* O `display: none` que o atributo `hidden` traz vem do navegador com
+   especificidade mínima, então qualquer regra nossa com `display` o derrota
+   em silêncio — foi assim que a barra de edição apareceu com o modo
+   desligado. Como aqui `hidden` é sempre usado no sentido de "não existe
+   agora", vale o !important. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   height: 100%;
@@ -320,7 +329,6 @@ body.modo-edicao .grade .botao.arrastando {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   grid-auto-rows: 120px;
-  grid-auto-flow: dense;
   gap: 16px;
   align-content: start;
 }
@@ -470,53 +478,6 @@ body.modo-edicao .grade .botao.arrastando {
 .botao-slider .slider-valor {
   font-size: 1.15rem;
   margin-top: 2px;
-}
-
-/* Os dois sliders de volume ficam fixos nas duas últimas colunas da grade
-   (canto superior direito), juntos, não importa quantos outros botões vierem
-   antes deles — os demais fluem naturalmente à esquerda ao redor (o
-   grid-auto-flow: dense da .grade preenche os buracos ao redor de itens com
-   posição explícita). Como só são esses 2 elementos, não compensa criar um
-   mecanismo genérico de posicionamento no config por esse caso pontual. */
-[data-id="midia.volume_slider"] {
-  grid-column: -3 / -2;
-  grid-row: 1 / 3;
-}
-
-[data-id="spotify.volume_slider"] {
-  grid-column: -2 / -1;
-  grid-row: 1 / 3;
-}
-
-/* Layout específico pedido para a página "Mídia": bloco 2x2 compacto com os
-   controles do Spotify (play/pause + próxima em cima, tocar em + anterior
-   embaixo — sem buracos), "Tocando agora" cola à direita desse bloco (única
-   posição 2x2 livre sobrando), "Mudo" isolado embaixo do slider de volume
-   do Spotify. O "spotify.now_playing" não tem posição própria fixada aqui —
-   sobra pra ele o próximo buraco 2x2 livre. */
-[data-id="spotify.play_pause"] {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-[data-id="spotify.proxima"] {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-[data-id="spotify.tocar_em"] {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-[data-id="spotify.anterior"] {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-[data-id="midia.mute"] {
-  grid-column: -2 / -1;
-  grid-row: 3;
 }
 
 /* Botão do tipo info (mostrador somente leitura, ex.: now playing); 2 linhas
