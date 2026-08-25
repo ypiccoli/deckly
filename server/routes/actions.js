@@ -12,6 +12,7 @@
 
 const express = require('express');
 const { encontrarBotao } = require('../config-store');
+const { redigir } = require('../lib/segredos');
 
 function resolverAcao(integracoes, passo) {
   const integracao = integracoes[passo.integracao];
@@ -50,8 +51,12 @@ module.exports = function criarRotaAcoes(integracoes) {
       }
       res.json({ ok: true, estado });
     } catch (erro) {
-      console.error(`[action] Erro ao executar "${req.params.id}": ${erro.message}`);
-      res.status(500).json({ ok: false, erro: erro.message });
+      // redigir: mensagem de erro de integração pode trazer credencial
+      // dentro (o Discord devolve o access token junto com "Invalid access
+      // token"), e daqui ela iria para o log e para a tela do tablet.
+      const mensagem = redigir(erro.message);
+      console.error(`[action] Erro ao executar "${req.params.id}": ${mensagem}`);
+      res.status(500).json({ ok: false, erro: mensagem });
     }
   });
 

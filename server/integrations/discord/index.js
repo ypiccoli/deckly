@@ -20,6 +20,8 @@
 
 const EventEmitter = require('events');
 const atalhos = require('../atalhos');
+const envStore = require('../../lib/env-store');
+const { redigir } = require('../../lib/segredos');
 const { ClienteRpcDiscord } = require('./rpc');
 
 const PADROES = {
@@ -52,6 +54,14 @@ const ARGUMENTOS_LANCADOR = '--processStart Discord.exe';
 // sempre uma variação destes. Ajustável por DISCORD_NOMES_AFK.
 const NOMES_AFK_PADRAO = 'afk, ausente, ausentes, away, inativo, inativos';
 
+// Código do erro (posto pelo rpc.js) -> motivo mostrado à pessoa. Ver
+// `_diagnosticoRpc()`.
+const MOTIVO_POR_ERRO = {
+  discord_fechado: 'discord_fechado',
+  token_invalido: 'autorizacao_expirada',
+  renovacao_recusada: 'autorizacao_expirada',
+};
+
 class IntegracaoDiscord extends EventEmitter {
   constructor() {
     super();
@@ -77,6 +87,8 @@ class IntegracaoDiscord extends EventEmitter {
     this._timeoutReconexao = null;
     this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
     this._avisouFalha = false;
+    // Por que a última conexão falhou, para a mensagem dizer o que fazer.
+    this._motivoFalhaRpc = null;
   }
 
   get modo() {
@@ -172,7 +184,37 @@ class IntegracaoDiscord extends EventEmitter {
       clientId: process.env.DISCORD_CLIENT_ID,
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
       accessToken: process.env.DISCORD_ACCESS_TOKEN,
+      refreshToken: process.env.DISCORD_REFRESH_TOKEN,
     };
+  }
+
+  // Os dois tokens andam juntos no .env porque andam juntos no protocolo: o
+  // Discord rotaciona o refresh a cada renovação, e gravar só um deixaria a
+  // dupla incoerente na próxima subida.
+  _gravarTokens({ accessToken, refreshToken }) {
+    envStore.gravar({
+      DISCORD_ACCESS_TOKEN: accessToken,
+      DISCORD_REFRESH_TOKEN: refreshToken || '',
+    });
+  }
+
+  // Uma frase por motivo de falha, em vez da mesma para tudo. A versão
+  // anterior dizia "confira as credenciais" mesmo quando elas estavam certas
+  // e o que tinha vencido era a autorização — mandando procurar no lugar
+  // errado justamente quem já estava com problema.
+  _diagnosticoRpc() {
+    switch (this._motivoFalhaRpc) {
+      case 'sem_credenciais':
+        return 'Discord ainda não configurado: preencha o Client ID e o Client Secret na aba Integrações.';
+      case 'sem_autorizacao':
+        return 'Discord ainda não autorizado: clique em "Conectar ao Discord" na aba Integrações.';
+      case 'autorizacao_expirada':
+        return 'A autorização do Discord expirou e não deu para renovar. Clique em "Reconectar ao Discord" na aba Integrações.';
+      case 'discord_fechado':
+        return 'Não achei o Discord aberto neste PC (o aplicativo, não a versão web).';
+      default:
+        return 'RPC do Discord não está conectado. Abra o Discord e tente de novo.';
+    }
   }
 
   _garantirRpc() {
@@ -180,7 +222,7 @@ class IntegracaoDiscord extends EventEmitter {
       throw new Error('Esta ação exige o modo RPC. Mude na aba Integrações.');
     }
     if (!this.rpc || !this.rpc.autenticado) {
-      throw new Error('RPC do Discord não está conectado. Abra o Discord e confira as credenciais.');
+      throw new Error(this._diagnosticoRpc());
     }
   }
 
@@ -195,13 +237,31 @@ class IntegracaoDiscord extends EventEmitter {
     if (this._timeoutReconexao.unref) this._timeoutReconexao.unref();
   }
 
+  // Autentica e, se o token tiver vencido, compra um novo com o refresh e
+  // tenta UMA vez mais. Mais que uma seria laço: se o token recém-emitido
+  // também for recusado, o problema não é validade.
+  async _autenticarRenovandoSePreciso() {
+    try {
+      await this.rpc.autenticar();
+      return;
+    } catch (erro) {
+      if (erro.codigo !== 'token_invalido' || !this.rpc.refreshToken) throw erro;
+    }
+
+    this._gravarTokens(await this.rpc.renovarToken());
+    await this.rpc.autenticar();
+    console.log('[discord] Autorização expirada; renovada automaticamente.');
+  }
+
   async _conectarRpc() {
-    const { clientId, clientSecret, accessToken } = this._credenciaisRpc();
+    const { clientId, clientSecret, accessToken, refreshToken } = this._credenciaisRpc();
     if (!clientId || !clientSecret) {
+      this._motivoFalhaRpc = 'sem_credenciais';
       console.log('[discord] Modo RPC sem Client ID/Secret — preencha na aba Integrações.');
       return;
     }
     if (!accessToken) {
+      this._motivoFalhaRpc = 'sem_autorizacao';
       console.log('[discord] Modo RPC ainda não autorizado — use "Conectar ao Discord" na aba Integrações.');
       return;
     }
@@ -212,6 +272,7 @@ class IntegracaoDiscord extends EventEmitter {
       clientId,
       clientSecret,
       accessToken,
+      refreshToken,
       aoMudarEstado: (evento, dados) => this._tratarEventoRpc(evento, dados),
       aoDesconectar: () => {
         this._atualizarEstado({ conectado: false });
@@ -221,7 +282,7 @@ class IntegracaoDiscord extends EventEmitter {
 
     try {
       await this.rpc.conectar();
-      await this.rpc.autenticar();
+      await this._autenticarRenovandoSePreciso();
 
       await this.rpc.assinar('VOICE_SETTINGS_UPDATE');
       await this.rpc.assinar('VOICE_CHANNEL_SELECT');
@@ -230,11 +291,16 @@ class IntegracaoDiscord extends EventEmitter {
 
       this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
       this._avisouFalha = false;
+      this._motivoFalhaRpc = null;
       console.log(`[discord] RPC conectado${this.rpc.usuario ? ` como ${this.rpc.usuario.username}` : ''}.`);
     } catch (erro) {
+      // Token inválido chegar até aqui significa que a renovação não
+      // aconteceu (sem refresh guardado) ou não adiantou: daí em diante só a
+      // pessoa resolve, autorizando de novo.
+      this._motivoFalhaRpc = MOTIVO_POR_ERRO[erro.codigo] || 'outro';
       if (!this._avisouFalha) {
         this._avisouFalha = true;
-        console.log(`[discord] RPC indisponível (${erro.message}). Tentando em segundo plano.`);
+        console.log(`[discord] RPC indisponível (${redigir(erro.message)}). Tentando em segundo plano.`);
       }
       this._atualizarEstado({ conectado: false });
       this._agendarReconexaoRpc();
@@ -423,7 +489,9 @@ class IntegracaoDiscord extends EventEmitter {
   }
 
   // Chamada pela rota de autorização. Conecta sem token só para pedir a
-  // aprovação, e devolve o access_token para quem chamou gravar no .env.
+  // aprovação e grava a dupla resultante. A gravação mora aqui, e não na
+  // rota, porque a renovação automática também grava: de dois lugares viria
+  // a pergunta "qual dos dois vale".
   async autorizarRpc() {
     const { clientId, clientSecret } = this._credenciaisRpc();
     if (!clientId || !clientSecret) {
@@ -432,8 +500,7 @@ class IntegracaoDiscord extends EventEmitter {
     const cliente = new ClienteRpcDiscord({ clientId, clientSecret });
     try {
       await cliente.conectar();
-      const token = await cliente.autorizar(ESCOPOS_RPC);
-      return token;
+      this._gravarTokens(await cliente.autorizar(ESCOPOS_RPC));
     } finally {
       cliente.desconectar();
     }
@@ -483,6 +550,7 @@ class IntegracaoDiscord extends EventEmitter {
     this._timeoutReconexao = null;
     this._atrasoReconexao = ATRASO_RECONEXAO_INICIAL_MS;
     this._avisouFalha = false;
+    this._motivoFalhaRpc = null;
     if (this.rpc) {
       this.rpc.desconectar();
       this.rpc = null;
@@ -614,6 +682,13 @@ class IntegracaoDiscord extends EventEmitter {
             url: '/discord/autorizar',
             rotulo: 'Conectar ao Discord',
             pronto: Boolean(process.env.DISCORD_ACCESS_TOKEN),
+            // Ter token gravado não é o mesmo que ter autorização válida: sem
+            // esta ressalva a aba anunciava "conta já autorizada" sobre um
+            // token vencido, que foi como este problema se escondeu.
+            observacao:
+              this._motivoFalhaRpc === 'autorizacao_expirada'
+                ? '⚠ a autorização expirou — reconecte'
+                : null,
             precisaAntes: ['DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET'],
           }
         : null,
@@ -673,7 +748,7 @@ class IntegracaoDiscord extends EventEmitter {
       motivoIndisponivel: disponivel
         ? null
         : ehRpc
-          ? 'RPC não conectado — abra o Discord e confira as credenciais na aba Integrações.'
+          ? this._diagnosticoRpc()
           : 'Depende dos atalhos do Windows, que só funcionam no Windows ou no WSL2.',
       // Só o modo RPC tem estado: no modo teclado o Discord não informa nada,
       // e um botão que promete acender e não acende é pior que um que não

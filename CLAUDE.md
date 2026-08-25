@@ -321,6 +321,52 @@ servidor, com permissão de administrador que ninguém tem nos servidores dos
 outros. **É exatamente isso que o modo RPC resolve** — `GET /discord/canais`
 lista os canais de voz reais, sem bot nenhum, porque fala pelo seu cliente.
 
+### A autorização do RPC expira em 7 dias, e se renova sozinha
+
+O access token OAuth2 do Discord vale **uma semana**. A primeira versão do
+`rpc.js` guardava só o `access_token` e jogava fora o `refresh_token` que vem
+na mesma resposta: passados sete dias o `AUTHENTICATE` era recusado, a
+reconexão automática ficava retentando o mesmo token morto para sempre, e os
+botões do Discord morriam em silêncio até alguém reautorizar à mão.
+
+- **A renovação é reativa, não agendada.** O access token só é usado no
+  `AUTHENTICATE`, uma vez por conexão, e `_conectarRpc()` já roda na subida e
+  em toda reconexão. Então basta `_autenticarRenovandoSePreciso()`: se o erro
+  vier com `codigo === 'token_invalido'`, troca o refresh por um token novo e
+  tenta **uma** vez mais. Nada de guardar prazo de validade no `.env` nem de
+  criar um timer que ninguém lembraria de cancelar. (O Spotify renova por
+  prazo porque usa o token a cada chamada de API — caso diferente.)
+- **O Discord ROTACIONA o refresh token**: cada renovação invalida o anterior.
+  Por isso `_gravarTokens()` grava os dois juntos — gravar só o access token
+  faria a renovação seguinte falhar.
+- **Quem grava é a integração, não a rota.** `routes/discord.js` gravava o
+  token depois de autorizar; como a renovação também precisa gravar, os dois
+  caminhos passam pelo mesmo `_gravarTokens()`.
+- **Erro carrega `codigo`, não frase.** `rpc.js` marca `token_invalido`,
+  `renovacao_recusada` e `discord_fechado`; `MOTIVO_POR_ERRO` +
+  `_diagnosticoRpc()` traduzem isso numa frase só, usada tanto pelas ações
+  (`_garantirRpc()`) quanto pelo `catalogo.motivoIndisponivel`. Antes a mesma
+  mensagem — "confira as credenciais" — servia para credencial ausente,
+  Discord fechado e autorização vencida, mandando procurar no lugar errado
+  justamente quem já estava com problema.
+- **`autorizacao.pronto` não prova nada** além de existir uma string no
+  `.env`: com o token vencido a aba Integrações anunciava "✓ conta já
+  autorizada". Daí o campo `observacao`, que a UI mostra no lugar do ✓.
+
+### Segredo não entra em log: `server/lib/segredos.js`
+
+Quando o token vence, o próprio Discord responde `Invalid access token: <o
+token>` — e essa mensagem era interpolada num `console.log`. No modo
+empacotado o console vai para `deckly.log`, um arquivo solto ao lado do
+`.exe`: a credencial ficava lá em texto puro, válida.
+
+`redigir(texto)` varre `process.env` e troca o valor de toda chave cujo nome
+case `TOKEN|SECRET|SENHA|PASSWORD|KEY` por `«NOME_DA_CHAVE oculto»` — dizer
+qual chave foi ocultada é o que mantém a mensagem útil para diagnóstico.
+Envolva com ele qualquer `erro.message` de integração que vá para log ou
+resposta HTTP. O ponto mais importante já está coberto: `routes/actions.js`,
+por onde passa erro de toda ação de toda integração.
+
 ### Abrir o Discord: nada de `abrirUwp`
 
 **O Discord não é um app da Store.** Ele é instalado pelo Squirrel, numa

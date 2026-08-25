@@ -23,6 +23,7 @@
 
 const EventEmitter = require('events');
 const WebSocket = require('ws');
+const { redigir } = require('../../lib/segredos');
 
 const INTERVALO_RECONEXAO_INICIAL_MS = 5000;
 const INTERVALO_RECONEXAO_MAXIMO_MS = 60000;
@@ -216,7 +217,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
       if (!this._avisouFalha) {
         this._avisouFalha = true;
         console.log(
-          `[homeassistant] Não consegui falar com ${this.url} (${erro.message}). ` +
+          `[homeassistant] Não consegui falar com ${this.url} (${redigir(erro.message)}). ` +
             'Tentando em segundo plano.',
         );
       }
@@ -245,7 +246,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
       this._atualizarEstado({ conectado: true, entidades });
       console.log(`[homeassistant] Conectado — ${estados.length} entidades.`);
     } catch (erro) {
-      console.warn(`[homeassistant] Conectado, mas falhei ao ler o estado inicial: ${erro.message}`);
+      console.warn(`[homeassistant] Conectado, mas falhei ao ler o estado inicial: ${redigir(erro.message)}`);
       this._atualizarEstado({ conectado: true });
     }
   }

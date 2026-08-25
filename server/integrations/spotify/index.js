@@ -14,6 +14,7 @@
 // duração) sempre que necessário.
 
 const EventEmitter = require('events');
+const { redigir } = require('../../lib/segredos');
 
 const URL_CONTAS_SPOTIFY = 'https://accounts.spotify.com';
 const URL_API_SPOTIFY = 'https://api.spotify.com/v1';
@@ -149,7 +150,7 @@ class IntegracaoSpotify extends EventEmitter {
         dispositivo: dados.device?.name || null,
       });
     } catch (erro) {
-      console.warn(`[spotify] Falha ao buscar now playing: ${erro.message}`);
+      console.warn(`[spotify] Falha ao buscar now playing: ${redigir(erro.message)}`);
     }
   }
 
@@ -177,7 +178,7 @@ class IntegracaoSpotify extends EventEmitter {
       this._intervaloPolling = setInterval(() => this._atualizarNowPlaying(), INTERVALO_POLLING_MS);
       console.log('[spotify] Conectado à Web API do Spotify.');
     } catch (erro) {
-      console.warn(`[spotify] Falha ao conectar (${erro.message}). Refaça a autorização em /spotify/login se o refresh token expirou.`);
+      console.warn(`[spotify] Falha ao conectar (${redigir(erro.message)}). Refaça a autorização em /spotify/login se o refresh token expirou.`);
     }
   }
 

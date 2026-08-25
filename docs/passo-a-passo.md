@@ -204,6 +204,7 @@ mostra seus servidores.
 | "Não achei o Discord rodando" | O app do Discord está fechado, ou você está usando só a versão web (que não expõe o canal local) |
 | Nada acontece ao clicar em Conectar | A janela de autorização pode ter aberto atrás de outra janela — procure no Discord |
 | "Falha ao trocar o código por token" | Client Secret errado, ou o Redirect `http://127.0.0.1` não foi salvo |
+| "A autorização do Discord expirou" | A aprovação vale 7 dias e normalmente se renova sozinha; se ela foi revogada (senha trocada, app apagado no portal), clique em **Reconectar ao Discord** |
 
 O modo **teclado** continua disponível: se preferir voltar, é só mudar o
 Modo e salvar.

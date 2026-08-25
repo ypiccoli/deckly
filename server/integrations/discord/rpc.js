@@ -18,6 +18,10 @@
 // código por um access_token no endpoint OAuth normal -> AUTHENTICATE. Só
 // depois disso os comandos valem.
 //
+// O access token vale 7 dias. A aprovação só precisa acontecer uma vez
+// porque a mesma troca devolve um refresh token, e `renovarToken()` compra
+// um access token novo com ele sem interromper ninguém.
+//
 // Cada comando leva um `nonce`; a resposta volta com o mesmo nonce, e é
 // assim que pedidos concorrentes não se confundem. Eventos assinados
 // (SUBSCRIBE) chegam sem nonce, com `evt` preenchido.
@@ -55,10 +59,11 @@ function caminhosPipe() {
 }
 
 class ClienteRpcDiscord {
-  constructor({ clientId, clientSecret, accessToken, aoMudarEstado, aoDesconectar }) {
+  constructor({ clientId, clientSecret, accessToken, refreshToken, aoMudarEstado, aoDesconectar }) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.accessToken = accessToken || null;
+    this.refreshToken = refreshToken || null;
     this.aoMudarEstado = aoMudarEstado || (() => {});
     this.aoDesconectar = aoDesconectar || (() => {});
 
@@ -187,12 +192,15 @@ class ClienteRpcDiscord {
     return new Promise((resolve, reject) => {
       const tentar = (indice) => {
         if (indice >= caminhos.length) {
-          reject(
-            new Error(
-              'Não achei o Discord rodando neste PC. Abra o aplicativo do Discord ' +
-                '(a versão web não expõe o canal local).',
-            ),
+          const erro = new Error(
+            'Não achei o Discord rodando neste PC. Abra o aplicativo do Discord ' +
+              '(a versão web não expõe o canal local).',
           );
+          // Quem chama precisa distinguir "Discord fechado" de "token
+          // vencido" para dizer o que fazer — e casar a mensagem por string
+          // quebraria na primeira vez que ela fosse reescrita.
+          erro.codigo = 'discord_fechado';
+          reject(erro);
           return;
         }
         const socket = net.connect(caminhos[indice]);
@@ -235,8 +243,33 @@ class ClienteRpcDiscord {
     await pronto;
   }
 
-  // Devolve um access_token novo. Abre uma janela de aprovação no Discord —
-  // por isso o prazo generoso.
+  // Endpoint OAuth normal (HTTP, não o pipe): serve tanto para trocar o
+  // código pela primeira dupla de tokens quanto para renovar depois.
+  async _trocarToken(campos, oQueEstavaFazendo) {
+    const resposta = await fetch(URL_TOKEN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        ...campos,
+      }),
+    });
+    if (!resposta.ok) {
+      throw new Error(`Falha ao ${oQueEstavaFazendo} (${resposta.status}): ${await resposta.text()}`);
+    }
+
+    const dados = await resposta.json();
+    this.accessToken = dados.access_token;
+    // O Discord ROTACIONA o refresh token: cada renovação devolve um novo e
+    // invalida o anterior. Guardar o novo não é otimização — sem isso a
+    // renovação seguinte falharia.
+    if (dados.refresh_token) this.refreshToken = dados.refresh_token;
+    return { accessToken: this.accessToken, refreshToken: this.refreshToken };
+  }
+
+  // Devolve a dupla de tokens. Abre uma janela de aprovação no Discord — por
+  // isso o prazo generoso.
   async autorizar(escopos) {
     const { code } = await this._comando(
       'AUTHORIZE',
@@ -244,29 +277,50 @@ class ClienteRpcDiscord {
       { tempoLimite: TEMPO_LIMITE_AUTORIZACAO_MS },
     );
 
-    const resposta = await fetch(URL_TOKEN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
+    return this._trocarToken(
+      {
         grant_type: 'authorization_code',
         code,
         // O Discord exige o campo, mas no fluxo RPC ele não redireciona
         // nada; qualquer URI cadastrada no app serve.
         redirect_uri: 'http://127.0.0.1',
-      }),
-    });
-    if (!resposta.ok) {
-      throw new Error(`Falha ao trocar o código por token (${resposta.status}): ${await resposta.text()}`);
+      },
+      'trocar o código por token',
+    );
+  }
+
+  // O access token do Discord vale 7 dias; o refresh token é o que evita
+  // pedir a aprovação de novo toda semana.
+  async renovarToken() {
+    if (!this.refreshToken) {
+      throw new Error('Não há refresh token guardado para renovar a autorização do Discord.');
     }
-    const dados = await resposta.json();
-    this.accessToken = dados.access_token;
-    return this.accessToken;
+    try {
+      return await this._trocarToken(
+        { grant_type: 'refresh_token', refresh_token: this.refreshToken },
+        'renovar a autorização do Discord',
+      );
+    } catch (erro) {
+      // Renovação recusada é fim de linha automático: o refresh token foi
+      // revogado (senha trocada, app apagado) e só a pessoa resolve.
+      erro.codigo = 'renovacao_recusada';
+      throw erro;
+    }
   }
 
   async autenticar() {
-    const dados = await this._comando('AUTHENTICATE', { access_token: this.accessToken });
+    let dados;
+    try {
+      dados = await this._comando('AUTHENTICATE', { access_token: this.accessToken });
+    } catch (erro) {
+      // Token vencido é o erro esperado aqui (7 dias), e o único que a
+      // integração consegue consertar sozinha — daí a marca, para ela não
+      // precisar reconhecer a frase do Discord.
+      if (/invalid.*token|token.*(invalid|expired)/i.test(erro.message)) {
+        erro.codigo = 'token_invalido';
+      }
+      throw erro;
+    }
     this.autenticado = true;
     this.usuario = dados.user || null;
     return dados;

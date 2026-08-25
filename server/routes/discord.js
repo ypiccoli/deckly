@@ -2,7 +2,7 @@
 //
 //   GET /discord/destinos   nomes configurados (modo teclado)
 //   GET /discord/canais     canais de voz de verdade (modo RPC)
-//   GET /discord/autorizar  aprova o app no Discord e grava o token
+//   GET /discord/autorizar  aprova o app no Discord e grava os tokens
 //
 // As duas primeiras respondem no formato { ok, opcoes: [...] } de todas as
 // listagens (veja routes/atalhos.js), que é o que faz um botão do tipo
@@ -10,8 +10,8 @@
 
 const express = require('express');
 const discord = require('../integrations/discord');
-const envStore = require('../lib/env-store');
 const favoritos = require('../lib/favoritos-store');
+const { redigir } = require('../lib/segredos');
 const { exigirLocal, exigirToken } = require('../lib/auth');
 
 function pagina(titulo, blocos) {
@@ -45,17 +45,17 @@ module.exports = function criarRotaDiscord() {
       const opcoes = await discord.listarCanaisDeVoz();
       res.json({ ok: true, opcoes: favoritos.aplicar('/discord/canais', opcoes) });
     } catch (erro) {
-      res.status(500).json({ ok: false, erro: erro.message });
+      res.status(500).json({ ok: false, erro: redigir(erro.message) });
     }
   });
 
   // Autorização do modo RPC. Como o Spotify, é um passo de navegador: abre,
-  // a pessoa aprova numa janela do próprio Discord, e o token é gravado e
-  // aplicado na hora — sem copiar e colar nada.
+  // a pessoa aprova numa janela do próprio Discord, e os tokens são gravados
+  // e aplicados na hora — sem copiar e colar nada. Quem grava é a própria
+  // integração: a renovação automática grava pelo mesmo caminho.
   router.get('/autorizar', exigirLocal, async (req, res) => {
     try {
-      const token = await discord.autorizarRpc();
-      envStore.gravar({ DISCORD_ACCESS_TOKEN: token });
+      await discord.autorizarRpc();
       await discord.reconfigurar();
 
       res.send(pagina('Discord conectado!', [
@@ -65,7 +65,7 @@ module.exports = function criarRotaDiscord() {
       ]));
     } catch (erro) {
       res.status(500).send(pagina('Não deu para conectar', [
-        `<p>${erro.message}</p>`,
+        `<p>${redigir(erro.message)}</p>`,
         '<p>Confira se o Discord está aberto neste PC (o app, não a versão web) e se o ' +
           'Client ID e o Client Secret estão certos.</p>',
       ]));

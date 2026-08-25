@@ -1039,8 +1039,8 @@
         });
     });
 
-    // Passo de OAuth (hoje só o Spotify): um link normal, porque o fluxo é
-    // uma ida ao site do Spotify e uma volta para /spotify/callback.
+    // Passo de OAuth (Spotify e Discord): um link normal, porque o fluxo é
+    // uma ida ao serviço e uma volta — nada aqui é específico de um deles.
     if (integracao.autorizacao) {
       var faltando = integracao.autorizacao.precisaAntes.some(function (env) {
         return !integracao.campos.some(function (c) { return c.env === env && c.preenchido; });
@@ -1052,7 +1052,7 @@
       autorizar.target = '_blank';
       autorizar.rel = 'noopener';
       autorizar.textContent = integracao.autorizacao.pronto
-        ? 'Reconectar ao Spotify'
+        ? 'Reconectar a ' + integracao.rotulo
         : integracao.autorizacao.rotulo;
       if (faltando) {
         autorizar.removeAttribute('href');
@@ -1062,10 +1062,14 @@
       }
       acoes.appendChild(autorizar);
 
-      if (integracao.autorizacao.pronto) {
+      // Ter credencial gravada não é o mesmo que ter autorização válida: um
+      // access token vencido continua sendo uma string no .env. Quando a
+      // integração sabe que expirou, ela manda a ressalva em `observacao` — e
+      // é ela que aparece, no lugar de um ✓ que estaria mentindo.
+      if (integracao.autorizacao.observacao || integracao.autorizacao.pronto) {
         var ok = document.createElement('span');
         ok.className = 'integracao-status';
-        ok.textContent = '✓ conta já autorizada';
+        ok.textContent = integracao.autorizacao.observacao || '✓ conta já autorizada';
         acoes.appendChild(ok);
       }
     }

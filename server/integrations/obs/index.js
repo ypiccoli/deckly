@@ -6,6 +6,7 @@
 
 const EventEmitter = require('events');
 const OBSWebSocket = require('obs-websocket-js').default;
+const { redigir } = require('../../lib/segredos');
 
 // A reconexão começa rápida (quem fechou o OBS por um instante volta logo) e
 // vai desacelerando até um minuto. Sem esse teto, quem nunca abre o OBS teria
@@ -159,7 +160,7 @@ class IntegracaoObs extends EventEmitter {
         this._jaAvisouOffline = true;
         // Numa recusa de conexão o obs-websocket-js devolve o erro sem
         // mensagem, e "( )" no log só confunde.
-        const motivo = erro.message || 'conexão recusada';
+        const motivo = redigir(erro.message) || 'conexão recusada';
         console.log(
           `[obs] OBS não encontrado em ${host}:${porta} (${motivo}). ` +
             'Vou tentando em segundo plano — abra o OBS com o WebSocket Server ligado e ' +

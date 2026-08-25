@@ -8,6 +8,7 @@ const express = require('express');
 const spotify = require('../integrations/spotify');
 const { exigirToken, exigirLocal } = require('../lib/auth');
 const envStore = require('../lib/env-store');
+const { redigir } = require('../lib/segredos');
 
 // Estas rotas são as únicas do app que respondem HTML solto: o Spotify
 // devolve o navegador para cá, então a resposta é lida por uma pessoa, não
@@ -80,7 +81,7 @@ module.exports = function criarRotaSpotifyAuth() {
       ]));
     } catch (erro) {
       res.status(500).send(pagina('Falhou ao conectar', [
-        `<p>${erro.message}</p>`,
+        `<p>${redigir(erro.message)}</p>`,
         '<p>Confira se o Client ID e o Client Secret estão certos, e se o ' +
           'Redirect URI cadastrado no painel do Spotify é exatamente ' +
           `<code>${spotify.redirectUri}</code>.</p>`,
