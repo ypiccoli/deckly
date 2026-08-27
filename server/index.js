@@ -45,12 +45,11 @@ function iniciarServidor() {
   const media = require('./integrations/media');
   const obs = require('./integrations/obs');
   const spotify = require('./integrations/spotify');
-  const hue = require('./integrations/hue');
   const atalhos = require('./integrations/atalhos');
   const discord = require('./integrations/discord');
   const homeassistant = require('./integrations/homeassistant');
 
-  const integracoes = { media, obs, spotify, hue, atalhos, discord, homeassistant };
+  const integracoes = { media, obs, spotify, atalhos, discord, homeassistant };
 
   const app = express();
   app.use(express.json());

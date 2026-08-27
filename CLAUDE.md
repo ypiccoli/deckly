@@ -7,8 +7,7 @@ Guia para quem (humano ou Claude Code) for mexer neste repositório depois.
 Stream Deck web caseiro: servidor Node local + grade de botões táteis
 servida via navegador para um tablet Android na mesma LAN, substituindo o
 Touch Portal. Controla mídia/volume do Windows, cenas/mic/gravação do OBS;
-Spotify e Hue estão estruturados mas desativados até o usuário configurar
-credenciais.
+Spotify fica estruturado mas desativado até o usuário configurar credenciais.
 
 **Convenção do projeto: código, comentários e identificadores em
 português.** Mantenha esse padrão em qualquer código novo.
@@ -74,7 +73,7 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
   é o que a pessoa recebe embutido no `.exe` e vê na primeira execução, então
   o critério dele é outro: as páginas Mídia, Sistema e Atalhos precisam
   funcionar **sem configurar nada**, e o que depende de setup (OBS, Spotify,
-  Hue) entra só com `_nota` explicando. Não copie botões pessoais para lá —
+  Home Assistant) entra só com `_nota` explicando. Não copie botões pessoais para lá —
   caminho de `C:\Users\...`, IP de servidor da casa e nome de cena real são
   exatamente o que não deve aparecer para quem acabou de baixar. Mudança no
   deck pessoal não precisa ser replicada no template.
@@ -242,7 +241,7 @@ jeitos diferentes conforme o ambiente. Gotchas já resolvidos:
   era 5s fixo com um `console.warn` por tentativa: quem nunca abre o OBS
   levava um aviso a cada 5 segundos para sempre. O aviso volta a sair quando
   uma conexão que existia cai — aí é informação de verdade.
-- Diferente de Spotify e Hue, **não dá para deduzir "não configurado" da
+- Diferente de Spotify e Home Assistant, **não dá para deduzir "não configurado" da
   ausência de `.env`**: o OBS funciona sem credencial nenhuma. Daí o
   `OBS_HABILITADO` explícito.
 
@@ -753,7 +752,7 @@ Validar o template inicial sem subir servidor (o mesmo validador da rota):
 ```bash
 node -e "
 const store=require('./server/config-store');
-const integ={}; for (const n of ['media','obs','spotify','hue','atalhos'])
+const integ={}; for (const n of ['media','obs','spotify','atalhos','discord','homeassistant'])
   integ[n]=require('./server/integrations/'+n);
 const erros=store.validar(require('./config/pages.config.example.json'), integ);
 console.log(erros.length ? erros : 'template válido'); process.exit(0);"

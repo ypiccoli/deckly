@@ -82,8 +82,7 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
                                                           ├── integrations/obs     -> obs-websocket-js
                                                           ├── integrations/spotify -> Web API oficial
                                                           ├── integrations/discord -> atalhos de teclado ou RPC local
-                                                          ├── integrations/homeassistant -> REST + WebSocket (casa inteligente)
-                                                          └── integrations/hue     -> CLIP API v2 (esqueleto, superado pelo HA)
+                                                          └── integrations/homeassistant -> REST + WebSocket (casa inteligente)
 ```
 
 - O frontend (`public/`) é HTML/CSS/JS puro, sem framework e sem build step.
@@ -121,7 +120,8 @@ cp config/pages.config.example.json config/pages.config.json
 ```
 
 Abra o `.env` e ajuste o que precisar (a porta padrão já funciona sem
-alterar nada; OBS/Spotify/Hue são opcionais — veja as seções abaixo).
+alterar nada; OBS, Spotify, Discord e Home Assistant são opcionais — veja
+as seções abaixo).
 
 O `config/pages.config.json` é o seu layout de botões: ajuste os caminhos de
 programas, IPs e nomes de cena para os da sua máquina. Os dois arquivos
@@ -604,22 +604,6 @@ seu layout, ou tire os botões de casa, ou avise que precisam ser reapontados.
 
 Detalhes de quais marcas exigem o quê: **[docs/casa-inteligente.md](docs/casa-inteligente.md)**.
 
-## Philips Hue (esqueleto antigo)
-
-Módulo estruturado em `server/integrations/hue/index.js`, com as chamadas
-HTTP ainda por escrever. **Foi superado pelo Home Assistant**, que cobre Hue
-junto com todo o resto — só faz sentido implementá-lo se você quiser falar
-com a bridge sem um Home Assistant no meio.
-
-1. Descubra o IP da sua bridge Hue (app oficial Philips Hue, ou
-   <https://discovery.meethue.com/>).
-2. Aperte o **botão físico** da bridge e, nos 30s seguintes, gere uma
-   *application key* fazendo um `POST` para `https://<IP-da-bridge>/api`
-   com corpo `{"devicetype":"deckly"}`.
-3. Preencha `HUE_BRIDGE_IP` e `HUE_APPLICATION_KEY` no `.env`.
-4. Implemente os `TODO`s em `server/integrations/hue/index.js` usando a
-   CLIP API v2 (`https://<bridge>/clip/v2/resource/grouped_light/...`).
-
 ## Editar páginas e botões
 
 São **duas telas, com papéis diferentes**, e vale saber qual abrir:
@@ -691,8 +675,8 @@ funcionando, sem configurar nada.
 
 
 Cada página tem um `id`, `titulo`, `icone` e uma lista de `botoes`. Cada
-botão referencia uma integração (`media`, `atalhos`, `obs`, `spotify` ou
-`hue`) e o nome de uma ação exposta por ela — veja os comentários no topo do
+botão referencia uma integração (`media`, `atalhos`, `obs`, `spotify`,
+`discord` ou `homeassistant`) e o nome de uma ação exposta por ela — veja os comentários no topo do
 arquivo para a lista completa de campos (`estadoChave` para refletir estado
 ao vivo, `tipo: 'slider'` para controles deslizantes, `tipo: 'lista'` para
 seletores, etc).
@@ -772,7 +756,7 @@ Junto do `.exe` é criada uma pasta `dados/`:
 ```
 deckly.exe
 dados/
-├── .env                  # porta, credenciais de OBS/Spotify/Hue
+├── .env                  # porta e credenciais das integrações
 ├── config/
 │   ├── pages.config.json # seu layout (criado ao salvar pela primeira vez)
 │   └── token.json        # token de acesso
@@ -835,7 +819,8 @@ deckly/
 │       ├── atalhos/            # atalhos de sistema, abrir apps/sites/jogos, janelas
 │       ├── obs/                # cenas, mic, gravação (obs-websocket-js)
 │       ├── spotify/            # play/pause, faixas, volume, now playing (Web API)
-│       └── hue/                 # estruturado, aguardando credenciais
+│       ├── discord/            # atalhos de teclado ou RPC local
+│       └── homeassistant/      # luzes, tomadas e cenas (REST + WebSocket)
 ├── public/                     # frontend estático (PWA)
 │   ├── index.html
 │   ├── manifest.json

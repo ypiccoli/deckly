@@ -110,18 +110,6 @@ Servem para o botão acender sozinho (campo **Acende quando**) ou para mostrar t
 | `spotify.volume` | Volume do Spotify (0–100) | numero |
 | `spotify.conectado` | Spotify conectado | booleano |
 
-## Philips Hue
-
-Nas configurações do botão, esta é a integração **hue**.
-
-**Precisa de:** Bridge Philips Hue na rede e as chaves `HUE_*` no `.env`. **A integração ainda é um esqueleto** — os botões existem, mas as chamadas à bridge não estão implementadas.
-
-### Ações
-
-| Ação | O que faz | Parâmetros |
-| --- | --- | --- |
-| `alternarLuz` | Acender / apagar luz | `grupo` (texto, obrigatório) — Nome do grupo de luzes |
-
 ## Atalhos e programas do Windows
 
 Nas configurações do botão, esta é a integração **atalhos**.

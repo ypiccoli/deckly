@@ -1,7 +1,7 @@
 {
   "name": "Deckly",
   "short_name": "Deckly",
-  "description": "Painel de botões táteis para controlar mídia, OBS, Spotify e Hue no PC.",
+  "description": "Painel de botões táteis para controlar mídia, OBS, Spotify, Discord e a casa inteligente.",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",

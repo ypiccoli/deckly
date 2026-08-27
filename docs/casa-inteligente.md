@@ -1,9 +1,9 @@
 # Casa inteligente: o que dá para integrar
 
-Estado atual: **nenhuma integração de casa inteligente está funcionando.**
-Existe um esqueleto de Philips Hue (`server/integrations/hue/`) com as
-chamadas HTTP ainda por escrever. Este documento existe para a próxima
-tentativa começar do lugar certo, em vez de escolher a marca errada.
+Estado atual: **a casa inteligente entra pelo Home Assistant**
+(`server/integrations/homeassistant/`), que fala com o HA por REST (agir) e
+WebSocket (estado ao vivo). Este documento explica por que o caminho é esse, e
+o que cada marca exige antes de chegar até ele.
 
 ## A conclusão que importa
 
@@ -84,7 +84,7 @@ paralelo ao deck, sem uma coisa depender da outra.
 | Intelbras Izy | Tuya | Tuya Cloud ou local |
 | Multilaser Liv | Tuya | Tuya Cloud ou local |
 | Elgin, Geonav, Philco, RGB de marketplace | Tuya (quase sempre) | Tuya Cloud ou local |
-| Philips Hue | Hue próprio | Bridge local, CLIP API v2 (é o esqueleto que já existe aqui) |
+| Philips Hue | Hue próprio | Bridge local; o Home Assistant fala com ela sem nuvem |
 | Sonoff (eWeLink) | eWeLink | API própria, ou trocar o firmware por Tasmota |
 | Shelly | HTTP local | O mais fácil de todos: um `GET` numa URL do próprio aparelho |
 | Xiaomi / Mi Home | Miio | Biblioteca `miio`, exige token do aparelho |
@@ -123,9 +123,11 @@ com as tentativas mais rápidas antes dessa, está em
 
 2. **Longo prazo:** integração **Home Assistant**, que vira a resposta única
    para qualquer marca — e aí a Tuya vira só mais uma coisa que o HA resolve.
-3. **Hue:** manter o esqueleto. Não vale implementar sem ter uma bridge para
-   testar, e hoje isso está declarado como "em construção" na tela de
-   Integrações, honestamente.
+3. **Hue:** nada de integração própria. Existia um esqueleto aqui, removido
+   em 2026-08-27: sem uma bridge para testar, ele nunca passaria de promessa —
+   e, pior, com as chaves preenchidas a ação retornava em silêncio, sem acender
+   luz nenhuma. Quem tem Hue liga a bridge no Home Assistant (que fala com ela
+   localmente) e usa a integração daqui, a mesma das lâmpadas Tuya.
 
 Qualquer uma delas entra como uma integração normal: uma pasta em
 `server/integrations/`, com `acoes`, `catalogo` e `configuracao` — sem tocar

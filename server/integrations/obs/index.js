@@ -28,7 +28,7 @@ class IntegracaoObs extends EventEmitter {
     };
     this.obs = new OBSWebSocket();
     this.nomeEntradaMic = process.env.OBS_MIC_INPUT_NAME || 'Mic/Aux';
-    // Diferente de Spotify e Hue, o OBS não precisa de credencial nenhuma
+    // Diferente de Spotify e Home Assistant, o OBS não precisa de credencial nenhuma
     // para funcionar — então não dá para deduzir "não configurado" da
     // ausência de .env. Quem não usa OBS desliga aqui.
     this.habilitado = String(process.env.OBS_HABILITADO || 'true').toLowerCase() !== 'false';
