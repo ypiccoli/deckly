@@ -467,6 +467,22 @@ Duas peças de documentação **não** são escritas à mão:
 - `docs/Guia-Deckly.pdf` sai de `scripts/gerar-pdf.js`, que imprime
   `docs/guia-primeiro-acesso.html` com o Chrome do Windows em headless. **A
   fonte é o HTML** — editar o PDF não faz sentido, ele é regenerado.
+- O guia é escrito à mão, **menos o catálogo**: o bloco entre
+  `<!-- CATALOGO:INICIO -->` e `<!-- CATALOGO:FIM -->` é reescrito pelo
+  `npm run docs`, da mesma fonte do `acoes.md`. Sem isso o guia — a única
+  documentação que quem baixa o `.exe` lê — envelheceria a cada ação nova.
+- **As imagens de `docs/img/` saem de uma instância descartável, nunca do deck
+  pessoal.** Prints do deck real levariam caminho com o usuário do Windows, IP
+  da LAN e nomes de canais do Discord para dentro do PDF distribuído. O jeito:
+  copiar o `.exe` para uma pasta temporária, pré-criar `dados/.env` com
+  `PORT=3555`, `DECKLY_TOKEN=DEMO-…` e `ABRIR_NAVEGADOR=nunca` (variável de
+  ambiente do shell não chega no `.exe`), subir e fotografar com
+  `chrome.exe --headless --screenshot --window-size=L,A`. A tela de boas-vindas
+  ainda mostraria o IP real: para ela, os estáticos da cópia descartável
+  recebem um `<script>` que troca a resposta de `/api/bemvindo` por valores
+  genéricos, com o QR regerado por `server/lib/qr.js` para o endereço falso.
+  O headless não clica: seletor aberto e modo de edição saem de um script que
+  dispara o clique conforme o `#hash` da URL.
 
 Escritos à mão, e que precisam ser atualizados junto com o código:
 `docs/urls.md` (todas as rotas e suas travas — atualize ao criar rota nova)

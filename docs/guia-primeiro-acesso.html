@@ -5,8 +5,9 @@
 <title>Deckly — Guia de Primeiro Acesso</title>
 <style>
   /* Folha pensada para impressão (é daqui que sai o PDF), não para tela.
-     Tudo em preto no branco, sem imagem externa: o gerador roda o Chrome em
-     modo headless, que não busca nada na rede. */
+     As imagens são arquivos locais em docs/img/, capturados de uma instância
+     limpa do programa — o Chrome headless que gera o PDF lê do disco, e nada
+     aqui depende da rede. */
   @page {
     size: A4;
     margin: 18mm 16mm 20mm;
@@ -160,6 +161,36 @@
     color: #4a4f5c;
   }
 
+  /* ---------- figuras ---------- */
+  figure {
+    margin: 0 0 5mm;
+    page-break-inside: avoid;
+  }
+  figure img {
+    width: 100%;
+    display: block;
+    border: 0.75pt solid #c9ccd4;
+    border-radius: 3pt;
+  }
+  figcaption {
+    font-size: 8.5pt;
+    color: #6b7180;
+    margin-top: 1.5mm;
+  }
+
+  /* ---------- catálogo gerado ---------- */
+  .catalogo h3 {
+    margin-top: 7mm;
+    padding-top: 2mm;
+    border-top: 0.5pt solid #e3e5ea;
+  }
+  .catalogo .precisa {
+    font-size: 9pt;
+    color: #4a4f5c;
+    margin-bottom: 2.5mm;
+  }
+  .catalogo table { margin-bottom: 2mm; }
+
   .sumario ol { padding-left: 5mm; }
   .sumario li { margin-bottom: 2mm; }
 
@@ -182,8 +213,8 @@
   <p><strong>Guia de primeiro acesso.</strong> Do arquivo baixado até o deck
   funcionando no tablet, sem precisar saber programar.</p>
   <p>Transforme qualquer tablet ou celular numa mesa de botões para o seu PC:
-  volume, mídia, atalhos do Windows, programas, jogos e OBS — tudo por toque,
-  pela rede da sua casa.</p>
+  volume, mídia, atalhos do Windows, programas, jogos, OBS, Discord e até as
+  luzes da casa — tudo por toque, pela rede da sua casa.</p>
   <div class="rodape-capa">
     Leva cerca de 10 minutos · Windows 10 ou 11 · Nenhuma instalação necessária
   </div>
@@ -197,8 +228,10 @@
     <li><strong>Ligar o programa no PC</strong> — baixar, rodar e o aviso do Windows</li>
     <li><strong>Conectar o tablet</strong> — o QR code e o token de acesso</li>
     <li><strong>Deixar com cara de aplicativo</strong> — instalar na tela inicial</li>
-    <li><strong>Montar o seu deck</strong> — criar e editar botões</li>
-    <li><strong>Extras opcionais</strong> — conectar OBS e Spotify, e iniciar junto com o Windows</li>
+    <li><strong>Usar o deck no dia a dia</strong> — os tipos de botão e o modo de edição</li>
+    <li><strong>Montar o seu deck</strong> — criar botões e escolher o que fazem</li>
+    <li><strong>Tudo que dá para colocar num botão</strong> — o catálogo completo</li>
+    <li><strong>Extras opcionais</strong> — OBS, Spotify, Discord, casa inteligente e iniciar com o Windows</li>
     <li><strong>Quando algo não funciona</strong> — os problemas mais comuns</li>
   </ol>
 
@@ -210,7 +243,7 @@
     instalado no tablet.</p>
   </div>
 
-  <h2 class="secao--continua">1. Antes de começar</h2>
+  <h2 class="secao--continua" id="comecar">1. Antes de começar</h2>
   <table>
     <tr>
       <th style="width: 38mm">O que</th>
@@ -288,13 +321,17 @@
     <tr><td>OBS</td><td>OBS Studio aberto, com o servidor WebSocket ligado.</td></tr>
     <tr><td>Spotify</td><td>Conta <strong>Premium</strong> e um app criado no site de
     desenvolvedores deles (é gratuito e leva uns minutos).</td></tr>
-    <tr><td>Discord</td><td>Discord aberto. Nada a configurar no modo padrão.</td></tr>
-    <tr><td>Casa inteligente</td><td>Um Home Assistant rodando na sua rede — veja o README.</td></tr>
+    <tr><td>Discord</td><td>Discord aberto. Nada a configurar no modo padrão — ele
+    usa os atalhos de teclado do próprio Discord.</td></tr>
+    <tr><td>Casa inteligente</td><td>Um <strong>Home Assistant</strong> rodando na sua
+    rede (num Raspberry Pi, num PC que fica ligado ou num mini-servidor). Ele cobre
+    Tuya, Positivo, Intelbras, Philips Hue, Sonoff, Shelly, Zigbee e o que mais
+    você tiver.</td></tr>
   </table>
 </section>
 
 <!-- ===================== PASSO 2 ===================== -->
-<section class="secao">
+<section class="secao" id="ligar">
   <h2>2. Ligar o programa no PC</h2>
 
   <div class="passo">
@@ -354,6 +391,12 @@
     </div>
   </div>
 
+  <figure>
+    <img src="img/bemvindo.png" alt="Tela de boas-vindas do Deckly, com QR code, token e atalhos" />
+    <figcaption>A tela de boas-vindas, que abre sozinha na primeira execução. O QR
+    e o token são os seus — cada instalação gera o seu próprio.</figcaption>
+  </figure>
+
   <div class="caixa">
     <div class="titulo">A tela de boas-vindas é o seu painel</div>
     <p>É ela que mostra o QR code, o token e os atalhos para abrir o deck e a
@@ -364,7 +407,7 @@
 </section>
 
 <!-- ===================== PASSO 3 ===================== -->
-<section class="secao">
+<section class="secao" id="tablet">
   <h2>3. Conectar o tablet</h2>
 
   <p>O deck é protegido por um <strong>token</strong> — uma senha curta, no
@@ -414,7 +457,7 @@
 </section>
 
 <!-- ===================== PASSO 4 ===================== -->
-<section class="secao">
+<section class="secao" id="aplicativo">
   <h2>4. Deixar com cara de aplicativo</h2>
 
   <p>Dá para usar pelo navegador mesmo, mas instalando na tela inicial o deck
@@ -447,8 +490,8 @@
 </section>
 
 <!-- ===================== PASSO 5 ===================== -->
-<section class="secao">
-  <h2>5. Montar o seu deck</h2>
+<section class="secao" id="usar">
+  <h2>5. Usar o deck no dia a dia</h2>
 
   <p>O deck já vem com quatro páginas prontas. As três primeiras funcionam sem
   você configurar nada:</p>
@@ -460,8 +503,9 @@
     </tr>
     <tr>
       <td>🎵 Mídia</td>
-      <td>Play/pause, faixa anterior e próxima, mudo e uma barra de volume do
-      Windows. Funciona com o que estiver tocando — YouTube, Spotify, jogo.</td>
+      <td>Play/pause, faixa anterior e próxima, mudo, troca da saída de áudio e
+      uma barra de volume do Windows. Funciona com o que estiver tocando —
+      YouTube, Spotify, jogo.</td>
     </tr>
     <tr>
       <td>🖥️ Sistema</td>
@@ -476,13 +520,54 @@
     <tr>
       <td>🎬 OBS</td>
       <td>Trocar de cena, mutar o microfone e gravar. Só funciona com o OBS
-      aberto — veja a seção 6.</td>
+      aberto — veja a seção 8.</td>
     </tr>
   </table>
 
-  <h3>Para arrumar os botões na tela (no próprio tablet)</h3>
+  <figure>
+    <img src="img/deck.png" alt="O deck aberto na página Mídia, com botões, um seletor e uma barra de volume" />
+    <figcaption>A página Mídia como ela vem. À direita, uma barra de volume; o
+    botão "Saída" com o pontinho verde é um seletor.</figcaption>
+  </figure>
+
+  <h3>Os quatro tipos de botão</h3>
+  <table>
+    <tr>
+      <th style="width: 30mm">Tipo</th>
+      <th>Como se comporta</th>
+    </tr>
+    <tr><td>Botão</td><td>Toca e dispara. É o tipo mais comum.</td></tr>
+    <tr><td>Barra deslizante</td><td>Arrasta para escolher um valor — volume,
+    brilho de uma luz. Ela acompanha sozinha se o valor mudar no PC.</td></tr>
+    <tr><td>Seletor</td><td>Abre uma lista para você escolher: as janelas
+    abertas, os jogos instalados, os aparelhos de áudio.</td></tr>
+    <tr><td>Mostrador</td><td>Não dispara nada; só exibe informação, como a
+    música que está tocando.</td></tr>
+  </table>
+
+  <figure>
+    <img src="img/deck-seletor.png" alt="Seletor aberto mostrando três saídas de áudio para escolher" />
+    <figcaption>Um seletor aberto. A ⭐ ao lado de cada item marca favoritos, que
+    passam a aparecer no topo da lista.</figcaption>
+  </figure>
+
+  <h3>Botões que acendem sozinhos</h3>
+  <p>Alguns botões mudam de cor conforme o estado real do PC: o de mudo fica
+  vermelho quando o som está mudo, o de gravar fica aceso enquanto o OBS grava,
+  o de uma luz acende quando a luz está acesa — inclusive se você usar o
+  interruptor da parede. Isso não é enfeite: é o que evita apertar duas vezes
+  por não saber se funcionou.</p>
+
+  <h3>Arrumar os botões na tela, no próprio tablet</h3>
   <p>Toque no <strong>✏️</strong> no canto do deck. Os botões passam a poder ser
   arrastados — <strong>no próprio tablet</strong>, vendo como fica de verdade.</p>
+
+  <figure>
+    <img src="img/edicao.png" alt="Modo de edição ligado, com a barra de colunas e altura no topo" />
+    <figcaption>Modo de edição. A barra de cima muda o número de colunas e a
+    altura dos botões na hora.</figcaption>
+  </figure>
+
   <ul>
     <li><strong>Arraste</strong> um botão para mudar de lugar. Os outros se
     ajeitam sozinhos.</li>
@@ -497,13 +582,40 @@
   </ul>
   <p>Enquanto o ✏️ está ligado, tocar num botão <strong>não faz ele
   funcionar</strong> — dá para arrastar o botão de desligar o PC sem medo.</p>
+</section>
 
-  <h3>Para criar botões e escolher o que eles fazem</h3>
+<!-- ===================== PASSO 6 ===================== -->
+<section class="secao" id="montar">
+  <h2>6. Montar o seu deck</h2>
+
   <p>No PC, abra <code>http://127.0.0.1:3000/config/</code> (ou clique no ⚙️ no
   canto do deck). Dali você cria páginas, adiciona botões, escolhe emoji e o
   que cada um faz, e clica em <strong>Salvar</strong>.</p>
   <p><strong>Não precisa reiniciar nada:</strong> ao salvar, o tablet se
   atualiza sozinho, na hora.</p>
+
+  <figure>
+    <img src="img/config-botoes.png" alt="Tela de configuração: colunas de páginas, botões e o formulário de detalhes" />
+    <figcaption>Três colunas: as páginas, os botões da página escolhida, e os
+    detalhes do botão selecionado.</figcaption>
+  </figure>
+
+  <h3>O caminho, em quatro passos</h3>
+  <ol>
+    <li>Escolha (ou crie) uma <strong>página</strong> na coluna da esquerda.</li>
+    <li>Clique em <strong>+ Botão</strong> na coluna do meio.</li>
+    <li>Na coluna da direita, dê um título, escolha o emoji e o
+    <strong>tipo</strong>.</li>
+    <li>Em <strong>O que acontece ao tocar</strong>, escolha a integração e a
+    ação — e preencha o que ela pedir.</li>
+  </ol>
+
+  <div class="caixa">
+    <div class="titulo">Um botão pode fazer várias coisas</div>
+    <p>Em <strong>Transformar em macro</strong>, o botão passa a aceitar vários
+    passos, executados em sequência num toque só: abrir o jogo <em>e</em> o
+    Discord, ou trocar a cena do OBS <em>e</em> começar a gravar.</p>
+  </div>
 
   <div class="caixa">
     <div class="titulo">Por que uma coisa pode no tablet e a outra só no PC</div>
@@ -515,25 +627,126 @@
     padrão, só responde na própria máquina.</p>
   </div>
 
-  <h3>O que dá para colocar num botão</h3>
-  <ul>
-    <li><strong>Programas e sites</strong> — pelo caminho do <code>.exe</code>,
-    por um comando (<code>notepad</code>) ou por um endereço.</li>
-    <li><strong>Atalhos do Windows</strong> — print, bloquear, área de
-    transferência, encaixar janelas, trocar de monitor.</li>
-    <li><strong>Volume e mídia</strong> — inclusive uma barra deslizante.</li>
-    <li><strong>Macros</strong> — vários passos num toque só (abrir o jogo
-    <em>e</em> o Discord, por exemplo).</li>
-    <li><strong>Botões que acendem</strong> — o botão de mudo fica vermelho
-    quando o PC está mudo, o de gravar pisca enquanto grava.</li>
-  </ul>
-  <p>A lista completa, com todos os parâmetros de cada ação, está no arquivo
-  <code>docs/acoes.md</code>, no repositório.</p>
+  <h3>As credenciais ficam na aba Integrações</h3>
+  <p>O botão <strong>🔌 Integrações</strong>, no topo, abre a tela onde cada
+  integração diz o que precisa e onde conseguir. Nada de editar arquivo: ao
+  salvar, vale na hora.</p>
+
+  <figure>
+    <img src="img/config-integracoes.png" alt="Aba Integrações, com o cartão do OBS e seus campos" />
+    <figcaption>Cada integração traz o passo a passo do que fazer. Senhas ficam
+    guardadas no PC e nunca voltam para a tela.</figcaption>
+  </figure>
+</section>
+
+<!-- ===================== PASSO 7 ===================== -->
+<section class="secao" id="catalogo">
+  <h2>7. Tudo que dá para colocar num botão</h2>
+
+  <p>Esta é a lista completa do que existe hoje, integração por integração, com
+  o que cada ação pede que você informe. Você monta tudo pela tela de
+  configuração da seção anterior — a lista aqui é para consulta, para saber o
+  que é possível antes de procurar.</p>
+
+  <div class="caixa">
+    <div class="titulo">Como ler esta lista</div>
+    <p><strong>Integração</strong> é a família (mídia do Windows, OBS, Spotify…).
+    <strong>Ação</strong> é o que o botão faz. <strong>O que você informa</strong>
+    são os campos que aparecem na tela de configuração ao escolher aquela ação —
+    quando está vazio, é porque a ação não precisa de nada.</p>
+  </div>
+
+  <div class="catalogo">
+  <!-- CATALOGO:INICIO -->
+  <h3>Mídia do Windows</h3>
+  <p class="precisa"><strong>Precisa de:</strong> Nada. Funciona assim que o programa abre, no Windows.</p>
+  <table>
+    <tr><th style="width: 52mm">Ação</th><th>O que você informa</th></tr>
+    <tr><td>Play / Pause</td><td>—</td></tr>
+    <tr><td>Faixa anterior</td><td>—</td></tr>
+    <tr><td>Próxima faixa</td><td>—</td></tr>
+    <tr><td>Alternar mudo</td><td>—</td></tr>
+    <tr><td>Aumentar volume</td><td>—</td></tr>
+    <tr><td>Diminuir volume</td><td>—</td></tr>
+    <tr><td>Definir volume</td><td><strong>Volume (0–100)</strong></td></tr>
+    <tr><td>Trocar a saída de áudio</td><td><strong>Dispositivo</strong><br /><em>Em branco num botão do tipo Seletor: a saída é escolhida na hora, na lista.</em></td></tr>
+  </table>
+  <h3>OBS Studio</h3>
+  <p class="precisa"><strong>Precisa de:</strong> OBS Studio aberto, com <strong>Ferramentas &gt; WebSocket Server Settings &gt; Enable WebSocket server</strong> ligado.</p>
+  <table>
+    <tr><th style="width: 52mm">Ação</th><th>O que você informa</th></tr>
+    <tr><td>Trocar de cena</td><td><strong>Nome da cena</strong> (obrigatório)<br /><em>Precisa bater exatamente com o nome da cena no OBS.</em></td></tr>
+    <tr><td>Alternar mudo do microfone</td><td><strong>Nome da fonte de áudio</strong><br /><em>Em branco usa OBS_MIC_INPUT_NAME do .env (padrão: Mic/Aux).</em></td></tr>
+    <tr><td>Iniciar / parar gravação</td><td>—</td></tr>
+  </table>
+  <h3>Spotify</h3>
+  <p class="precisa"><strong>Precisa de:</strong> Conta Spotify <strong>Premium</strong> e as chaves <code>SPOTIFY_*</code> no <code>.env</code> — veja "Habilitar o Spotify" no README.</p>
+  <table>
+    <tr><th style="width: 52mm">Ação</th><th>O que você informa</th></tr>
+    <tr><td>Play / Pause</td><td>—</td></tr>
+    <tr><td>Próxima faixa</td><td>—</td></tr>
+    <tr><td>Faixa anterior</td><td>—</td></tr>
+    <tr><td>Definir volume do Spotify</td><td><strong>Volume (0–100)</strong></td></tr>
+    <tr><td>Tocar em outro dispositivo</td><td><strong>ID do dispositivo</strong></td></tr>
+  </table>
+  <h3>Atalhos e programas do Windows</h3>
+  <p class="precisa"><strong>Precisa de:</strong> Nada. Funciona assim que o programa abre, no Windows.</p>
+  <table>
+    <tr><th style="width: 52mm">Ação</th><th>O que você informa</th></tr>
+    <tr><td>Captura de tela (Win+Shift+S)</td><td>—</td></tr>
+    <tr><td>Bloquear o PC</td><td>—</td></tr>
+    <tr><td>Mostrar área de trabalho</td><td>—</td></tr>
+    <tr><td>Encaixar janela à esquerda</td><td>—</td></tr>
+    <tr><td>Encaixar janela à direita</td><td>—</td></tr>
+    <tr><td>Área de transferência (Win+V)</td><td>—</td></tr>
+    <tr><td>Mover janela para o monitor da esquerda</td><td>—</td></tr>
+    <tr><td>Mover janela para o monitor da direita</td><td>—</td></tr>
+    <tr><td>Enviar atalho de teclado</td><td><strong>Combinação de teclas</strong> (obrigatório)<br /><em>Ex.: CTRL+SHIFT+M. Vale CTRL, SHIFT, ALT, WIN, letras, números, F1–F24 e teclas como ENTER, ESC, TAB, setas.</em></td></tr>
+    <tr><td>Trazer um programa para frente</td><td><strong>Nome do processo</strong> (obrigatório)<br /><em>Sem o .exe (ex.: Discord, vivaldi, Code). Falha se o programa não estiver aberto.</em></td></tr>
+    <tr><td>Digitar um texto</td><td><strong>Texto</strong> (obrigatório)<br /><em>Digitado na janela que estiver em foco. Combine com "Trazer um programa para frente" numa macro.</em></td></tr>
+    <tr><td>Abrir programa</td><td><strong>Caminho, comando ou atalho .lnk</strong> (obrigatório)<br /><em>Prefira o .lnk do Menu Iniciar para apps que se auto-atualizam. Comandos no PATH também valem (ex.: code, wt).</em><br /><strong>Argumentos (opcional)</strong><br /><em>Passados na linha de comando, para programas que precisam deles.</em></td></tr>
+    <tr><td>Abrir app da Store (MSIX)</td><td><strong>AppUserModelID</strong> (obrigatório)<br /><em>Descubra com: Get-StartApps | Where-Object { $_.Name -like '*Nome*' }</em></td></tr>
+    <tr><td>Abrir site</td><td><strong>Endereço</strong> (obrigatório)<br /><strong>Navegador específico (opcional)</strong><br /><em>Caminho do .exe. Em branco, abre no navegador padrão do Windows — prefira assim se for compartilhar seu deck com alguém, senão o botão quebra em quem não tiver esse navegador instalado.</em></td></tr>
+    <tr><td>Abrir jogo da Steam</td><td><strong>AppID na Steam</strong></td></tr>
+    <tr><td>Ir para uma janela</td><td><strong>Identificador da janela</strong></td></tr>
+  </table>
+  <h3>Discord</h3>
+  <p class="precisa"><strong>Precisa de:</strong> Discord aberto, com os atalhos globais cadastrados em <strong>Configurações do Usuário &gt; Teclas de Atalho</strong> e as mesmas teclas informadas na aba Integrações. Os botões não acendem: o Discord não informa se você está mudo.</p>
+  <table>
+    <tr><th style="width: 52mm">Ação</th><th>O que você informa</th></tr>
+    <tr><td>Ativar/desativar microfone</td><td>—</td></tr>
+    <tr><td>Ativar/desativar áudio (surdo)</td><td>—</td></tr>
+    <tr><td>Abrir o Discord</td><td>—</td></tr>
+    <tr><td>Canal anterior (na lista)</td><td>—</td></tr>
+    <tr><td>Próximo canal (na lista)</td><td>—</td></tr>
+    <tr><td>Atender chamada</td><td>—</td></tr>
+    <tr><td>Recusar chamada</td><td>—</td></tr>
+    <tr><td>Alternar painel de som</td><td>—</td></tr>
+    <tr><td>Servidor anterior</td><td>—</td></tr>
+    <tr><td>Próximo servidor</td><td>—</td></tr>
+    <tr><td>Ir para a ligação atual</td><td>—</td></tr>
+    <tr><td>Abrir a busca do Discord</td><td>—</td></tr>
+    <tr><td>Ir para um canal ou servidor</td><td><strong>Nome do canal ou servidor</strong></td></tr>
+  </table>
+  <h3>Home Assistant</h3>
+  <p class="precisa"><strong>Precisa de:</strong> Um Home Assistant rodando na sua rede e um token de acesso de longa duração. Cobre qualquer marca que o Home Assistant suporte — veja docs/casa-inteligente.md.</p>
+  <table>
+    <tr><th style="width: 52mm">Ação</th><th>O que você informa</th></tr>
+    <tr><td>Ligar / desligar (alternar)</td><td><strong>Entidade</strong> (obrigatório)<br /><em>Ex.: light.sala. Use o seletor de entidades para descobrir os nomes.</em></td></tr>
+    <tr><td>Ligar</td><td><strong>Entidade</strong> (obrigatório)<br /><em>Ex.: light.sala. Use o seletor de entidades para descobrir os nomes.</em></td></tr>
+    <tr><td>Desligar</td><td><strong>Entidade</strong> (obrigatório)<br /><em>Ex.: light.sala. Use o seletor de entidades para descobrir os nomes.</em></td></tr>
+    <tr><td>Definir brilho da luz</td><td><strong>Entidade</strong> (obrigatório)<br /><em>Ex.: light.sala. Use o seletor de entidades para descobrir os nomes.</em><br /><strong>Brilho (0–100)</strong></td></tr>
+    <tr><td>Definir cor da luz</td><td><strong>Entidade</strong> (obrigatório)<br /><em>Ex.: light.sala. Use o seletor de entidades para descobrir os nomes.</em><br /><strong>Cor</strong><br /><em>Hex (#a64dff) ou k&lt;kelvin&gt; para branco (k2700 = quente, k6500 = frio). Num botão do tipo lista, a cor vem da opção escolhida.</em></td></tr>
+    <tr><td>Enviar comando de controle remoto (IR)</td><td><strong>Controle remoto</strong> (obrigatório)<br /><em>A entidade do tipo remote, ex.: remote.controle_universal.</em><br /><strong>Aparelho</strong><br /><em>Como o aparelho foi nomeado ao aprender os códigos. Em branco, vale "ar".</em><br /><strong>Comando aprendido</strong> (obrigatório)<br /><em>O nome dado ao código, ex.: ligar, temp_mais, turbo.</em></td></tr>
+    <tr><td>Ativar cena</td><td><strong>Cena</strong> (obrigatório)<br /><em>Ex.: scene.noite</em></td></tr>
+  </table>
+  <!-- CATALOGO:FIM -->
+  </div>
 </section>
 
 <!-- ===================== PASSO 6 ===================== -->
-<section class="secao">
-  <h2>6. Extras opcionais</h2>
+<section class="secao" id="extras">
+  <h2>8. Extras opcionais</h2>
 
   <p>Nada aqui é necessário para o deck funcionar. Tudo se configura pela
   tela de <strong>Integrações</strong> — no PC, abra a tela de configuração e
@@ -578,6 +791,41 @@
   </ol>
   <p>O passo 5 precisa ser feito no navegador do PC, não do tablet.</p>
 
+  <h3>Discord</h3>
+  <p>Funciona <strong>sem configurar nada</strong>: no modo padrão, o Deckly
+  simula os atalhos de teclado do próprio Discord para mutar o microfone, ficar
+  surdo, atender e recusar chamada. Basta o Discord estar aberto.</p>
+  <p>Esse modo é cego, porém: como o Discord não conta o seu estado, os botões
+  não acendem e o de mudo não sabe se você já está mudo. Se isso incomodar,
+  existe o <strong>modo RPC</strong>, que conversa com o Discord de verdade — aí
+  os botões acendem, e um seletor mostra os canais de voz reais para entrar com
+  um toque. O preço é criar um aplicativo gratuito no portal de desenvolvedores
+  do Discord, coisa de dez minutos.</p>
+  <div class="caixa">
+    <div class="titulo">Onde está o passo a passo</div>
+    <p>No repositório, em <code>docs/passo-a-passo.md</code> — ele cobre a
+    criação do app, o que colar em cada campo e o que fazer quando dá errado.</p>
+  </div>
+
+  <h3>Luzes, tomadas e ar-condicionado (casa inteligente)</h3>
+  <p>O Deckly não fala com cada marca de lâmpada; ele fala com o
+  <strong>Home Assistant</strong>, um programa gratuito que você deixa rodando
+  na sua rede (um Raspberry Pi dá conta). A vantagem é que uma configuração só
+  cobre tudo que ele suporta: Tuya, Positivo, Intelbras, Multilaser, Philips
+  Hue, Sonoff, Shelly, Zigbee.</p>
+  <p>Com ele ligado, o deck ganha botões que <strong>acendem conforme a luz
+  real</strong> — inclusive quando alguém usa o interruptor da parede —, barra
+  de brilho e um seletor de cores.</p>
+  <div class="caixa caixa--atencao">
+    <div class="titulo">Um aviso que poupa tempo</div>
+    <p>A integração Tuya que o Home Assistant instala por padrão passa pela
+    <strong>nuvem</strong>: o comando sai da sua casa, vai até o servidor do
+    fabricante e volta. Quando essa conexão esfria, apertar o botão pode demorar
+    <em>minutos</em>. A solução é o controle local (LocalTuya), que responde em
+    cerca de um décimo de segundo e funciona até com a internet caída. O passo a
+    passo completo está em <code>docs/passo-a-passo.md</code>.</p>
+  </div>
+
   <h3>Iniciar junto com o Windows</h3>
   <ol>
     <li>Clique com o botão direito no <code>deckly.exe</code> e escolha
@@ -591,8 +839,8 @@
 </section>
 
 <!-- ===================== PROBLEMAS ===================== -->
-<section class="secao">
-  <h2>7. Quando algo não funciona</h2>
+<section class="secao" id="problemas">
+  <h2>9. Quando algo não funciona</h2>
 
   <table>
     <tr>
@@ -620,7 +868,18 @@
     <tr>
       <td>Os botões do OBS estão apagados</td>
       <td>O OBS está fechado ou o servidor WebSocket dele não está ligado. Veja
-      a seção 6.</td>
+      a seção 8.</td>
+    </tr>
+    <tr>
+      <td>Os botões do Discord não acendem</td>
+      <td>É o esperado no modo padrão: ele age por atalho de teclado e o Discord
+      não informa o seu estado. Para os botões acenderem, é preciso o modo RPC —
+      veja a seção 8.</td>
+    </tr>
+    <tr>
+      <td>A luz demora minutos para responder</td>
+      <td>O comando está indo pela nuvem do fabricante em vez da sua rede. Veja
+      o aviso sobre controle local na seção 8.</td>
     </tr>
     <tr>
       <td>Um ícone aparece como quadradinho</td>
@@ -650,7 +909,9 @@
     Deckly é um projeto pessoal, de código aberto. A documentação
     técnica completa — como funciona por dentro, como adicionar novas
     integrações e a lista de todas as ações — está no repositório, no
-    <code>README.md</code> e em <code>docs/acoes.md</code>.
+    <code>README.md</code>, em <code>docs/acoes.md</code> e em
+    <code>docs/passo-a-passo.md</code> (as configurações que exigem trabalho
+    manual: Home Assistant, Discord no modo RPC e iniciar com o Windows).
   </div>
 </section>
 
