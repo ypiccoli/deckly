@@ -210,7 +210,15 @@ class IntegracaoHomeAssistant extends EventEmitter {
 
       if (msg.type === 'event' && msg.event?.event_type === 'state_changed') {
         const { entity_id: entityId, new_state: novo } = msg.event.data;
-        if (!novo) return;
+        // new_state nulo é entidade REMOVIDA do Home Assistant. Ignorar isso
+        // deixava fantasmas no estado: uma entidade apagada continuava sendo
+        // oferecida no editor, no campo "acende quando", como se existisse.
+        if (!novo) {
+          const entidades = { ...this.estado.entidades };
+          delete entidades[chaveDe(entityId)];
+          this._atualizarEstado({ entidades });
+          return;
+        }
         this._atualizarEstado({
           entidades: this._registrarEntidade(entityId, novo.state, novo.attributes),
         });
