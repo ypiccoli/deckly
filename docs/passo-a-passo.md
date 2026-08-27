@@ -126,6 +126,45 @@ Com o Código de usuário em mãos:
 Anote o nome de cada dispositivo — em **Ferramentas de desenvolvedor →
 Estados** você vê o `entity_id` real (ex.: `light.luz_sala`).
 
+### 1.3.2 Tirar as luzes da nuvem (importante)
+
+A integração Tuya que você acabou de configurar é **só nuvem**: cada clique sai
+do Pi, atravessa a internet até o datacenter da Tuya e volta para a lâmpada que
+está a três metros. Quando a sessão com a nuvem esfria, o comando chega a
+**travar por minutos** — e é por isso que o app parece mais rápido que o Home
+Assistant: no mesmo Wi-Fi, ele fala direto com o aparelho.
+
+O **LocalTuya** faz o Home Assistant falar essa mesma língua local. Medido nesta
+casa: **0,1 s no local contra comandos que não voltavam em 30 s pela nuvem** —
+e o local continua funcionando com a internet caída.
+
+1. Instale o componente no Pi (uma pasta, sem reiniciar o container ainda):
+   ```bash
+   cd ~/homeassistant/config && mkdir -p custom_components && cd custom_components
+   curl -fsSL -o lt.zip https://codeload.github.com/xZetsubou/hass-localtuya/zip/refs/tags/2026.7.0
+   unzip -q lt.zip && cp -r hass-localtuya-*/custom_components/localtuya . && rm -rf lt.zip hass-localtuya-*
+   cd ~/homeassistant && docker compose restart homeassistant
+   ```
+2. **Configurações → Dispositivos e serviços → Adicionar integração → Local
+   Tuya**. Na primeira tela, marque **"Desativar a API de Nuvem?"** — sem isso
+   ele pede um projeto no Tuya IoT Platform.
+3. **Configurar → Escolha o dispositivo a configurar**: os aparelhos aparecem
+   sozinhos (eles se anunciam na rede). Para cada um falta a **local key**.
+
+**De onde sai a local key.** Ou de um projeto no <https://iot.tuya.com> (grátis,
+~15 min, com a armadilha do trial do IoT Core que expira), ou do próprio Home
+Assistant: a integração Tuya que você já configurou guarda um token que a API
+devolve junto com a chave de cada aparelho. O segundo caminho evita a conta
+nova.
+
+> **Se um aparelho for um controle universal de infravermelho**, há uma
+> pegadinha que custa tempo: o LocalTuya tem dois dialetos de IR e escolhe entre
+> eles **só** pelo campo *"DP de aprendizado de tecla"* estar preenchido. Com ele
+> vazio, o componente fala JSON; aparelhos que falam ENUM aceitam a mensagem,
+> respondem ACK e **ignoram em silêncio** — o modo de estudo parece funcionar e
+> nada é aprendido. Se os DPs do aparelho mostrarem valores como `send_ir` (e
+> não JSON), preencha esse campo com `7`.
+
 ### 1.4 Gerar o token para o Deckly
 
 1. No Home Assistant, clique no **seu nome** (canto inferior esquerdo).

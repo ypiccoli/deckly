@@ -115,6 +115,12 @@ com as tentativas mais rápidas antes dessa, está em
 
 1. **Curto prazo:** integração **Tuya Cloud**. Cobre os Positivo que você já
    tem e a maioria do que você comprar depois, sem exigir servidor extra.
+> **Uma ressalva sobre a integração Tuya do Home Assistant:** ela é só nuvem.
+> Funciona, mas o comando faz a volta pela internet e, com a sessão fria, pode
+> demorar minutos. Para controle local de verdade (~0,1 s, e funcionando sem
+> internet) use o **LocalTuya** — o passo a passo está em
+> [passo-a-passo.md](passo-a-passo.md#132-tirar-as-luzes-da-nuvem-importante).
+
 2. **Longo prazo:** integração **Home Assistant**, que vira a resposta única
    para qualquer marca — e aí a Tuya vira só mais uma coisa que o HA resolve.
 3. **Hue:** manter o esqueleto. Não vale implementar sem ter uma bridge para
