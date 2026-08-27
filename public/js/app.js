@@ -202,8 +202,11 @@
     Tablet: '📱', GameConsole: '🎮', CastVideo: '📺', CastAudio: '🔊',
   };
 
-  function iconeDoItem(detalhe, iconePadrao) {
-    return ICONES_POR_DETALHE[detalhe] || iconePadrao || '•';
+  // A opção pode trazer o próprio ícone — é assim que a paleta mostra uma
+  // bolinha por cor, em vez de sete ícones iguais. Sem ele valem o mapa por
+  // "detalhe" (dispositivos do Spotify) e o padrão do botão.
+  function iconeDoItem(opcao, iconePadrao) {
+    return opcao.icone || ICONES_POR_DETALHE[opcao.detalhe] || iconePadrao || '•';
   }
 
   // O "detalhe" tem dois usos nas listagens: em algumas ele é um tipo que
@@ -274,11 +277,12 @@
     escolher.type = 'button';
     escolher.className = 'item-lista-escolher';
     escolher.innerHTML = `
-      <span class="item-lista-icone">${iconeDoItem(opcao.detalhe, botao.iconeItem)}</span>
+      <span class="item-lista-icone"></span>
       <span class="item-lista-nome"></span>
       <span class="item-lista-detalhe"></span>
     `;
     // textContent, não innerHTML: nome de canal é texto de terceiros.
+    escolher.querySelector('.item-lista-icone').textContent = iconeDoItem(opcao, botao.iconeItem);
     escolher.querySelector('.item-lista-nome').textContent = opcao.nome;
     escolher.querySelector('.item-lista-detalhe').textContent = detalheVisivel(opcao.detalhe);
     escolher.addEventListener('click', aoEscolher);

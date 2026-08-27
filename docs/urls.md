@@ -80,6 +80,7 @@ que podem se acumular:
 | `GET /discord/canais` | token | Canais de voz de verdade, via RPC (alimenta o seletor "Canais") |
 | `GET /discord/autorizar` | local | Aprova o app no Discord e grava o token do modo RPC |
 | `GET /homeassistant/entidades` | token | Entidades do Home Assistant (alimenta os seletores de casa inteligente) |
+| `GET /homeassistant/cores` | token | Paleta fixa de cores (alimenta o seletor de cor da luz) |
 | `GET /spotify/login` | local | Redireciona para a autorização do Spotify |
 | `GET /spotify/callback` | local | Retorno do Spotify. **Não exige token** — o Spotify redireciona o navegador sem ele |
 | `GET /spotify/dispositivos` | token | Aparelhos Spotify ativos (alimenta o "Tocar em…") |

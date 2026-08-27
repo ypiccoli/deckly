@@ -51,6 +51,15 @@ function chaveDe(entityId) {
   return entityId.replace(/\./g, '_');
 }
 
+// O Home Assistant recebe cor como rgb_color ([r, g, b]), não como hex — e é
+// hex que cabe num campo de texto do editor e no id de uma opção do seletor.
+function hexParaRgb(valor) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(valor).trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
 class IntegracaoHomeAssistant extends EventEmitter {
   constructor() {
     super();
@@ -339,6 +348,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
       estados,
       listas: [
         { fonte: '/homeassistant/entidades', rotulo: 'Dispositivos e cenas', acaoSugerida: 'alternar' },
+        { fonte: '/homeassistant/cores', rotulo: 'Cores da luz', acaoSugerida: 'definirCor' },
       ],
       acoes: {
         alternar: alvo('Ligar / desligar (alternar)'),
@@ -347,6 +357,41 @@ class IntegracaoHomeAssistant extends EventEmitter {
         definirBrilho: alvo('Definir brilho da luz', [
           { nome: 'valor', rotulo: 'Brilho (0–100)', tipo: 'numero', obrigatorio: false },
         ]),
+        definirCor: alvo('Definir cor da luz', [
+          {
+            nome: 'cor',
+            rotulo: 'Cor',
+            tipo: 'texto',
+            obrigatorio: false,
+            ajuda: 'Hex (#a64dff) ou k<kelvin> para branco (k2700 = quente, k6500 = frio). Num botão do tipo lista, a cor vem da opção escolhida.',
+          },
+        ]),
+        enviarComando: {
+          rotulo: 'Enviar comando de controle remoto (IR)',
+          parametros: [
+            {
+              nome: 'entidade',
+              rotulo: 'Controle remoto',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'A entidade do tipo remote, ex.: remote.controle_universal_controle_universal',
+            },
+            {
+              nome: 'aparelho',
+              rotulo: 'Aparelho',
+              tipo: 'texto',
+              obrigatorio: false,
+              ajuda: 'Como o aparelho foi nomeado ao aprender os códigos. Em branco, vale "ar".',
+            },
+            {
+              nome: 'comando',
+              rotulo: 'Comando aprendido',
+              tipo: 'texto',
+              obrigatorio: true,
+              ajuda: 'O nome dado ao código, ex.: ligar, temp_mais, turbo.',
+            },
+          ],
+        },
         ativarCena: {
           rotulo: 'Ativar cena',
           parametros: [
@@ -388,6 +433,48 @@ class IntegracaoHomeAssistant extends EventEmitter {
         await this._chamarServico('light', 'turn_on', {
           entity_id: entidade,
           brightness_pct: Math.max(0, Math.min(100, Math.round(valor))),
+        });
+        return this.estado;
+      },
+      definirCor: async (parametros = {}) => {
+        // Aqui o opcaoId é a COR escolhida no seletor, e não a entidade — por
+        // isso esta ação não usa alvoDe(): a entidade vem fixa do botão.
+        const entidade = parametros.entidade;
+        if (!entidade) throw new Error('Parâmetro "entidade" é obrigatório.');
+        const cor = String(parametros.opcaoId || parametros.cor || '').trim();
+        if (!cor) throw new Error('Parâmetro "cor" é obrigatório.');
+
+        // "k2700" pede branco de 2700 K. Numa lâmpada RGB+W o branco bom sai
+        // do LED branco dedicado; somar os três coloridos dá um branco sujo.
+        const kelvin = /^k(\d{3,5})$/i.exec(cor);
+        if (kelvin) {
+          await this._chamarServico('light', 'turn_on', {
+            entity_id: entidade,
+            color_temp_kelvin: Number(kelvin[1]),
+          });
+          return this.estado;
+        }
+
+        const rgb = hexParaRgb(cor);
+        if (!rgb) throw new Error(`Cor inválida: "${cor}". Use #rrggbb ou k<kelvin>, ex.: k2700.`);
+        await this._chamarServico('light', 'turn_on', { entity_id: entidade, rgb_color: rgb });
+        return this.estado;
+      },
+      // Controle remoto de infravermelho: dispara um código que o Home
+      // Assistant aprendeu do controle físico. Infravermelho é de mão única —
+      // o aparelho não responde nada —, então isto é sempre um disparo, nunca
+      // um estado. Não existe "está ligado?" aqui.
+      enviarComando: async (parametros = {}) => {
+        const entidade = parametros.entidade;
+        if (!entidade) throw new Error('Parâmetro "entidade" é obrigatório (ex.: remote.controle_universal).');
+        const comando = parametros.opcaoId || parametros.comando;
+        if (!comando) throw new Error('Parâmetro "comando" é obrigatório (ex.: ligar).');
+        await this._chamarServico('remote', 'send_command', {
+          entity_id: entidade,
+          // "device" agrupa os códigos por aparelho na hora de aprender: o
+          // mesmo controle universal guarda o ar, a TV, o ventilador.
+          device: parametros.aparelho || 'ar',
+          command: comando,
         });
         return this.estado;
       },
