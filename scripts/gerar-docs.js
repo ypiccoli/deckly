@@ -1,4 +1,6 @@
-// Gera docs/acoes.md a partir do catálogo das integrações (npm run docs).
+// Gera docs/acoes.md e preenche o catálogo dentro de
+// docs/guia-primeiro-acesso.html a partir do catálogo das integrações
+// (npm run docs).
 //
 // Por que gerar em vez de escrever à mão: o catálogo (o getter `catalogo` de
 // cada integração) já é a fonte de verdade da tela de configuração. Se a doc
@@ -12,6 +14,13 @@ const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
 const DESTINO = path.join(RAIZ, 'docs', 'acoes.md');
+
+// O guia do usuário é escrito à mão, MENOS o catálogo: essa parte fica entre
+// as marcas abaixo e é reescrita aqui. Sem isso o guia nasceria desatualizado
+// a cada ação nova — e ele é a única documentação que quem baixa o .exe lê.
+const GUIA = path.join(RAIZ, 'docs', 'guia-primeiro-acesso.html');
+const MARCA_INICIO = '<!-- CATALOGO:INICIO -->';
+const MARCA_FIM = '<!-- CATALOGO:FIM -->';
 
 // Requerer as integrações imprime as mensagens de subida delas ("[media]
 // Backend ativo…"), que aqui só sujariam a saída do comando.
@@ -161,7 +170,80 @@ function gerar() {
   return partes.join('\n');
 }
 
+function escapar(texto) {
+  return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Os requisitos são escritos em markdown (são compartilhados com o acoes.md).
+// Aqui só as duas marcações que eles usam viram HTML.
+function marcacaoParaHtml(texto) {
+  return escapar(texto)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+function parametrosHtml(acao) {
+  const parametros = acao.parametros || [];
+  if (parametros.length === 0) return '—';
+  return parametros
+    .map((p) => {
+      const rotulo = `<strong>${escapar(p.rotulo || p.nome)}</strong>`;
+      const obrigatorio = p.obrigatorio ? ' (obrigatório)' : '';
+      const ajuda = p.ajuda ? `<br /><em>${escapar(p.ajuda)}</em>` : '';
+      return rotulo + obrigatorio + ajuda;
+    })
+    .join('<br />');
+}
+
+// O guia fala com quem não programa: aqui vai o RÓTULO da ação (o mesmo texto
+// que aparece no menu da tela de configuração), nunca o identificador interno.
+function catalogoHtml(catalogos) {
+  const linhas = [];
+  for (const [nome, catalogo] of catalogos) {
+    if (!catalogo) continue;
+    linhas.push(`  <h3>${escapar(catalogo.rotulo)}</h3>`);
+    linhas.push(`  <p class="precisa"><strong>Precisa de:</strong> ${marcacaoParaHtml(REQUISITOS[nome] || '—')}</p>`);
+    linhas.push('  <table>');
+    linhas.push('    <tr><th style="width: 52mm">Ação</th><th>O que você informa</th></tr>');
+    for (const acao of Object.values(catalogo.acoes || {})) {
+      linhas.push(`    <tr><td>${escapar(acao.rotulo)}</td><td>${parametrosHtml(acao)}</td></tr>`);
+    }
+    linhas.push('  </table>');
+  }
+  return linhas.join('\n');
+}
+
+function atualizarGuia(catalogos) {
+  if (!fs.existsSync(GUIA)) return null;
+  const original = fs.readFileSync(GUIA, 'utf8');
+  const i = original.indexOf(MARCA_INICIO);
+  const f = original.indexOf(MARCA_FIM);
+  if (i === -1 || f === -1) {
+    console.warn('Aviso: não achei as marcas do catálogo no guia — ele não foi atualizado.');
+    return null;
+  }
+  const miolo = `${MARCA_INICIO}\n${catalogoHtml(catalogos)}\n  `;
+  const novo = original.slice(0, i) + miolo + original.slice(f);
+  // Comparar o conteúdo, e não o número de linhas: uma troca de texto do mesmo
+  // tamanho mudaria o arquivo e seria anunciada como "já estava em dia".
+  if (novo === original) return 'igual';
+  fs.writeFileSync(GUIA, novo);
+  return 'atualizado';
+}
+
 const conteudo = gerar();
 fs.mkdirSync(path.dirname(DESTINO), { recursive: true });
 fs.writeFileSync(DESTINO, conteudo);
 console.log(`docs/acoes.md gerado (${conteudo.split('\n').length} linhas).`);
+
+const catalogos = semRuido(() =>
+  NOMES.map((nome) => [nome, require(path.join(RAIZ, 'server', 'integrations', nome)).catalogo]),
+);
+const resultado = atualizarGuia(catalogos);
+if (resultado !== null) {
+  console.log(
+    resultado === 'igual'
+      ? 'docs/guia-primeiro-acesso.html: catálogo já estava em dia.'
+      : 'docs/guia-primeiro-acesso.html: catálogo atualizado.',
+  );
+}

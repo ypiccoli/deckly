@@ -382,7 +382,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
               rotulo: 'Controle remoto',
               tipo: 'texto',
               obrigatorio: true,
-              ajuda: 'A entidade do tipo remote, ex.: remote.controle_universal_controle_universal',
+              ajuda: 'A entidade do tipo remote, ex.: remote.controle_universal.',
             },
             {
               nome: 'aparelho',

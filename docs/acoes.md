@@ -176,7 +176,7 @@ Nas configurações do botão, esta é a integração **homeassistant**.
 | `desligar` | Desligar | `entidade` (texto, obrigatório) — Entidade _Ex.: light.sala. Use o seletor de entidades para descobrir os nomes._ |
 | `definirBrilho` | Definir brilho da luz | `entidade` (texto, obrigatório) — Entidade _Ex.: light.sala. Use o seletor de entidades para descobrir os nomes._<br />`valor` (numero) — Brilho (0–100) |
 | `definirCor` | Definir cor da luz | `entidade` (texto, obrigatório) — Entidade _Ex.: light.sala. Use o seletor de entidades para descobrir os nomes._<br />`cor` (texto) — Cor _Hex (#a64dff) ou k<kelvin> para branco (k2700 = quente, k6500 = frio). Num botão do tipo lista, a cor vem da opção escolhida._ |
-| `enviarComando` | Enviar comando de controle remoto (IR) | `entidade` (texto, obrigatório) — Controle remoto _A entidade do tipo remote, ex.: remote.controle_universal_controle_universal_<br />`aparelho` (texto) — Aparelho _Como o aparelho foi nomeado ao aprender os códigos. Em branco, vale "ar"._<br />`comando` (texto, obrigatório) — Comando aprendido _O nome dado ao código, ex.: ligar, temp_mais, turbo._ |
+| `enviarComando` | Enviar comando de controle remoto (IR) | `entidade` (texto, obrigatório) — Controle remoto _A entidade do tipo remote, ex.: remote.controle_universal._<br />`aparelho` (texto) — Aparelho _Como o aparelho foi nomeado ao aprender os códigos. Em branco, vale "ar"._<br />`comando` (texto, obrigatório) — Comando aprendido _O nome dado ao código, ex.: ligar, temp_mais, turbo._ |
 | `ativarCena` | Ativar cena | `entidade` (texto, obrigatório) — Cena _Ex.: scene.noite_ |
 
 ### Informações ao vivo
