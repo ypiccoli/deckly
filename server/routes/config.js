@@ -14,6 +14,7 @@ const express = require('express');
 const configStore = require('../config-store');
 const { exigirLocal } = require('../lib/auth');
 const { TIPOS_BOTAO, ESTILOS_ESTADO } = require('../lib/catalogo-ui');
+const receitas = require('../lib/receitas');
 
 module.exports = function criarRotaConfig(integracoes, aoAtualizarConfig) {
   const router = express.Router();
@@ -60,6 +61,10 @@ module.exports = function criarRotaConfig(integracoes, aoAtualizarConfig) {
       integracoes: catalogo,
       tipos: TIPOS_BOTAO,
       estilosEstado: ESTILOS_ESTADO,
+      // Botões prontos da galeria "Botão pronto". Vêm resolvidos contra o
+      // catálogo acima (disponível? a ação existe neste modo?) para a tela
+      // poder marcar o que falta em vez de entregar um botão que nasce morto.
+      receitas: receitas.paraCatalogo(catalogo),
     });
   });
 

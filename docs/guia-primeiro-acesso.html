@@ -191,6 +191,27 @@
   }
   .catalogo table { margin-bottom: 2mm; }
 
+  /* Receitas: cada uma é um bloco curto (objetivo, o que já vem preenchido,
+     o que sobra fazer) e não deve ser cortado no meio pela quebra de página. */
+  .receitas h3 {
+    margin-top: 6mm;
+    margin-bottom: 1mm;
+    page-break-after: avoid;
+  }
+  .receitas .receita-resumo {
+    font-size: 9.5pt;
+    color: #4a4f5c;
+    margin: 0 0 2mm;
+  }
+  .receitas .ajuste {
+    font-size: 9pt;
+    color: #4a4f5c;
+    margin: 0 0 2mm;
+    padding-left: 3mm;
+    border-left: 2pt solid #6c5ce7;
+  }
+  .receitas table { margin-bottom: 2mm; }
+
   .sumario ol { padding-left: 5mm; }
   .sumario li { margin-bottom: 2mm; }
 
@@ -230,6 +251,7 @@
     <li><strong>Deixar com cara de aplicativo</strong> — instalar na tela inicial</li>
     <li><strong>Usar o deck no dia a dia</strong> — os tipos de botão e o modo de edição</li>
     <li><strong>Montar o seu deck</strong> — criar botões e escolher o que fazem</li>
+    <li><strong>Botões prontos</strong> — receitas que já vêm preenchidas</li>
     <li><strong>Tudo que dá para colocar num botão</strong> — o catálogo completo</li>
     <li><strong>Extras opcionais</strong> — OBS, Spotify, Discord, casa inteligente e iniciar com o Windows</li>
     <li><strong>Quando algo não funciona</strong> — os problemas mais comuns</li>
@@ -520,7 +542,7 @@
     <tr>
       <td>🎬 OBS</td>
       <td>Trocar de cena, mutar o microfone e gravar. Só funciona com o OBS
-      aberto — veja a seção 8.</td>
+      aberto — veja a seção 9.</td>
     </tr>
   </table>
 
@@ -640,13 +662,244 @@
 </section>
 
 <!-- ===================== PASSO 7 ===================== -->
+<section class="secao" id="receitas">
+  <h2>7. Botões prontos</h2>
+
+  <p>Montar um botão do zero exige decidir cinco coisas: qual integração, qual
+  ação, que tipo de botão, o que preencher em cada campo e quando ele deve
+  acender. É muita escolha para quem só quer <em>um botão que troca a cena do
+  OBS</em>.</p>
+
+  <p>Por isso, ao lado de <strong>+ Botão</strong> na tela de configuração há o
+  <strong>✨ Botão pronto</strong>. Ele abre uma lista de receitas: escolha o
+  que você quer que o botão faça e ele entra na página <strong>já
+  preenchido</strong> — só sobra ajustar o que é seu (o nome da <em>sua</em>
+  cena, o caminho do <em>seu</em> programa) e clicar em Salvar.</p>
+
+  <figure>
+    <img src="img/config-receitas.png" alt="Galeria de botões prontos, com um cartão por receita" />
+    <figcaption>A galeria de botões prontos. Cada cartão diz o que o botão faz
+    e o que sobra para você ajustar.</figcaption>
+  </figure>
+
+  <div class="caixa">
+    <div class="titulo">Receita que ainda não dá para usar não some da lista</div>
+    <p>As receitas de OBS, Spotify e casa inteligente aparecem mesmo antes de
+    você configurar essas integrações — marcadas com o motivo. É de propósito:
+    dá para montar o deck inteiro primeiro e ligar o OBS depois, e o botão
+    passa a funcionar sozinho quando a integração entrar no ar.</p>
+  </div>
+
+  <p>A lista abaixo é a mesma da tela, com o que cada receita já traz
+  preenchido. Serve como consulta — e também para montar o mesmo botão à mão,
+  se você preferir.</p>
+
+  <div class="receitas">
+  <!-- RECEITAS:INICIO -->
+  <h3>🗒️ Abrir um programa</h3>
+  <p class="receita-resumo">Um toque abre o programa que você escolher.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Atalhos e programas do Windows › Abrir programa</td></tr>
+    <tr><td>Caminho, comando ou atalho .lnk</td><td>notepad</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque o caminho pelo do seu programa. Para apps que se atualizam sozinhos (navegadores, Spotify), prefira o atalho .lnk do Menu Iniciar — ele continua valendo depois da atualização.</p>
+  <h3>🌐 Abrir um site</h3>
+  <p class="receita-resumo">Abre um endereço no navegador padrão do Windows.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Atalhos e programas do Windows › Abrir site</td></tr>
+    <tr><td>Endereço</td><td>https://www.youtube.com</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque o endereço. Deixe o navegador em branco: assim o botão funciona em qualquer PC.</p>
+  <h3>⌨️ Enviar um atalho de teclado</h3>
+  <p class="receita-resumo">Manda uma combinação de teclas para a janela que estiver na frente.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Atalhos e programas do Windows › Enviar atalho de teclado</td></tr>
+    <tr><td>Combinação de teclas</td><td>CTRL+V</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque a combinação pela que você quer. Valem CTRL, SHIFT, ALT, WIN, letras, números, F1–F24 e teclas como ENTER, ESC, TAB e as setas.</p>
+  <h3>📝 Digitar um texto pronto</h3>
+  <p class="receita-resumo">Traz o programa para frente e digita o texto nele — dois passos num toque só.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>1. Atalhos e programas do Windows › Trazer um programa para frente · 2. Atalhos e programas do Windows › Digitar um texto</td></tr>
+    <tr><td>Nome do processo</td><td>notepad</td></tr>
+    <tr><td>Texto</td><td>Abraço, Fulano</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque o processo e o texto. Os dois passos andam juntos de propósito: sem trazer o programa para frente, o texto iria parar na janela que estivesse na frente.</p>
+  <h3>🔈 Trocar a saída de áudio</h3>
+  <p class="receita-resumo">Abre a lista dos seus fones e caixas e troca a saída padrão do Windows.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Seletor</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Mídia do Windows › Trocar a saída de áudio</td></tr>
+    <tr><td>Lista de opções</td><td>preenchida sozinha</td></tr>
+    <tr><td>Acende quando</td><td>Saída de áudio em uso</td></tr>
+  </table>
+  <h3>🔇 Mudo do Windows que acende</h3>
+  <p class="receita-resumo">Corta o som do PC — e o botão fica vermelho enquanto estiver mudo.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Mídia do Windows › Alternar mudo</td></tr>
+    <tr><td>Acende quando</td><td>Windows está mudo</td></tr>
+    <tr><td>Cor quando aceso</td><td>Alerta (vermelho)</td></tr>
+  </table>
+  <h3>🎮 Abrir o jogo e o Discord juntos</h3>
+  <p class="receita-resumo">Escolhe um jogo da sua Steam, abre e já traz o Discord junto.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Seletor</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>1. Atalhos e programas do Windows › Abrir jogo da Steam · 2. Discord › Abrir o Discord</td></tr>
+    <tr><td>Lista de opções</td><td>preenchida sozinha</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> O seletor lista os jogos instalados na Steam sozinho — nada a preencher. O Discord abre no mesmo toque.</p>
+  <h3>🎬 Trocar para uma cena do OBS</h3>
+  <p class="receita-resumo">Um botão por cena. Ele acende sozinho quando aquela cena está no ar.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>OBS Studio › Trocar de cena</td></tr>
+    <tr><td>Nome da cena</td><td>Live</td></tr>
+    <tr><td>Acende quando</td><td>Cena ativa for a deste botão</td></tr>
+    <tr><td>Cor quando aceso</td><td>Destaque (verde)</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque "Live" pelo nome exato da cena no seu OBS — precisa bater letra por letra. Duplique o botão para cada cena: todos usam a mesma chave de estado e só acende o da cena no ar.</p>
+  <h3>🔴 Ir ao ar: trocar de cena e começar a gravar</h3>
+  <p class="receita-resumo">Um toque põe a cena Live no ar e começa a gravação.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>1. OBS Studio › Trocar de cena · 2. OBS Studio › Iniciar / parar gravação</td></tr>
+    <tr><td>Nome da cena</td><td>Live</td></tr>
+    <tr><td>Acende quando</td><td>Gravando</td></tr>
+    <tr><td>Cor quando aceso</td><td>Gravando (vermelho pulsante)</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque "Live" pelo nome da sua cena de transmissão.</p>
+  <h3>🎙️ Mudo do microfone no OBS</h3>
+  <p class="receita-resumo">Corta o seu microfone no OBS. Fica vermelho enquanto estiver mudo.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>OBS Studio › Alternar mudo do microfone</td></tr>
+    <tr><td>Acende quando</td><td>Microfone mudo</td></tr>
+    <tr><td>Cor quando aceso</td><td>Alerta (vermelho)</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Em branco, ele usa a fonte de áudio padrão do OBS (Mic/Aux). Só preencha se o seu microfone tiver outro nome na lista de fontes.</p>
+  <h3>⏺️ Gravar, com aviso pulsando</h3>
+  <p class="receita-resumo">Começa e para a gravação. Enquanto grava, o botão pulsa em vermelho.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>OBS Studio › Iniciar / parar gravação</td></tr>
+    <tr><td>Acende quando</td><td>Gravando</td></tr>
+    <tr><td>Cor quando aceso</td><td>Gravando (vermelho pulsante)</td></tr>
+  </table>
+  <h3>🎵 Mostrador do que está tocando</h3>
+  <p class="receita-resumo">Não é um botão de apertar: mostra música, artista e onde está tocando.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Mostrador</td></tr>
+    <tr><td>Acende quando</td><td>Está tocando</td></tr>
+    <tr><td>Cor quando aceso</td><td>Destaque (verde)</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Nada a preencher. Ele ocupa duas células por duas — arraste no ✏️ se quiser outro tamanho.</p>
+  <h3>🎚️ Volume só do Spotify</h3>
+  <p class="receita-resumo">Uma barra que mexe no volume do Spotify sem tocar no volume do PC.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Slider</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Spotify › Definir volume do Spotify</td></tr>
+    <tr><td>Faixa</td><td>0 a 100</td></tr>
+    <tr><td>Acende quando</td><td>Volume do Spotify (0–100)</td></tr>
+  </table>
+  <h3>📡 Tocar em outro aparelho</h3>
+  <p class="receita-resumo">Lista onde o Spotify pode tocar (PC, celular, caixa) e joga a música para lá.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Seletor</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Spotify › Tocar em outro dispositivo</td></tr>
+    <tr><td>Lista de opções</td><td>preenchida sozinha</td></tr>
+  </table>
+  <h3>💡 Ligar e desligar uma luz</h3>
+  <p class="receita-resumo">Acende e apaga. O botão acende junto com a luz — até quando alguém usa o interruptor da parede.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Home Assistant › Ligar / desligar (alternar)</td></tr>
+    <tr><td>Entidade</td><td>light.sala</td></tr>
+    <tr><td>Cor quando aceso</td><td>Destaque (verde)</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Duas coisas: troque a entidade pela sua (o campo abre a lista dos seus dispositivos) e escolha a mesma em "Acende quando" — é o que faz o botão refletir a luz de verdade.</p>
+  <h3>🔆 Barra de brilho da luz</h3>
+  <p class="receita-resumo">Uma barra que escurece e clareia a lâmpada.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Slider</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Home Assistant › Definir brilho da luz</td></tr>
+    <tr><td>Entidade</td><td>light.sala</td></tr>
+    <tr><td>Faixa</td><td>0 a 100</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque a entidade pela sua lâmpada.</p>
+  <h3>🎨 Seletor de cor da luz</h3>
+  <p class="receita-resumo">Abre uma paleta e pinta a lâmpada com a cor escolhida.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Seletor</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Home Assistant › Definir cor da luz</td></tr>
+    <tr><td>Entidade</td><td>light.sala</td></tr>
+    <tr><td>Lista de opções</td><td>preenchida sozinha</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque a entidade pela sua lâmpada. As cores da lista já vêm prontas.</p>
+  <h3>❄️ Ligar o ar pelo controle remoto</h3>
+  <p class="receita-resumo">Manda um código infravermelho pelo controle universal — ar, TV, ventilador.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Home Assistant › Enviar comando de controle remoto (IR)</td></tr>
+    <tr><td>Controle remoto</td><td>remote.controle_universal</td></tr>
+    <tr><td>Aparelho</td><td>ar</td></tr>
+    <tr><td>Comando aprendido</td><td>ligar</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Troque a entidade do controle e o nome do comando pelos que você ensinou a ele. O aparelho é o apelido usado no aprendizado (em branco, vale "ar").</p>
+  <h3>🎙️ Mudo no Discord</h3>
+  <p class="receita-resumo">Corta o seu microfone no Discord.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Botão</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Discord › Ativar/desativar microfone</td></tr>
+    <tr><td>Acende quando</td><td>discord.mudo</td></tr>
+    <tr><td>Cor quando aceso</td><td>Alerta (vermelho)</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> No modo padrão (teclado), confira em Integrações se a tecla informada é a mesma cadastrada no Discord. No modo RPC não há nada a preencher, e o botão ainda acende.</p>
+  <h3>🔊 Entrar num canal de voz</h3>
+  <p class="receita-resumo">Lista os canais de voz dos seus servidores e entra no que você tocar.</p>
+  <p class="precisa"><strong>Atenção:</strong> Só existe no modo RPC do Discord (aba Integrações). No modo padrão, o Discord não conta quais são os seus canais.</p>
+  <table>
+    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>
+    <tr><td>Tipo de botão</td><td>Seletor</td></tr>
+    <tr><td>O que acontece ao tocar</td><td>Discord › Entrar num canal de voz</td></tr>
+    <tr><td>Lista de opções</td><td>preenchida sozinha</td></tr>
+  </table>
+  <p class="ajuste"><strong>O que sobra fazer:</strong> Nada a preencher — a lista vem do seu próprio Discord.</p>
+  <!-- RECEITAS:FIM -->
+  </div>
+</section>
+
+<!-- ===================== PASSO 8 ===================== -->
 <section class="secao" id="catalogo">
-  <h2>7. Tudo que dá para colocar num botão</h2>
+  <h2>8. Tudo que dá para colocar num botão</h2>
 
   <p>Esta é a lista completa do que existe hoje, integração por integração, com
-  o que cada ação pede que você informe. Você monta tudo pela tela de
-  configuração da seção anterior — a lista aqui é para consulta, para saber o
-  que é possível antes de procurar.</p>
+  o que cada ação pede que você informe. As receitas da seção 7 cobrem o que a
+  maioria quer; esta lista é para quando você quiser algo que não está lá — ou
+  só para saber o que é possível antes de procurar.</p>
 
   <div class="caixa">
     <div class="titulo">Como ler esta lista</div>
@@ -744,9 +997,9 @@
   </div>
 </section>
 
-<!-- ===================== PASSO 6 ===================== -->
+<!-- ===================== PASSO 9 ===================== -->
 <section class="secao" id="extras">
-  <h2>8. Extras opcionais</h2>
+  <h2>9. Extras opcionais</h2>
 
   <p>Nada aqui é necessário para o deck funcionar. Tudo se configura pela
   tela de <strong>Integrações</strong> — no PC, abra a tela de configuração e
@@ -840,7 +1093,7 @@
 
 <!-- ===================== PROBLEMAS ===================== -->
 <section class="secao" id="problemas">
-  <h2>9. Quando algo não funciona</h2>
+  <h2>10. Quando algo não funciona</h2>
 
   <table>
     <tr>
@@ -868,18 +1121,18 @@
     <tr>
       <td>Os botões do OBS estão apagados</td>
       <td>O OBS está fechado ou o servidor WebSocket dele não está ligado. Veja
-      a seção 8.</td>
+      a seção 9.</td>
     </tr>
     <tr>
       <td>Os botões do Discord não acendem</td>
       <td>É o esperado no modo padrão: ele age por atalho de teclado e o Discord
       não informa o seu estado. Para os botões acenderem, é preciso o modo RPC —
-      veja a seção 8.</td>
+      veja a seção 9.</td>
     </tr>
     <tr>
       <td>A luz demora minutos para responder</td>
       <td>O comando está indo pela nuvem do fabricante em vez da sua rede. Veja
-      o aviso sobre controle local na seção 8.</td>
+      o aviso sobre controle local na seção 9.</td>
     </tr>
     <tr>
       <td>Um ícone aparece como quadradinho</td>

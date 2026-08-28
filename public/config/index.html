@@ -41,7 +41,10 @@
     <section class="coluna coluna-botoes">
       <div class="coluna-cabecalho">
         <h2 id="titulo-botoes">Botões</h2>
-        <button type="button" class="btn btn-pequeno" id="btn-add-botao" disabled>+ Botão</button>
+        <div class="coluna-cabecalho-acoes">
+          <button type="button" class="btn btn-pequeno" id="btn-add-receita" disabled>✨ Botão pronto</button>
+          <button type="button" class="btn btn-pequeno" id="btn-add-botao" disabled>+ Botão</button>
+        </div>
       </div>
       <ul class="lista" id="lista-botoes"></ul>
     </section>
@@ -64,6 +67,25 @@
       <input type="text" class="campo" id="emoji-livre" placeholder="Ou digite/cole um emoji aqui" maxlength="8" />
       <div class="emoji-grade" id="emoji-grade"></div>
       <button type="button" class="btn btn-fantasma" id="emoji-fechar">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Botões prontos: receitas montadas, para não ter que traduzir sozinho um
+       objetivo ("trocar de cena no OBS") em integração + ação + parâmetros +
+       acende-quando. Sai de GET /api/catalogo, mesma resposta que monta os
+       formulários. -->
+  <div class="overlay" id="overlay-receitas">
+    <div class="overlay-cartao overlay-largo">
+      <div class="overlay-topo">
+        <h2>Botões prontos</h2>
+        <button type="button" class="btn btn-fantasma btn-pequeno" id="receitas-fechar">Fechar</button>
+      </div>
+      <p class="overlay-ajuda">
+        Escolha o que você quer que o botão faça. Ele entra já preenchido na
+        página aberta — depois é só ajustar o que for seu (o nome da sua cena,
+        o caminho do seu programa) e clicar em Salvar.
+      </p>
+      <div id="receitas-lista"></div>
     </div>
   </div>
 

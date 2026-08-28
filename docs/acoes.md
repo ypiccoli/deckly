@@ -27,6 +27,33 @@ A cor que o botão assume quando está "ligado":
 
 Um botão não precisa fazer só uma coisa. Na tela de configuração dá para adicionar vários passos, executados em sequência num toque só — por exemplo abrir o jogo e o Discord de uma vez, ou trocar a cena do OBS e começar a gravar.
 
+## Receitas: botões prontos
+
+Na tela de configuração, o botão **✨ Botão pronto** insere qualquer uma destas já preenchida — integração, ação, parâmetros, "acende quando" e cor. Elas vêm de `server/lib/receitas.js`, uma lista curada (não uma projeção do catálogo): adicionar uma ação nova não inventa uma receita, e as mais úteis são macros que cruzam integrações.
+
+| Receita | O que monta | Precisa de |
+| --- | --- | --- |
+| **Abrir um programa**<br />_Um toque abre o programa que você escolher._ | Tipo de botão: Botão<br />O que acontece ao tocar: Atalhos e programas do Windows › Abrir programa<br />Caminho, comando ou atalho .lnk: notepad | Atalhos e programas do Windows |
+| **Abrir um site**<br />_Abre um endereço no navegador padrão do Windows._ | Tipo de botão: Botão<br />O que acontece ao tocar: Atalhos e programas do Windows › Abrir site<br />Endereço: https://www.youtube.com | Atalhos e programas do Windows |
+| **Enviar um atalho de teclado**<br />_Manda uma combinação de teclas para a janela que estiver na frente._ | Tipo de botão: Botão<br />O que acontece ao tocar: Atalhos e programas do Windows › Enviar atalho de teclado<br />Combinação de teclas: CTRL+V | Atalhos e programas do Windows |
+| **Digitar um texto pronto**<br />_Traz o programa para frente e digita o texto nele — dois passos num toque só._ | Tipo de botão: Botão<br />O que acontece ao tocar: 1. Atalhos e programas do Windows › Trazer um programa para frente · 2. Atalhos e programas do Windows › Digitar um texto<br />Nome do processo: notepad<br />Texto: Abraço, Fulano | Atalhos e programas do Windows |
+| **Trocar a saída de áudio**<br />_Abre a lista dos seus fones e caixas e troca a saída padrão do Windows._ | Tipo de botão: Seletor<br />O que acontece ao tocar: Mídia do Windows › Trocar a saída de áudio<br />Lista de opções: preenchida sozinha<br />Acende quando: Saída de áudio em uso | Mídia do Windows |
+| **Mudo do Windows que acende**<br />_Corta o som do PC — e o botão fica vermelho enquanto estiver mudo._ | Tipo de botão: Botão<br />O que acontece ao tocar: Mídia do Windows › Alternar mudo<br />Acende quando: Windows está mudo<br />Cor quando aceso: Alerta (vermelho) | Mídia do Windows |
+| **Abrir o jogo e o Discord juntos**<br />_Escolhe um jogo da sua Steam, abre e já traz o Discord junto._ | Tipo de botão: Seletor<br />O que acontece ao tocar: 1. Atalhos e programas do Windows › Abrir jogo da Steam · 2. Discord › Abrir o Discord<br />Lista de opções: preenchida sozinha | Atalhos e programas do Windows, Discord |
+| **Trocar para uma cena do OBS**<br />_Um botão por cena. Ele acende sozinho quando aquela cena está no ar._ | Tipo de botão: Botão<br />O que acontece ao tocar: OBS Studio › Trocar de cena<br />Nome da cena: Live<br />Acende quando: Cena ativa for a deste botão<br />Cor quando aceso: Destaque (verde) | OBS Studio |
+| **Ir ao ar: trocar de cena e começar a gravar**<br />_Um toque põe a cena Live no ar e começa a gravação._ | Tipo de botão: Botão<br />O que acontece ao tocar: 1. OBS Studio › Trocar de cena · 2. OBS Studio › Iniciar / parar gravação<br />Nome da cena: Live<br />Acende quando: Gravando<br />Cor quando aceso: Gravando (vermelho pulsante) | OBS Studio |
+| **Mudo do microfone no OBS**<br />_Corta o seu microfone no OBS. Fica vermelho enquanto estiver mudo._ | Tipo de botão: Botão<br />O que acontece ao tocar: OBS Studio › Alternar mudo do microfone<br />Acende quando: Microfone mudo<br />Cor quando aceso: Alerta (vermelho) | OBS Studio |
+| **Gravar, com aviso pulsando**<br />_Começa e para a gravação. Enquanto grava, o botão pulsa em vermelho._ | Tipo de botão: Botão<br />O que acontece ao tocar: OBS Studio › Iniciar / parar gravação<br />Acende quando: Gravando<br />Cor quando aceso: Gravando (vermelho pulsante) | OBS Studio |
+| **Mostrador do que está tocando**<br />_Não é um botão de apertar: mostra música, artista e onde está tocando._ | Tipo de botão: Mostrador<br />Acende quando: Está tocando<br />Cor quando aceso: Destaque (verde) | Spotify |
+| **Volume só do Spotify**<br />_Uma barra que mexe no volume do Spotify sem tocar no volume do PC._ | Tipo de botão: Slider<br />O que acontece ao tocar: Spotify › Definir volume do Spotify<br />Faixa: 0 a 100<br />Acende quando: Volume do Spotify (0–100) | Spotify |
+| **Tocar em outro aparelho**<br />_Lista onde o Spotify pode tocar (PC, celular, caixa) e joga a música para lá._ | Tipo de botão: Seletor<br />O que acontece ao tocar: Spotify › Tocar em outro dispositivo<br />Lista de opções: preenchida sozinha | Spotify |
+| **Ligar e desligar uma luz**<br />_Acende e apaga. O botão acende junto com a luz — até quando alguém usa o interruptor da parede._ | Tipo de botão: Botão<br />O que acontece ao tocar: Home Assistant › Ligar / desligar (alternar)<br />Entidade: light.sala<br />Cor quando aceso: Destaque (verde) | Home Assistant |
+| **Barra de brilho da luz**<br />_Uma barra que escurece e clareia a lâmpada._ | Tipo de botão: Slider<br />O que acontece ao tocar: Home Assistant › Definir brilho da luz<br />Entidade: light.sala<br />Faixa: 0 a 100 | Home Assistant |
+| **Seletor de cor da luz**<br />_Abre uma paleta e pinta a lâmpada com a cor escolhida._ | Tipo de botão: Seletor<br />O que acontece ao tocar: Home Assistant › Definir cor da luz<br />Entidade: light.sala<br />Lista de opções: preenchida sozinha | Home Assistant |
+| **Ligar o ar pelo controle remoto**<br />_Manda um código infravermelho pelo controle universal — ar, TV, ventilador._ | Tipo de botão: Botão<br />O que acontece ao tocar: Home Assistant › Enviar comando de controle remoto (IR)<br />Controle remoto: remote.controle_universal<br />Aparelho: ar<br />Comando aprendido: ligar | Home Assistant |
+| **Mudo no Discord**<br />_Corta o seu microfone no Discord._ | Tipo de botão: Botão<br />O que acontece ao tocar: Discord › Ativar/desativar microfone<br />Acende quando: discord.mudo<br />Cor quando aceso: Alerta (vermelho) | Discord |
+| **Entrar num canal de voz**<br />_Lista os canais de voz dos seus servidores e entra no que você tocar._ | Tipo de botão: Seletor<br />O que acontece ao tocar: Discord › Entrar num canal de voz<br />Lista de opções: preenchida sozinha | Discord |
+
 ## Mídia do Windows
 
 Nas configurações do botão, esta é a integração **media**.

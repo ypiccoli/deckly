@@ -42,7 +42,7 @@ precisar de Node.js 18+. Rodando do código-fonte não existe `.exe` nem pasta
 
 O resto deste README é a documentação técnica. Veja também:
 
-- **[docs/acoes.md](docs/acoes.md)** — tudo que dá para colocar num botão
+- **[docs/acoes.md](docs/acoes.md)** — as receitas de botão pronto e tudo que dá para colocar num botão
 - **[docs/urls.md](docs/urls.md)** — todas as URLs e rotas da API
 - **[docs/passo-a-passo.md](docs/passo-a-passo.md)** — Home Assistant, Discord RPC e autostart, do começo ao fim
 - **[docs/casa-inteligente.md](docs/casa-inteligente.md)** — que marcas dão para integrar e como
@@ -612,6 +612,7 @@ São **duas telas, com papéis diferentes**, e vale saber qual abrir:
 |--------|------|-------------|
 | Mover, redimensionar, mudar colunas | **No próprio deck** | ✏️ no cabeçalho |
 | Criar botão, escolher ação, integração, ícone, cor | Tela de configuração | ⚙️ no cabeçalho |
+| Começar de um botão pronto em vez do zero | Tela de configuração | ⚙️ › **✨ Botão pronto** |
 
 ### Ajustar o layout: no próprio deck (✏️)
 
@@ -642,6 +643,11 @@ Abra **`http://localhost:3000/config/`** — ou toque na engrenagem ⚙️ no ca
 do deck. Dá para criar, editar e remover páginas e botões sem tocar em arquivo
 nenhum:
 
+- **✨ Botão pronto** abre a galeria de receitas: escolha o objetivo ("trocar
+  para uma cena do OBS", "ligar e desligar uma luz") e o botão entra na página
+  já preenchido — integração, ação, parâmetros, "acende quando" e cor. Sobra
+  ajustar o que é seu. As receitas vivem em `server/lib/receitas.js` e saem
+  também no [docs/acoes.md](docs/acoes.md) e no guia em PDF.
 - Escolha a integração e a ação numa lista, e os campos de parâmetro
   aparecem sozinhos (o caminho do programa, a URL, o nome da cena…).
   Integração indisponível aparece marcada, com o motivo.
@@ -788,14 +794,14 @@ deckly/
 │   ├── pages.config.example.json  # template inicial versionado (vai no .exe)
 │   └── pages.config.json          # SEU layout real — gitignored, edite aqui
 ├── docs/
-│   ├── acoes.md                    # GERADO por npm run docs — todas as ações
+│   ├── acoes.md                    # GERADO por npm run docs — receitas e todas as ações
 │   ├── guia-primeiro-acesso.html   # fonte do guia (edite este)
 │   └── Guia-Deckly.pdf    # GERADO por npm run docs:pdf
 ├── scripts/
 │   ├── windows-media.ps1     # volume e mute do Windows (P/Invoke)
 │   ├── windows-atalhos.ps1   # atalhos de teclado, abrir apps/sites, janelas, Steam
 │   ├── build.js              # gera o executável do Windows (npm run build)
-│   ├── gerar-docs.js         # gera docs/acoes.md a partir do catálogo
+│   ├── gerar-docs.js         # gera docs/acoes.md e o miolo do guia (catálogo + receitas)
 │   └── gerar-pdf.js          # gera o PDF do guia (Chrome headless)
 ├── server/
 │   ├── index.js               # bootstrap: Express + WebSocket + integrações
@@ -804,6 +810,7 @@ deckly/
 │   │   ├── caminhos.js       # resolve caminhos (código-fonte vs empacotado)
 │   │   ├── segundo-plano.js  # relança o .exe destacado do console
 │   │   ├── catalogo-ui.js    # tipos de botão e estilos (editor + doc gerada)
+│   │   ├── receitas.js       # botões prontos curados (galeria + doc gerada)
 │   │   ├── qr.js             # QR em SVG para a tela de boas-vindas
 │   │   ├── rede.js           # descobre o IP da máquina na LAN
 │   │   ├── token.js          # token de acesso
@@ -842,7 +849,7 @@ deckly/
 | `npm start`     | Sobe o servidor uma vez (produção)                    |
 | `npm run dev`   | Sobe com `nodemon`, reiniciando a cada alteração      |
 | `npm run build` | Gera `build/deckly.exe` para Windows         |
-| `npm run docs`  | Regenera `docs/acoes.md` a partir do catálogo das integrações |
+| `npm run docs`  | Regenera `docs/acoes.md` e os blocos gerados do guia a partir do catálogo das integrações; valida as receitas |
 | `npm run docs:pdf` | Regenera o guia em PDF a partir de `docs/guia-primeiro-acesso.html` |
 
 `npm run docs` deve ser rodado sempre que uma ação for adicionada ou tiver

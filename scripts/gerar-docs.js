@@ -19,8 +19,6 @@ const DESTINO = path.join(RAIZ, 'docs', 'acoes.md');
 // as marcas abaixo e é reescrita aqui. Sem isso o guia nasceria desatualizado
 // a cada ação nova — e ele é a única documentação que quem baixa o .exe lê.
 const GUIA = path.join(RAIZ, 'docs', 'guia-primeiro-acesso.html');
-const MARCA_INICIO = '<!-- CATALOGO:INICIO -->';
-const MARCA_FIM = '<!-- CATALOGO:FIM -->';
 
 // Requerer as integrações imprime as mensagens de subida delas ("[media]
 // Backend ativo…"), que aqui só sujariam a saída do comando.
@@ -40,6 +38,7 @@ function semRuido(fn) {
 const NOMES = ['media', 'obs', 'spotify', 'atalhos', 'discord', 'homeassistant'];
 
 const { TIPOS_BOTAO, ESTILOS_ESTADO } = require(path.join(RAIZ, 'server', 'lib', 'catalogo-ui'));
+const receitas = require(path.join(RAIZ, 'server', 'lib', 'receitas'));
 
 // O que cada integração precisa para funcionar. É a única coisa aqui que não
 // vem do catálogo: o catálogo diz se ESTÁ disponível agora, não o que fazer
@@ -162,6 +161,8 @@ function gerar() {
     NOMES.map((nome) => [nome, require(path.join(RAIZ, 'server', 'integrations', nome)).catalogo]),
   );
 
+  partes.push(receitasMarkdown(catalogos));
+
   for (const [nome, catalogo] of catalogos) {
     if (!catalogo) continue;
     partes.push(secaoIntegracao(nome, catalogo));
@@ -213,17 +214,163 @@ function catalogoHtml(catalogos) {
   return linhas.join('\n');
 }
 
+/* ---------------- receitas (botões prontos) ---------------- */
+
+// Os rótulos saem do catálogo ao vivo, nunca dos ids internos — o guia fala
+// com quem não programa. Quando a ação não está no catálogo atual (o do
+// Discord muda conforme o modo), cai no id: é melhor que sumir da doc.
+function rotuloDaAcao(catalogos, passo, receita) {
+  const catalogo = catalogos[passo.integracao];
+  const acao = catalogo && (catalogo.acoes || {})[passo.acao];
+  if (acao) return acao.rotulo;
+  return (receita.rotulos || {})[passo.acao] || passo.acao;
+}
+
+function rotuloDoParametro(catalogos, passo, nome) {
+  const catalogo = catalogos[passo.integracao];
+  const acao = catalogo && (catalogo.acoes || {})[passo.acao];
+  const parametro = acao && (acao.parametros || []).find((p) => p.nome === nome);
+  return parametro ? parametro.rotulo || parametro.nome : nome;
+}
+
+function rotuloDaIntegracao(catalogos, nome) {
+  return catalogos[nome] ? catalogos[nome].rotulo : nome;
+}
+
+// As linhas "campo → valor" que a receita já deixa preenchidas. É o que
+// transforma a receita num passo a passo: quem não quiser usar a galeria
+// monta o mesmo botão à mão a partir daqui.
+function linhasDaReceita(receita, catalogos) {
+  const botao = receita.botao;
+  const linhas = [];
+
+  const tipo = TIPOS_BOTAO.find((t) => t.id === (botao.tipo || 'botao'));
+  linhas.push(['Tipo de botão', tipo ? tipo.rotulo : botao.tipo]);
+
+  const passos = receitas.passosDe(botao);
+  if (passos.length > 1) {
+    linhas.push([
+      'O que acontece ao tocar',
+      passos
+        .map((passo, i) => `${i + 1}. ${rotuloDaIntegracao(catalogos, passo.integracao)} › ${rotuloDaAcao(catalogos, passo, receita)}`)
+        .join(' · '),
+    ]);
+  } else if (passos.length === 1) {
+    linhas.push([
+      'O que acontece ao tocar',
+      `${rotuloDaIntegracao(catalogos, passos[0].integracao)} › ${rotuloDaAcao(catalogos, passos[0], receita)}`,
+    ]);
+  }
+
+  for (const passo of passos) {
+    for (const [nome, valor] of Object.entries(passo.parametros || {})) {
+      linhas.push([rotuloDoParametro(catalogos, passo, nome), String(valor)]);
+    }
+  }
+
+  if (botao.tipo === 'lista' && botao.fonte) linhas.push(['Lista de opções', 'preenchida sozinha']);
+  if (botao.tipo === 'slider') linhas.push(['Faixa', `${botao.min} a ${botao.max}`]);
+
+  if (botao.estadoChave) {
+    const estado = estadoPorChave(catalogos, botao.estadoChave);
+    linhas.push([
+      'Acende quando',
+      botao.estadoComparar
+        ? `${estado} for a deste botão`
+        : estado,
+    ]);
+  }
+  if (botao.estiloEstado) {
+    const estilo = ESTILOS_ESTADO.find((e) => e.id === botao.estiloEstado);
+    linhas.push(['Cor quando aceso', estilo ? estilo.rotulo : botao.estiloEstado]);
+  }
+
+  return linhas;
+}
+
+function estadoPorChave(catalogos, chave) {
+  for (const catalogo of Object.values(catalogos)) {
+    const achado = (catalogo.estados || []).find((e) => e.chave === chave);
+    if (achado) return achado.rotulo;
+  }
+  return chave;
+}
+
+function receitasHtml(catalogosLista) {
+  const catalogos = Object.fromEntries(catalogosLista);
+  const linhas = [];
+
+  for (const receita of receitas.RECEITAS) {
+    linhas.push(`  <h3>${escapar(receita.botao.icone || '✨')} ${escapar(receita.titulo)}</h3>`);
+    linhas.push(`  <p class="receita-resumo">${escapar(receita.resumo)}</p>`);
+    if (receita.nota) {
+      linhas.push(`  <p class="precisa"><strong>Atenção:</strong> ${escapar(receita.nota)}</p>`);
+    }
+    linhas.push('  <table>');
+    linhas.push('    <tr><th style="width: 52mm">Campo</th><th>Já vem com</th></tr>');
+    for (const [campo, valor] of linhasDaReceita(receita, catalogos)) {
+      linhas.push(`    <tr><td>${escapar(campo)}</td><td>${escapar(valor)}</td></tr>`);
+    }
+    linhas.push('  </table>');
+    if (receita.ajuste) {
+      linhas.push(`  <p class="ajuste"><strong>O que sobra fazer:</strong> ${escapar(receita.ajuste)}</p>`);
+    }
+  }
+
+  return linhas.join('\n');
+}
+
+// A mesma coisa em markdown, para o acoes.md.
+function receitasMarkdown(catalogosLista) {
+  const catalogos = Object.fromEntries(catalogosLista);
+  const partes = [];
+
+  partes.push('## Receitas: botões prontos');
+  partes.push('');
+  partes.push(
+    'Na tela de configuração, o botão **✨ Botão pronto** insere qualquer uma ' +
+      'destas já preenchida — integração, ação, parâmetros, "acende quando" e cor. ' +
+      'Elas vêm de `server/lib/receitas.js`, uma lista curada (não uma projeção do ' +
+      'catálogo): adicionar uma ação nova não inventa uma receita, e as mais úteis ' +
+      'são macros que cruzam integrações.',
+  );
+  partes.push('');
+  partes.push(
+    tabela(
+      ['Receita', 'O que monta', 'Precisa de'],
+      receitas.RECEITAS.map((r) => [
+        `**${r.titulo}**<br />_${r.resumo}_`,
+        linhasDaReceita(r, catalogos)
+          .map(([campo, valor]) => `${campo}: ${valor}`)
+          .join('<br />'),
+        (r.precisa || []).map((n) => rotuloDaIntegracao(catalogos, n)).join(', ') || '—',
+      ]),
+    ),
+  );
+
+  return partes.join('\n');
+}
+
+// Troca o miolo entre um par de marcas. São dois blocos gerados no guia
+// (o catálogo e as receitas), então a substituição é parametrizada em vez de
+// duplicada.
+function substituirMarcado(texto, nome, conteudo) {
+  const inicio = `<!-- ${nome}:INICIO -->`;
+  const fim = `<!-- ${nome}:FIM -->`;
+  const i = texto.indexOf(inicio);
+  const f = texto.indexOf(fim);
+  if (i === -1 || f === -1) {
+    console.warn(`Aviso: não achei as marcas ${nome} no guia — esse bloco não foi atualizado.`);
+    return texto;
+  }
+  return texto.slice(0, i) + `${inicio}\n${conteudo}\n  ` + texto.slice(f);
+}
+
 function atualizarGuia(catalogos) {
   if (!fs.existsSync(GUIA)) return null;
   const original = fs.readFileSync(GUIA, 'utf8');
-  const i = original.indexOf(MARCA_INICIO);
-  const f = original.indexOf(MARCA_FIM);
-  if (i === -1 || f === -1) {
-    console.warn('Aviso: não achei as marcas do catálogo no guia — ele não foi atualizado.');
-    return null;
-  }
-  const miolo = `${MARCA_INICIO}\n${catalogoHtml(catalogos)}\n  `;
-  const novo = original.slice(0, i) + miolo + original.slice(f);
+  let novo = substituirMarcado(original, 'CATALOGO', catalogoHtml(catalogos));
+  novo = substituirMarcado(novo, 'RECEITAS', receitasHtml(catalogos));
   // Comparar o conteúdo, e não o número de linhas: uma troca de texto do mesmo
   // tamanho mudaria o arquivo e seria anunciada como "já estava em dia".
   if (novo === original) return 'igual';
@@ -239,6 +386,25 @@ console.log(`docs/acoes.md gerado (${conteudo.split('\n').length} linhas).`);
 const catalogos = semRuido(() =>
   NOMES.map((nome) => [nome, require(path.join(RAIZ, 'server', 'integrations', nome)).catalogo]),
 );
+
+// As receitas são escritas à mão e apontam para ações que o código pode
+// renomear. Conferir aqui é o que impede uma receita de virar um botão morto
+// na galeria: este comando é o que se roda depois de mexer em qualquer ação.
+//
+// Ação ausente NÃO é fatal: o catálogo do Discord muda conforme DISCORD_MODO,
+// então uma receita de RPC some legitimamente em modo teclado. Integração
+// inexistente e parâmetro obrigatório faltando são erro de digitação — esses
+// derrubam o comando.
+const problemas = receitas.validar(Object.fromEntries(catalogos));
+if (problemas.length > 0) {
+  for (const problema of problemas) console.warn(`  ${problema.texto}`);
+  const graves = problemas.filter((p) => p.tipo !== 'acao');
+  if (graves.length > 0) {
+    console.error(`${graves.length} problema(s) nas receitas — corrija server/lib/receitas.js.`);
+    process.exit(1);
+  }
+}
+
 const resultado = atualizarGuia(catalogos);
 if (resultado !== null) {
   console.log(

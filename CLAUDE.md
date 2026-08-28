@@ -467,10 +467,10 @@ Duas peças de documentação **não** são escritas à mão:
 - `docs/Guia-Deckly.pdf` sai de `scripts/gerar-pdf.js`, que imprime
   `docs/guia-primeiro-acesso.html` com o Chrome do Windows em headless. **A
   fonte é o HTML** — editar o PDF não faz sentido, ele é regenerado.
-- O guia é escrito à mão, **menos o catálogo**: o bloco entre
-  `<!-- CATALOGO:INICIO -->` e `<!-- CATALOGO:FIM -->` é reescrito pelo
-  `npm run docs`, da mesma fonte do `acoes.md`. Sem isso o guia — a única
-  documentação que quem baixa o `.exe` lê — envelheceria a cada ação nova.
+- O guia é escrito à mão, **menos dois blocos**: `CATALOGO:INICIO/FIM` e
+  `RECEITAS:INICIO/FIM` são reescritos pelo `npm run docs`, da mesma fonte do
+  `acoes.md`. Sem isso o guia — a única documentação que quem baixa o `.exe` lê
+  — envelheceria a cada ação nova.
 - **As imagens de `docs/img/` saem de uma instância descartável, nunca do deck
   pessoal.** Prints do deck real levariam caminho com o usuário do Windows, IP
   da LAN e nomes de canais do Discord para dentro do PDF distribuído. O jeito:
@@ -482,7 +482,8 @@ Duas peças de documentação **não** são escritas à mão:
   recebem um `<script>` que troca a resposta de `/api/bemvindo` por valores
   genéricos, com o QR regerado por `server/lib/qr.js` para o endereço falso.
   O headless não clica: seletor aberto e modo de edição saem de um script que
-  dispara o clique conforme o `#hash` da URL.
+  dispara o clique conforme o `#hash` da URL — a galeria de botões prontos tem
+  `#receitas` de verdade no `config.js`, no mesmo espírito do `#integracoes`.
 
 Escritos à mão, e que precisam ser atualizados junto com o código:
 `docs/urls.md` (todas as rotas e suas travas — atualize ao criar rota nova)
@@ -496,6 +497,36 @@ apontam.
 `server/lib/catalogo-ui.js` existe por causa disso: os tipos de botão e os
 estilos de destaque são lidos tanto pela rota `/api/catalogo` quanto pelo
 gerador da doc.
+
+### As receitas (`server/lib/receitas.js`) são curadas, não projetadas
+
+O catálogo responde *"a ação Trocar de cena pede o campo Nome da cena"*. Ele
+não responde *"quero um botão que abre o jogo e o Discord juntos"* — traduzir
+um objetivo em integração + ação + tipo + parâmetros + `estadoChave` +
+`estiloEstado` são cinco decisões que o catálogo lista mas não conecta. As
+receitas são essa conexão: botões prontos que a galeria **✨ Botão pronto** da
+tela de configuração insere já preenchidos.
+
+- **Não é um getter por integração, e isso é de propósito.** Receita é
+  conteúdo editorial: adicionar uma ação nova não deveria inventar uma
+  receita. E as mais úteis são **macros que cruzam integrações** (abrir o jogo
+  *e* o Discord), que nenhum getter isolado conseguiria declarar. Mora ao lado
+  do `catalogo-ui.js` pelo mesmo motivo dele: dois consumidores
+  (`GET /api/catalogo` e `scripts/gerar-docs.js`).
+- **`npm run docs` valida contra o catálogo ao vivo.** Integração inexistente
+  e parâmetro obrigatório faltando derrubam o comando; **ação inexistente só
+  avisa**, porque o catálogo do Discord muda conforme `DISCORD_MODO` e uma
+  receita de RPC some legitimamente em modo teclado.
+- **Por causa disso a doc é gerada num modo só.** O `gerar-docs.js` não carrega
+  o `.env`, então vê o Discord em modo teclado — daí o campo opcional
+  `rotulos` na receita, com o nome em português da ação ausente: o guia não
+  pode mostrar `entrarNoCanal` para quem não programa.
+- **A galeria mostra receita indisponível, e deixa inserir.** Dá para montar o
+  deck inteiro e ligar o OBS depois. Só receita cuja **ação não existe** fica
+  desabilitada — aí inserir criaria um botão que o `validar()` do
+  `config-store` recusaria no Salvar. A frase de indisponível é a da própria
+  integração (`motivoIndisponivel`), nunca uma inventada aqui, senão a galeria
+  e a aba Integrações discordariam sobre o mesmo problema.
 
 ## Tela de boas-vindas (`/bemvindo/`)
 
@@ -638,6 +669,11 @@ sozinha no editor assim que expuser seu getter `catalogo`. Se você adicionar
 uma ação e ela não aparecer no editor, o que falta é a entrada no catálogo,
 não código de UI.
 
+Ao lado de "+ Botão" fica **✨ Botão pronto**, a galeria de receitas — veja
+"As receitas" acima. Ela sai do mesmo `GET /api/catalogo`, sem requisição
+nova, e insere uma cópia profunda do botão da receita com um `id` gerado por
+`gerarId()`; o formulário da direita abre preenchido, e é ele o passo a passo.
+
 Fluxo: carrega `/api/config` numa cópia em memória, edita à vontade, e só
 grava em `PUT /api/config` ao clicar em Salvar. Erro de validação volta em
 400 e é listado na tela sem gravar nada. Salvar dispara a recarga a quente,
@@ -733,7 +769,9 @@ devolve erros já legíveis, apontando página e botão.
    funciona mas fica invisível para quem for montar botões pela UI.
    Se ela precisar de credenciais, exponha também `configuracao` e
    `reconfigurar()` — veja "Aba Integrações" acima. Sem isso, configurá-la
-   volta a exigir editar `.env` na mão.
+   volta a exigir editar `.env` na mão. Considere também uma receita em
+   `server/lib/receitas.js`: o catálogo faz a integração aparecer no editor,
+   a receita faz alguém conseguir montar o primeiro botão dela.
 4. Adicione botões em `config/pages.config.json` referenciando
    `integracao: '<nome>'` e `acao: '<nomeDaAcao>'`.
 5. Se a ação tiver estado ao vivo, emita `this.emit('estado', this.estado)`

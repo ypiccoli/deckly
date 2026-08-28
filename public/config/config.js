@@ -22,6 +22,7 @@
   var estado = {
     config: null,
     catalogo: null,
+    receitas: [],
     tipos: [],
     estilosEstado: [],
     paginaIdx: null,
@@ -42,6 +43,9 @@
     form: document.getElementById('form'),
     btnAddPagina: document.getElementById('btn-add-pagina'),
     btnAddBotao: document.getElementById('btn-add-botao'),
+    btnAddReceita: document.getElementById('btn-add-receita'),
+    overlayReceitas: document.getElementById('overlay-receitas'),
+    receitasLista: document.getElementById('receitas-lista'),
     overlayEmoji: document.getElementById('overlay-emoji'),
     emojiGrade: document.getElementById('emoji-grade'),
     emojiLivre: document.getElementById('emoji-livre'),
@@ -144,6 +148,7 @@
     var pagina = paginaAtual();
     el.listaBotoes.innerHTML = '';
     el.btnAddBotao.disabled = !pagina;
+    el.btnAddReceita.disabled = !pagina;
     el.tituloBotoes.textContent = pagina ? 'Botões de ' + pagina.titulo : 'Botões';
 
     if (!pagina) {
@@ -732,6 +737,87 @@
     else renderFormularioPagina();
   }
 
+  /* ---------------- galeria de botões prontos ---------------- */
+
+  // Receitas vêm resolvidas de GET /api/catalogo (mesma resposta que monta os
+  // formulários) — nada aqui sabe o que é "OBS" ou "luz". A galeria só mostra
+  // o que o servidor já disse sobre cada uma.
+
+  function abrirReceitas() {
+    renderReceitas();
+    el.overlayReceitas.classList.add('aberto');
+  }
+
+  function renderReceitas() {
+    el.receitasLista.innerHTML = '';
+    if (estado.receitas.length === 0) {
+      el.receitasLista.innerHTML = '<p class="vazio">Nenhum botão pronto disponível.</p>';
+      return;
+    }
+
+    var grade = document.createElement('div');
+    grade.className = 'receitas-grade';
+
+    estado.receitas.forEach(function (receita) {
+      var cartao = document.createElement('button');
+      cartao.type = 'button';
+      cartao.className = 'receita';
+      // A ação não existe na configuração atual (o catálogo do Discord muda
+      // com o modo): inserir criaria um botão que o Salvar recusaria.
+      cartao.disabled = !receita.existe;
+
+      // O selo responde "isto funciona agora?" com a frase da própria
+      // integração — a mesma que a aba Integrações mostra.
+      var selo = receita.disponivel
+        ? ''
+        : '<span class="selo selo-off">falta configurar</span>';
+
+      var aviso = !receita.existe
+        ? receita.nota || 'Esta ação não existe na configuração atual.'
+        : receita.disponivel
+          ? receita.ajuste
+          : receita.motivoIndisponivel;
+
+      cartao.innerHTML =
+        '<span class="receita-icone">' + esc(receita.botao.icone || '✨') + '</span>' +
+        '<span class="receita-corpo">' +
+        '<h3>' + esc(receita.titulo) + '</h3>' +
+        '<p class="receita-resumo">' + esc(receita.resumo) + '</p>' +
+        (selo || aviso
+          ? '<span class="receita-rodape">' +
+            selo +
+            (aviso ? '<p class="receita-aviso">' + esc(aviso) + '</p>' : '') +
+            '</span>'
+          : '') +
+        '</span>';
+
+      cartao.addEventListener('click', function () { inserirReceita(receita); });
+      grade.appendChild(cartao);
+    });
+
+    el.receitasLista.appendChild(grade);
+  }
+
+  // Insere na página aberta e seleciona: o formulário da direita abre
+  // preenchido, e é ele o passo a passo. Nada é gravado até o Salvar, como
+  // no resto da tela.
+  function inserirReceita(receita) {
+    var pagina = paginaAtual();
+    if (!pagina) return;
+
+    // Cópia profunda: a receita é compartilhada por toda a galeria, e editar
+    // o botão inserido não pode mexer na próxima inserção.
+    var botao = JSON.parse(JSON.stringify(receita.botao));
+    botao.id = gerarId(pagina.id, botao.titulo);
+    pagina.botoes.push(botao);
+    estado.botaoIdx = pagina.botoes.length - 1;
+
+    marcarSujo();
+    renderTudo();
+    el.overlayReceitas.classList.remove('aberto');
+    toast(receita.ajuste || 'Botão adicionado. Confira os campos e clique em Salvar.');
+  }
+
   /* ---------------- seletor de emoji ---------------- */
 
   function abrirSeletorEmoji(aoEscolher) {
@@ -814,6 +900,14 @@
     estado.botaoIdx = pagina.botoes.length - 1;
     marcarSujo();
     renderTudo();
+  });
+
+  el.btnAddReceita.addEventListener('click', abrirReceitas);
+  document.getElementById('receitas-fechar').addEventListener('click', function () {
+    el.overlayReceitas.classList.remove('aberto');
+  });
+  el.overlayReceitas.addEventListener('click', function (ev) {
+    if (ev.target === el.overlayReceitas) el.overlayReceitas.classList.remove('aberto');
   });
 
   el.btnSalvar.addEventListener('click', salvar);
@@ -1138,6 +1232,7 @@
       var cat = await rCat.json();
       estado.config = cfg;
       estado.catalogo = cat.integracoes;
+      estado.receitas = cat.receitas || [];
       estado.tipos = cat.tipos;
       estado.estilosEstado = cat.estilosEstado;
       estado.paginaIdx = cfg.paginas.length ? 0 : null;
@@ -1149,6 +1244,11 @@
         ativas + ' de ' + Object.keys(cat.integracoes).length + ' integrações disponíveis';
 
       renderTudo();
+
+      // Link direto para a galeria, no mesmo espírito de #integracoes. Só
+      // depois de renderTudo: sem o catálogo carregado não há receita para
+      // listar.
+      if (location.hash === '#receitas') abrirReceitas();
     } catch (erro) {
       // "Não deu para carregar: Failed to fetch" não ajuda ninguém. Se o
       // servidor caiu entre abrir a página e buscar os dados, diga isso.

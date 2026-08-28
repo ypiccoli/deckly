@@ -66,7 +66,7 @@ que podem se acumular:
 | `POST /api/bemvindo/encerrar` | local + token | Desliga o servidor |
 | `GET /api/config` | token | O layout do deck (é o que o tablet busca ao abrir) |
 | `PUT /api/config` | local + token | Grava o layout. Valida antes; erro devolve 400 e não grava nada |
-| `GET /api/catalogo` | local + token | Ações e estados de cada integração — é o que monta os formulários do editor |
+| `GET /api/catalogo` | local + token | Ações e estados de cada integração (monta os formulários do editor) e as receitas de botão pronto, já resolvidas contra o catálogo ao vivo |
 | `GET /api/integracoes` | local + token | Credenciais: quais campos existem e se estão preenchidos (**nunca o valor**) |
 | `PUT /api/integracoes` | local + token | Grava credenciais no `.env` e reconfigura a integração na hora |
 | `POST /action/:id` | token | Dispara o botão de `id`. O corpo JSON vira parâmetro extra (ex.: `{"valor":30}` num slider) |
