@@ -17,9 +17,74 @@
 // uso pretendido (rede doméstica, nada exposto à internet) é o equilíbrio
 // certo; expor isto à internet continua sendo má ideia.
 
+const net = require('net');
+
 const { conferir } = require('./token');
 
 const ENDERECOS_LOCAIS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+// ---------------------------------------------------------------------------
+// exigirHostConhecido — defesa contra DNS rebinding.
+//
+// O exigirLocal confere o ENDEREÇO de quem conectou, e contra outro aparelho
+// da rede isso basta. Ele não cobre um ângulo diferente: o navegador do
+// próprio usuário sendo usado como intermediário.
+//
+// O ataque: a pessoa visita uma página maliciosa; o domínio dela volta a
+// resolver, agora para 127.0.0.1; a página faz fetch para si mesma na porta do
+// Deckly. Para o navegador é MESMA ORIGEM, então a resposta é legível — e o
+// req.socket.remoteAddress continua sendo 127.0.0.1, então o exigirLocal
+// aprova. Como GET /api/bemvindo é a única rota sem token e é exatamente onde
+// o token é revelado, o site sairia de lá com o token e o controle do deck.
+//
+// O que quebra o ataque é notar que ele SÓ funciona por nome: o atacante
+// precisa de um domínio para re-resolver. Acessar por IP literal não dá para
+// forjar. Então aceitamos IP e localhost, e recusamos nome DNS — o que não
+// afeta o uso real, já que o QR, o console e a tela de boas-vindas sempre
+// entregam o endereço por IP.
+//
+// Escotilha para quem acessa por nome (mDNS tipo "meupc.local", Tailscale,
+// um DNS caseiro): HOSTS_PERMITIDOS no .env, separados por vírgula.
+function hostsPermitidos() {
+  return (process.env.HOSTS_PERMITIDOS || '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+// Devolve só o nome do host, sem a porta. Trata o formato [::1]:3000 do IPv6.
+function extrairHost(cabecalho) {
+  if (!cabecalho) return null;
+  const valor = cabecalho.trim();
+  if (valor.startsWith('[')) {
+    const fim = valor.indexOf(']');
+    return fim === -1 ? null : valor.slice(1, fim).toLowerCase();
+  }
+  return valor.split(':')[0].toLowerCase();
+}
+
+function hostAceito(cabecalho) {
+  const host = extrairHost(cabecalho);
+  if (!host) return false;
+  // net.isIP cobre IPv4 e IPv6 sem regex de mentira.
+  if (net.isIP(host) !== 0) return true;
+  if (host === 'localhost') return true;
+  return hostsPermitidos().includes(host);
+}
+
+function exigirHostConhecido(req, res, next) {
+  if (hostAceito(req.headers.host)) {
+    next();
+    return;
+  }
+  res.status(403).json({
+    ok: false,
+    erro:
+      'Requisição recusada: o Deckly só responde quando acessado por endereço IP ' +
+      '(ex.: http://192.168.0.15:3000) ou localhost. Se você acessa por um nome, ' +
+      'acrescente-o em HOSTS_PERMITIDOS no .env.',
+  });
+}
 
 function ehLocal(req) {
   return ENDERECOS_LOCAIS.has(req.socket.remoteAddress);
@@ -57,4 +122,4 @@ function exigirLocal(req, res, next) {
   });
 }
 
-module.exports = { exigirToken, exigirLocal, ehLocal };
+module.exports = { exigirToken, exigirLocal, exigirHostConhecido, ehLocal };

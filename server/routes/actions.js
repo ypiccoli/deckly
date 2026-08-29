@@ -14,6 +14,29 @@ const express = require('express');
 const { encontrarBotao } = require('../config-store');
 const { redigir } = require('../lib/segredos');
 
+// As ÚNICAS chaves que o cliente pode contribuir para os parâmetros de uma
+// ação. É o que o deck realmente manda: o slider envia { valor } e o seletor
+// de lista envia { opcaoId } (public/js/app.js).
+//
+// Antes daqui o corpo inteiro era mesclado por cima dos parâmetros do
+// config, e isso furava uma decisão de projeto: `PUT /api/config` exige
+// 127.0.0.1 justamente porque criar botão é, na prática, execução de código
+// (um botão pode abrir qualquer programa). Só que não era preciso criar
+// botão nenhum — bastava trocar os parâmetros de um que já existisse. Um
+// POST em qualquer botão de `atalhos.abrirApp` com
+// { caminho: 'powershell.exe', argumentos: '-Command …' } executava o que
+// quisesse, com token e sem passar pelo exigirLocal.
+const CHAVES_DO_CLIENTE = ['valor', 'opcaoId'];
+
+function parametrosDoCliente(corpo) {
+  const filtrados = {};
+  if (!corpo || typeof corpo !== 'object') return filtrados;
+  for (const chave of CHAVES_DO_CLIENTE) {
+    if (Object.prototype.hasOwnProperty.call(corpo, chave)) filtrados[chave] = corpo[chave];
+  }
+  return filtrados;
+}
+
 function resolverAcao(integracoes, passo) {
   const integracao = integracoes[passo.integracao];
   if (!integracao) {
@@ -45,8 +68,10 @@ module.exports = function criarRotaAcoes(integracoes) {
         const acao = resolverAcao(integracoes, passo);
         // O corpo da requisição (ex.: valor do slider, escolha do seletor)
         // vale para todos os passos — na prática só macros de um passo só
-        // recebem corpo, mas manter uniforme evita surpresa.
-        const parametros = { ...(passo.parametros || {}), ...(req.body || {}) };
+        // recebem corpo, mas manter uniforme evita surpresa. Só as chaves de
+        // CHAVES_DO_CLIENTE passam: o resto do que define a ação vem do
+        // config, que só é gravável de 127.0.0.1.
+        const parametros = { ...(passo.parametros || {}), ...parametrosDoCliente(req.body) };
         estado = await acao(parametros);
       }
       res.json({ ok: true, estado });

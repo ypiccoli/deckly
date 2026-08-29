@@ -59,6 +59,12 @@ que podem se acumular:
   qualquer aparelho da rede mandaria o seu PC abrir programas.
 - **local** — só responde de `127.0.0.1`; libere com `CONFIG_REMOTO=true`.
 
+Além dessas duas, há uma trava que vale para **todas** as rotas, inclusive as
+abertas: o Deckly recusa requisição cujo `Host` seja um nome de domínio,
+aceitando só IP e `localhost`. É a defesa contra DNS rebinding — veja o
+[SECURITY.md](../SECURITY.md). Quem acessa por nome libera em
+`HOSTS_PERMITIDOS` no `.env`.
+
 | Método e rota | Travas | O que faz |
 |---------------|--------|-----------|
 | `GET /` , `/config/`, `/bemvindo/` | — | Arquivos estáticos. Abertos de propósito: não têm segredo, e a página precisa carregar para poder pedir o token |

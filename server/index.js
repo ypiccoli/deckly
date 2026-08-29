@@ -37,7 +37,7 @@ function iniciarServidor() {
   const criarRotaIntegracoes = require('./routes/integracoes');
   const criarRotaFavoritos = require('./routes/favoritos');
   const criarRotaLayout = require('./routes/layout');
-  const { exigirToken } = require('./lib/auth');
+  const { exigirToken, exigirHostConhecido } = require('./lib/auth');
   const { conferir: conferirToken, ORIGEM: ORIGEM_TOKEN } = require('./lib/token');
   const mostrarBoasVindas = require('./lib/boas-vindas');
   const abrirNoNavegador = require('./lib/abrir-navegador');
@@ -52,6 +52,13 @@ function iniciarServidor() {
   const integracoes = { media, obs, spotify, atalhos, discord, homeassistant };
 
   const app = express();
+
+  // Primeiro middleware de todos, inclusive antes dos estáticos: recusa
+  // requisição vinda por nome DNS, que é o que um ataque de DNS rebinding
+  // precisa para transformar o navegador do usuário em ponte até aqui. Veja
+  // a explicação longa em lib/auth.js.
+  app.use(exigirHostConhecido);
+
   app.use(express.json());
 
   // Os arquivos estáticos ficam abertos de propósito: HTML, CSS e JS não têm

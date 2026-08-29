@@ -586,6 +586,49 @@ da URL depois de guardar, injeta o header nas chamadas e mostra a tela de
 pareamento quando falta. Por isso `ws-client.js` **não** conecta sozinho no
 construtor — quem chama `conectar()` é o `app.js`, depois de garantir token.
 
+### Uma terceira trava: `exigirHostConhecido` (anti DNS rebinding)
+
+`app.use(exigirHostConhecido)` é o **primeiro** middleware de todos, antes
+até dos estáticos. Ele recusa requisição cujo cabeçalho `Host` seja um nome
+DNS: só passa IP literal (`net.isIP`), `localhost`, e o que estiver em
+`HOSTS_PERMITIDOS`.
+
+O motivo não é óbvio, porque parece redundante com o `exigirLocal`. **Não é:
+os dois olham coisas diferentes.** O `exigirLocal` confere o *endereço de
+quem conectou*, e contra outro aparelho da rede isso basta. Ele não cobre o
+navegador do próprio usuário sendo usado como ponte: um site malicioso
+re-resolve o domínio dele para `127.0.0.1`, faz `fetch` para si mesmo na
+porta do Deckly, e para o navegador aquilo é **mesma origem** — a resposta é
+legível, e o `remoteAddress` que o `exigirLocal` vê continua sendo
+`127.0.0.1`. Como `GET /api/bemvindo` é a única rota sem token e é
+exatamente onde o token é revelado, o site sairia de lá com o controle do
+deck.
+
+O que quebra o ataque é que ele **só funciona por nome** — é preciso um
+domínio para re-resolver. Acessar por IP não dá para forjar. Recusar nome
+DNS não afeta o uso real: o QR, o console e a tela de boas-vindas sempre
+entregam o endereço por IP.
+
+### O corpo do `POST /action/:id` não pode redefinir a ação
+
+`routes/actions.js` mescla só `valor` e `opcaoId` do corpo por cima dos
+`parametros` do config (`CHAVES_DO_CLIENTE`) — que é exatamente o que o
+frontend manda: slider envia `{ valor }`, seletor envia `{ opcaoId }`.
+
+Antes o corpo inteiro era mesclado, e isso **furava o `exigirLocal` do `PUT
+/api/config`**. A trava daquela rota existe porque criar botão é, na
+prática, execução de código — um botão pode abrir qualquer programa. Só que
+não era preciso criar botão nenhum: bastava trocar os parâmetros de um que
+já existisse. Um `POST` em qualquer botão de `atalhos.abrirApp` com
+`{ caminho: 'powershell.exe', argumentos: '-Command …' }` executava o que
+quisesse, com token e sem nunca passar pelo `exigirLocal`. E o template
+público já traz botões de `abrirApp`, então valia para toda instalação
+padrão.
+
+Ao adicionar uma ação que receba dado do cliente em runtime, o caminho é
+acrescentar a chave em `CHAVES_DO_CLIENTE` **conscientemente** — não voltar
+a mesclar o corpo inteiro.
+
 ## Modo de edição de layout (no próprio deck)
 
 O ✏️ no cabeçalho do deck liga o modo de edição: arrasta para mover, toca para
