@@ -37,7 +37,7 @@ Requisitos: Windows 10 ou 11, e um tablet/celular na **mesma rede Wi-Fi**.
 ### 🛠️ Quero mexer no código
 
 Aí sim, clone o repositório e siga [Instalação](#instalação). Você vai
-precisar de Node.js 18+. Rodando do código-fonte não existe `.exe` nem pasta
+precisar de Node.js 20+. Rodando do código-fonte não existe `.exe` nem pasta
 `dados/` — os arquivos ficam na raiz do repositório.
 
 O resto deste README é a documentação técnica. Veja também:
@@ -71,6 +71,8 @@ O resto deste README é a documentação técnica. Veja também:
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Scripts npm](#scripts-npm)
 - [Solução de problemas](#solução-de-problemas)
+- [Contribuindo](#contribuindo)
+- [Licença](#licença)
 
 ## Arquitetura
 
@@ -102,7 +104,7 @@ Tablet (navegador, PWA)  <-- HTTP + WebSocket -->  Servidor Node.js (Express + w
 
 - Windows 10/11 com **WSL2** instalado (é onde este projeto foi pensado para
   rodar) — mas também funciona rodando o Node nativamente no Windows.
-- **Node.js 18+** dentro do ambiente onde o servidor vai rodar (aqui, dentro
+- **Node.js 20+** dentro do ambiente onde o servidor vai rodar (aqui, dentro
   da distro WSL2). Confira com `node --version`.
 - Tablet Android (ou qualquer navegador moderno) na **mesma rede Wi-Fi** do
   PC.
@@ -839,6 +841,9 @@ deckly/
 │   ├── bemvindo/               # tela de boas-vindas (status, token, QR)
 │   └── icons/
 ├── .env.example                 # copie para .env e preencha
+├── CONTRIBUTING.md              # como rodar, convenções e como contribuir
+├── SECURITY.md                  # modelo de segurança e como reportar falha
+├── LICENSE                      # GPL-3.0
 └── package.json
 ```
 
@@ -883,3 +888,36 @@ como PDF".
 - **Quero mudar a porta**
   Edite `PORT` no `.env`. Lembre de ajustar as regras de portproxy/firewall
   (Opção B) se estiver usando esse modo.
+
+## Contribuindo
+
+Pull request e issue são bem-vindos. Veja o
+[CONTRIBUTING.md](CONTRIBUTING.md) — em especial a convenção de **código,
+comentários e identificadores em português**, que é a regra que mais
+surpreende quem chega.
+
+Achou uma falha de segurança? O [SECURITY.md](SECURITY.md) explica o modelo
+de segurança do Deckly e como reportar.
+
+## Licença
+
+Copyright (C) 2026 Ygor Piccoli
+
+Distribuído sob a **[GNU General Public License v3.0 ou posterior](LICENSE)**.
+
+Na prática, o que isso significa:
+
+- Você pode **usar, estudar, modificar e redistribuir** o Deckly à vontade,
+  inclusive comercialmente.
+- Se você **distribuir** uma versão modificada, tem que disponibilizar o
+  código dela sob a mesma licença. Melhorou? Ótimo — só não feche.
+- O programa vem **sem garantia nenhuma**. Ele executa comandos no seu PC;
+  leia o [SECURITY.md](SECURITY.md) antes de expor a porta para qualquer
+  rede em que você não confie.
+
+O executável distribuído nas [Releases](../../releases) embute o Node.js e
+as dependências de produção do `package.json`, cada uma sob a sua própria
+licença permissiva — a árvore são 80 pacotes, quase todos MIT, mais ISC,
+BSD-2-Clause, BSD-3-Clause e Apache-2.0. Uma cópia da GPL vai junto do
+executável, em `dados/LICENSE`. O código-fonte correspondente a cada binário
+é o deste repositório, na tag da versão em questão (`v1.0.0`, `v1.1.0`…).

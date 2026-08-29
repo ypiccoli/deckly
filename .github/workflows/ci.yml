@@ -1,0 +1,83 @@
+# Verificação básica a cada push. Não há suíte de testes automatizados neste
+# projeto (a validação é manual, subindo o servidor), então o que dá para
+# checar sozinho é: a sintaxe compila, o template inicial continua válido,
+# a documentação gerada está em dia e as dependências não têm vulnerabilidade
+# grave conhecida.
+#
+# Roda em Linux mesmo o alvo sendo Windows: as integrações de mídia e
+# atalhos detectam que não estão no Windows nem no WSL e ficam inativas
+# (powershell-interop.js -> detectarModo() devolve null), sem tentar
+# executar nada. Isso é justamente o que torna a validação abaixo possível
+# fora do Windows.
+#
+# O build do .exe não entra aqui de propósito: ele baixa o node.exe do
+# Windows e injeta o app com postject — coisa de release, não de cada push.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nada aqui precisa escrever no repositório.
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 20 é o piso declarado em engines; 24 é o que gera o .exe hoje
+        # (scripts/build.js embute o Node de quem builda).
+        node: ['20', '24']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Conferir a sintaxe de todos os .js
+        # -z/xargs -0 em vez de $(...): nome de arquivo com espaço quebraria
+        # a expansão do shell e o erro sairia como "módulo não encontrado".
+        run: git ls-files -z '*.js' | xargs -0 -n1 node --check
+
+      - name: Validar o template inicial de páginas e botões
+        run: |
+          node -e "
+          const store = require('./server/config-store');
+          const integracoes = {};
+          for (const nome of ['media', 'obs', 'spotify', 'atalhos', 'discord', 'homeassistant']) {
+            integracoes[nome] = require('./server/integrations/' + nome);
+          }
+          const erros = store.validar(require('./config/pages.config.example.json'), integracoes);
+          if (erros.length) {
+            for (const erro of erros) console.error('::error::' + erro);
+            process.exit(1);
+          }
+          console.log('template válido');
+          process.exit(0);"
+
+      - name: Conferir se a documentação gerada está em dia
+        # docs/acoes.md e dois blocos do guia saem do catálogo das integrações.
+        # Esquecer o `npm run docs` não quebra nada na hora — só deixa a
+        # documentação distribuída no PDF envelhecer em silêncio.
+        run: |
+          npm run docs
+          git diff --exit-code -- docs/ \
+            || { echo "::error::documentação desatualizada — rode 'npm run docs' e commite o resultado"; exit 1; }
+
+      - name: Auditar dependências de produção
+        # --audit-level=high de propósito: um aviso "low" numa dependência
+        # transitiva do express não deve deixar vermelho um PR que só mexeu
+        # no README.
+        run: npm audit --omit=dev --audit-level=high

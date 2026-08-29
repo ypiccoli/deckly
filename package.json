@@ -3,6 +3,16 @@
   "version": "1.0.0",
   "description": "Deckly — transforma um tablet num painel de botões táteis para o seu PC, pela rede local.",
   "private": true,
+  "license": "GPL-3.0-or-later",
+  "author": "Ygor Piccoli",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ypiccoli/deckly.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ypiccoli/deckly/issues"
+  },
+  "homepage": "https://github.com/ypiccoli/deckly#readme",
   "type": "commonjs",
   "main": "server/index.js",
   "scripts": {
@@ -13,7 +23,7 @@
     "docs:pdf": "node scripts/gerar-pdf.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

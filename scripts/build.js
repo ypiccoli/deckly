@@ -68,6 +68,10 @@ async function main() {
   const arquivosCodigo = [
     ...listarArquivos(path.join(RAIZ, 'public')),
     ...listarArquivos(path.join(RAIZ, 'scripts')).filter((f) => f.endsWith('.ps1')),
+    // A GPLv3 (seção 4) exige que uma cópia da licença acompanhe o programa.
+    // Quem baixa só o .exe nunca vê o repositório, então ela vai embutida e é
+    // gravada em dados/LICENSE junto com o resto do código.
+    'LICENSE',
   ];
   const modelos = {
     'config/pages.config.example.json': 'config/pages.config.example.json',
