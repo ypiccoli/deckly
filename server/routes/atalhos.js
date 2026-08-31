@@ -8,6 +8,7 @@
 
 const express = require('express');
 const atalhos = require('../integrations/atalhos');
+const { redigir } = require('../lib/segredos');
 
 module.exports = function criarRotaAtalhos() {
   const router = express.Router();
@@ -20,7 +21,7 @@ module.exports = function criarRotaAtalhos() {
         opcoes: janelas.map((j) => ({ id: j.id, nome: j.nome, detalhe: j.app })),
       });
     } catch (erro) {
-      res.status(500).json({ ok: false, erro: erro.message });
+      res.status(500).json({ ok: false, erro: redigir(erro.message) });
     }
   });
 
@@ -32,7 +33,7 @@ module.exports = function criarRotaAtalhos() {
         opcoes: jogos.map((j) => ({ id: j.id, nome: j.nome })),
       });
     } catch (erro) {
-      res.status(500).json({ ok: false, erro: erro.message });
+      res.status(500).json({ ok: false, erro: redigir(erro.message) });
     }
   });
 

@@ -37,9 +37,17 @@ function iniciarServidor() {
   const criarRotaIntegracoes = require('./routes/integracoes');
   const criarRotaFavoritos = require('./routes/favoritos');
   const criarRotaLayout = require('./routes/layout');
-  const { exigirToken, exigirHostConhecido } = require('./lib/auth');
+  const {
+    exigirToken,
+    exigirHostConhecido,
+    hostAceito,
+    bloqueioRestante,
+    registrarFalha,
+    registrarSucesso,
+  } = require('./lib/auth');
   const { conferir: conferirToken, ORIGEM: ORIGEM_TOKEN } = require('./lib/token');
   const mostrarBoasVindas = require('./lib/boas-vindas');
+  const { redigir } = require('./lib/segredos');
   const abrirNoNavegador = require('./lib/abrir-navegador');
 
   const media = require('./integrations/media');
@@ -50,6 +58,28 @@ function iniciarServidor() {
   const homeassistant = require('./integrations/homeassistant');
 
   const integracoes = { media, obs, spotify, atalhos, discord, homeassistant };
+
+  // Erro fatal precisa deixar rastro. Rodando empacotado em segundo plano não
+  // há console: o processo morre, o deck para de responder e o deckly.log fica
+  // sem a causa. A mensagem passa por redigir() porque erro de integração pode
+  // trazer credencial dentro (o Discord devolve o token junto com "Invalid
+  // access token") — mesmo cuidado de routes/actions.js.
+  process.on('uncaughtException', (erro) => {
+    console.error(`[fatal] ${new Date().toLocaleString('pt-BR')} — ${redigir(erro && erro.message)}`);
+    console.error(redigir(erro && erro.stack ? erro.stack : String(erro)));
+    // Sai mesmo assim: seguir rodando depois de uma exceção não tratada é
+    // seguir com estado imprevisível, e o pior defeito possível aqui é um
+    // deck que responde mas mente sobre o que aconteceu.
+    process.exit(1);
+  });
+
+  // Promessa rejeitada e não tratada só é registrada — não derruba. As
+  // integrações têm promessas soltas de propósito (a reconexão do OBS, o RPC
+  // do Discord), e matar o servidor porque o OBS caiu seria uma regressão.
+  process.on('unhandledRejection', (motivo) => {
+    const texto = motivo instanceof Error ? motivo.stack || motivo.message : String(motivo);
+    console.error(`[promessa] Rejeição não tratada: ${redigir(texto)}`);
+  });
 
   const app = express();
 
@@ -122,11 +152,31 @@ function iniciarServidor() {
   // volume), então também precisa de token. Um navegador não consegue mandar
   // header no handshake de WebSocket — por isso ele vai na query string.
   wss.on('connection', (socket, req) => {
+    // O handshake de WebSocket é um "upgrade", e upgrade não passa pelos
+    // middlewares do Express — nem pelo exigirHostConhecido. Então a mesma
+    // recusa de nome DNS é aplicada aqui à mão, senão sobraria um caminho
+    // por onde uma página maliciosa alcançaria o servidor pelo nome dela.
+    if (!hostAceito(req.headers.host)) {
+      socket.close(4003, 'Acesse por endereço IP');
+      return;
+    }
+
+    const ip = req.socket.remoteAddress;
+    if (bloqueioRestante(ip) > 0) {
+      socket.close(4029, 'Tentativas de token demais');
+      return;
+    }
+
     const url = new URL(req.url, 'http://localhost');
-    if (!conferirToken(url.searchParams.get('token'))) {
+    const token = url.searchParams.get('token');
+    if (!conferirToken(token)) {
+      // Só conta como tentativa quando veio token: o cliente sem token
+      // nenhum é o que ainda não pareou, e ele não deve se trancar sozinho.
+      if (token) registrarFalha(ip);
       socket.close(4001, 'Token de acesso inválido');
       return;
     }
+    registrarSucesso(ip);
     socket.send(JSON.stringify({ tipo: 'estado_completo', dados: estadoGlobal }));
   });
 

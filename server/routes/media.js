@@ -8,6 +8,7 @@
 
 const express = require('express');
 const media = require('../integrations/media');
+const { redigir } = require('../lib/segredos');
 
 module.exports = function criarRotaMedia() {
   const router = express.Router();
@@ -16,7 +17,7 @@ module.exports = function criarRotaMedia() {
     try {
       res.json({ ok: true, opcoes: await media.listarSaidas() });
     } catch (erro) {
-      res.status(500).json({ ok: false, erro: erro.message });
+      res.status(500).json({ ok: false, erro: redigir(erro.message) });
     }
   });
 

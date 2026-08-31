@@ -1,6 +1,11 @@
 // Cliente WebSocket: mantém conexão com o servidor e reconecta sozinho.
 // Expõe window.clienteWs.aoReceberMensagem(fn) para o app.js escutar o estado ao vivo.
 
+// Espera entre tentativas de reconexão: começa curta (queda de Wi-Fi do
+// tablet volta rápido) e cresce até meio minuto.
+const ESPERA_INICIAL_MS = 2000;
+const ESPERA_MAXIMA_MS = 30000;
+
 class ClienteWs {
   constructor() {
     this.socket = null;
@@ -15,6 +20,7 @@ class ClienteWs {
     // inscrever, a notificação se perde e a UI fica presa em "conectando…".
     this.conectado = false;
     this.ultimaMensagemCompleta = null;
+    this.esperaMs = ESPERA_INICIAL_MS;
   }
 
   conectar() {
@@ -29,7 +35,10 @@ class ClienteWs {
     const url = window.acesso.paraWs(`${protocolo}://${location.host}/ws`);
     this.socket = new WebSocket(url);
 
-    this.socket.addEventListener('open', () => this._notificarConexao(true));
+    this.socket.addEventListener('open', () => {
+      this.esperaMs = ESPERA_INICIAL_MS;
+      this._notificarConexao(true);
+    });
 
     this.socket.addEventListener('message', (evento) => {
       try {
@@ -46,7 +55,12 @@ class ClienteWs {
     this.socket.addEventListener('close', () => {
       this._notificarConexao(false);
       this.socket = null;
-      setTimeout(() => this._conectar(), 2000);
+      // Espera crescente, e não 2s fixos: se o token não vale mais (trocado
+      // no servidor, aparelho despareado), insistir de 2 em 2 segundos só
+      // faria o servidor bloquear este aparelho por tentativas demais. Volta
+      // ao mínimo assim que uma conexão abre.
+      setTimeout(() => this._conectar(), this.esperaMs);
+      this.esperaMs = Math.min(this.esperaMs * 2, ESPERA_MAXIMA_MS);
     });
 
     this.socket.addEventListener('error', () => {

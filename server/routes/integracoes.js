@@ -17,6 +17,7 @@
 const express = require('express');
 const { exigirLocal } = require('../lib/auth');
 const envStore = require('../lib/env-store');
+const { redigir } = require('../lib/segredos');
 
 // Campos assim não voltam para o navegador com o valor; só com "preenchido".
 const TIPOS_SECRETOS = new Set(['senha']);
@@ -91,7 +92,7 @@ module.exports = function criarRotaIntegracoes(integracoes) {
     try {
       envStore.gravar(paraGravar);
     } catch (erro) {
-      res.status(500).json({ ok: false, erro: `Não deu para gravar o .env: ${erro.message}` });
+      res.status(500).json({ ok: false, erro: `Não deu para gravar o .env: ${redigir(erro.message)}` });
       return;
     }
 
@@ -103,7 +104,7 @@ module.exports = function criarRotaIntegracoes(integracoes) {
       try {
         await integracao.reconfigurar();
       } catch (erro) {
-        aviso = `Salvo, mas a reconexão falhou: ${erro.message}`;
+        aviso = `Salvo, mas a reconexão falhou: ${redigir(erro.message)}`;
       }
     }
 

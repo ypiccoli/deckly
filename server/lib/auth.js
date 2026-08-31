@@ -16,6 +16,9 @@
 // protege contra quem consiga capturar o tráfego da própria rede. Para o
 // uso pretendido (rede doméstica, nada exposto à internet) é o equilíbrio
 // certo; expor isto à internet continua sendo má ideia.
+//
+// Há ainda um limite de tentativas do token (mais abaixo) e a recusa de
+// requisição vinda por nome DNS (exigirHostConhecido, logo em seguida).
 
 const net = require('net');
 
@@ -86,6 +89,88 @@ function exigirHostConhecido(req, res, next) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Limite de tentativas do token.
+//
+// Não há cadastro nem login aqui: o token É a tranca. São 16 caracteres de um
+// alfabeto de 32 (~80 bits), então adivinhar por força bruta é inviável mesmo
+// sem limite — mas "inviável" depende do tamanho do token continuar como está,
+// e um aparelho da LAN tentando sem parar também é ruído no log e trabalho
+// inútil para o servidor.
+//
+// Só falha conta. Requisição SEM token nenhum não entra na conta: a tela de
+// pareamento e o service worker batem na API antes de ter token, e trancar
+// alguém por causa disso quebraria justamente o primeiro acesso.
+//
+// O PRÓPRIO PC é isento, e isso não é um furo: quem roda ali já pode abrir o
+// config/token.json e ler o token, então limitar chute nenhum protege. O que
+// se ganha isentando é grande — sem isso, errar o token dez vezes na tela de
+// pareamento do próprio PC trancava junto a tela de configuração e o botão
+// "Encerrar servidor", que é o único jeito normal de desligar quando o
+// programa roda em segundo plano. A trava vale para quem vem pela rede, que é
+// exatamente o que o SECURITY.md diz que ela existe para conter.
+// (O caminho "site malicioso usando o navegador do usuário", que também
+// chegaria como 127.0.0.1, já é barrado antes pelo exigirHostConhecido.)
+//
+// Sem setInterval de propósito: o processo fica dias no ar, e um timer
+// pendurado só para limpar um Map de duas entradas é ruído. A limpeza é
+// preguiçosa, feita na própria tentativa.
+const LIMITE_FALHAS = 10;
+const BLOQUEIO_INICIAL_MS = 60 * 1000;
+const BLOQUEIO_MAXIMO_MS = 15 * 60 * 1000;
+// Falhas param de contar depois deste tempo sem nenhuma nova: quem errou de
+// digitação três vezes ontem não deve começar o dia mais perto do bloqueio.
+const MEMORIA_MS = 10 * 60 * 1000;
+
+const tentativas = new Map();
+
+function _limpar(agora) {
+  for (const [ip, dados] of tentativas) {
+    if (dados.ate > agora) continue;
+    if (agora - dados.ultima < MEMORIA_MS) continue;
+    tentativas.delete(ip);
+  }
+}
+
+// Milissegundos restantes de bloqueio (0 = liberado).
+function bloqueioRestante(ip) {
+  if (ENDERECOS_LOCAIS.has(ip)) return 0;
+  const dados = tentativas.get(ip);
+  if (!dados) return 0;
+  const restante = dados.ate - Date.now();
+  return restante > 0 ? restante : 0;
+}
+
+function registrarFalha(ip) {
+  if (ENDERECOS_LOCAIS.has(ip)) return;
+  const agora = Date.now();
+  _limpar(agora);
+
+  const dados = tentativas.get(ip) || { falhas: 0, ate: 0, espera: 0, ultima: agora };
+  // Falha isolada, muito depois da anterior: recomeça a contagem.
+  if (agora - dados.ultima > MEMORIA_MS) dados.falhas = 0;
+
+  dados.falhas += 1;
+  dados.ultima = agora;
+
+  if (dados.falhas >= LIMITE_FALHAS) {
+    // Cada bloqueio novo dobra o anterior, até o teto. Insistir fica caro
+    // depressa, e quem errou de digitação espera um minuto.
+    dados.espera = Math.min(dados.espera ? dados.espera * 2 : BLOQUEIO_INICIAL_MS, BLOQUEIO_MAXIMO_MS);
+    dados.ate = agora + dados.espera;
+    dados.falhas = 0;
+    console.warn(
+      `[acesso] ${dados.espera / 1000}s de bloqueio para ${ip}: ${LIMITE_FALHAS} tentativas de token erradas.`,
+    );
+  }
+
+  tentativas.set(ip, dados);
+}
+
+function registrarSucesso(ip) {
+  tentativas.delete(ip);
+}
+
 function ehLocal(req) {
   return ENDERECOS_LOCAIS.has(req.socket.remoteAddress);
 }
@@ -97,15 +182,35 @@ function extrairToken(req) {
 }
 
 function exigirToken(req, res, next) {
+  const ip = req.socket.remoteAddress;
+  const restante = bloqueioRestante(ip);
+  if (restante > 0) {
+    const segundos = Math.ceil(restante / 1000);
+    res.set('Retry-After', String(segundos));
+    // precisaToken junto de propósito: o frontend já sabe mostrar a tela de
+    // pareamento com esta forma de resposta (public/js/token.js), e é lá que
+    // a pessoa vai ler o motivo.
+    res.status(429).json({
+      ok: false,
+      erro: `Tentativas de token demais. Tente de novo em ${segundos}s.`,
+      precisaToken: true,
+    });
+    return;
+  }
+
   const informado = extrairToken(req);
+  // Sem token nenhum não conta como tentativa: é o estado normal de quem
+  // ainda não pareou o aparelho.
   if (!informado) {
     res.status(401).json({ ok: false, erro: 'Token de acesso não informado.', precisaToken: true });
     return;
   }
   if (!conferir(informado)) {
+    registrarFalha(ip);
     res.status(401).json({ ok: false, erro: 'Token de acesso inválido.', precisaToken: true });
     return;
   }
+  registrarSucesso(ip);
   next();
 }
 
@@ -122,4 +227,13 @@ function exigirLocal(req, res, next) {
   });
 }
 
-module.exports = { exigirToken, exigirLocal, exigirHostConhecido, ehLocal };
+module.exports = {
+  exigirToken,
+  exigirLocal,
+  exigirHostConhecido,
+  ehLocal,
+  hostAceito,
+  bloqueioRestante,
+  registrarFalha,
+  registrarSucesso,
+};

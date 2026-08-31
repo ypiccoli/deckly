@@ -106,7 +106,7 @@ module.exports = function criarRotaSpotifyAuth() {
         })),
       });
     } catch (erro) {
-      res.status(500).json({ ok: false, erro: erro.message });
+      res.status(500).json({ ok: false, erro: redigir(erro.message) });
     }
   });
 

@@ -10,6 +10,7 @@
 const express = require('express');
 const homeassistant = require('../integrations/homeassistant');
 const { exigirToken } = require('../lib/auth');
+const { redigir } = require('../lib/segredos');
 
 // Paleta fixa do seletor de cores. O Home Assistant não tem "lista de cores"
 // para oferecer, e um seletor de deck precisa de poucas opções, grandes o
@@ -38,7 +39,7 @@ module.exports = function criarRotaHomeAssistant() {
       const opcoes = await homeassistant.listarEntidadesAcionaveis();
       res.json({ ok: true, opcoes });
     } catch (erro) {
-      res.status(500).json({ ok: false, erro: erro.message });
+      res.status(500).json({ ok: false, erro: redigir(erro.message) });
     }
   });
 
