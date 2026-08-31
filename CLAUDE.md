@@ -81,6 +81,11 @@ public/js/app.js  --POST /action/:id--> server/routes/actions.js
   programaticamente pela tela de configuração sem perder nada. Como JSON não
   tem comentários, páginas e botões aceitam um campo opcional `_nota`, que
   sobrevive a idas e voltas pelo editor.
+- **Na subida, a ordem é pessoal → backup → exemplo.** `carregar()` nunca
+  lança por JSON inválido: um `pages.config.json` quebrado antes derrubava o
+  servidor no `require` (o `.exe` simplesmente não abria). O arquivo com
+  problema **não** é sobrescrito — é a única cópia do que a pessoa fez por
+  último. Só se nem o exemplo abrir é que ele lança.
 - **Salvar não exige reiniciar.** `PUT /api/config` valida, grava de forma
   atômica (temporário + rename, com backup da versão anterior em
   `pages.config.backup.json`) e dispara `{ tipo: 'config_atualizado' }` no
@@ -456,6 +461,16 @@ tela de boas-vindas) é o caminho normal de desligar. Ele exige `exigirLocal`
 **e** `exigirToken` — só local não bastaria, porque um `<form>` de outro site
 aberto no navegador conseguiria derrubar o servidor com um POST.
 
+## Erro fatal precisa deixar rastro
+
+`server/index.js` registra `uncaughtException` (loga e sai com 1) e
+`unhandledRejection` (só loga). Não é firula: empacotado em segundo plano não
+há console, então sem isso o processo morria e o `deckly.log` ficava sem a
+causa — o sintoma para a pessoa é "o deck parou de responder", sem mais nada.
+A rejeição **não** derruba de propósito: as integrações têm promessas soltas
+(reconexão do OBS, RPC do Discord), e matar o servidor porque o OBS caiu seria
+uma regressão. As duas mensagens passam por `redigir()`, inclusive o stack.
+
 ## Documentação gerada (`npm run docs`, `npm run docs:pdf`)
 
 Duas peças de documentação **não** são escritas à mão:
@@ -570,7 +585,24 @@ Detalhes que importam ao mexer aqui:
   a página precisa carregar para poder pedir o token a quem ainda não pareou.
 - **WebSocket recebe o token pela query string**, não por header — o
   handshake do navegador não permite header. Conexão sem token fecha com o
-  código 4001.
+  código 4001. **O upgrade não passa pelos middlewares do Express**, então o
+  `hostAceito` (anti DNS rebinding) e o limite de tentativas são aplicados à
+  mão dentro do `wss.on('connection')` — código 4003 para nome DNS, 4029 para
+  bloqueio. Esquecer isso deixaria um caminho aberto ao lado da porta trancada.
+- **Dez tentativas erradas de token bloqueiam o IP** por 1 min, dobrando até
+  15 min (`bloqueioRestante`/`registrarFalha`/`registrarSucesso` em
+  `lib/auth.js`, `Map` em memória, limpeza preguiçosa — sem `setInterval`).
+  Três decisões que parecem detalhe e não são: requisição **sem** token não
+  conta (é o estado de quem ainda não pareou, e contá-la quebraria o primeiro
+  acesso); o token **certo** também é recusado durante o bloqueio — aceitá-lo
+  faria o bloqueio deixar de limitar a taxa de chutes, que é a única coisa que
+  ele faz; e **`127.0.0.1` é isento**. A isenção não é conveniência: quem está
+  na máquina já lê o `config/token.json`, então limitá-lo não protege nada, e
+  sem ela dez erros na tela de pareamento do PC trancavam junto o `/config/` e
+  o `POST /api/bemvindo/encerrar` — que é o único jeito normal de desligar no
+  modo segundo plano. Foi o que aconteceu ao testar o `.exe`. Por causa disso o `ws-client.js` reconecta com espera crescente
+  (2s → 30s) em vez de 2s fixos: com token vencido, o próprio deck se
+  bloquearia em escalada.
 - **OAuth do Spotify não pode exigir token**: o Spotify redireciona o
   navegador para `/spotify/callback` sem ele. Por isso `/login` e
   `/callback` usam `exigirLocal` em vez de `exigirToken`.

@@ -55,6 +55,7 @@ O resto deste README é a documentação técnica. Veja também:
 - [Como rodar](#como-rodar)
 - [Acessar do tablet (rede — importante no WSL2)](#acessar-do-tablet-rede--importante-no-wsl2)
 - [Token de acesso](#token-de-acesso)
+- [O que sai do seu PC (privacidade)](#o-que-sai-do-seu-pc-privacidade)
 - [Controle de mídia (Windows via WSL2)](#controle-de-mídia-windows-via-wsl2)
 - [Atalhos: apps, sites, jogos e janelas](#atalhos-apps-sites-jogos-e-janelas)
 - [Configurar as integrações (aba Integrações)](#configurar-as-integrações-aba-integrações)
@@ -297,6 +298,51 @@ aparelho da rede use o seu deck — que é o risco real numa casa. Ele **não**
 protege contra alguém capaz de capturar o tráfego da própria rede, e nada
 disso torna seguro expor a porta à internet. Continue sem fazer port
 forwarding.
+
+### Tentativas de token erradas travam por um tempo
+
+Dez tentativas erradas seguidas do mesmo aparelho **da rede** e ele fica
+bloqueado por um minuto — e o bloqueio dobra a cada nova rodada, até quinze
+minutos. Errar de digitação não incomoda ninguém; insistir chutando fica caro
+depressa. Requisição **sem** token nenhum não conta: é o estado normal de quem
+ainda não pareou.
+
+O próprio PC (`127.0.0.1`) é isento: quem está nele já pode abrir o
+`config/token.json` e ler o token, então limitá-lo não protegeria nada — e
+trancaria junto a tela de configuração e o botão de encerrar o servidor.
+
+## O que sai do seu PC (privacidade)
+
+O Deckly não tem servidor, não tem conta e não tem telemetria. **Nada é
+enviado para mim nem para lugar nenhum sobre o seu uso** — não há o que
+enviar, o programa inteiro roda na sua máquina.
+
+Fora da sua máquina, só sai o que uma integração que **você** configurou
+precisa:
+
+| O quê | Para onde | Só quando |
+|-------|-----------|-----------|
+| Comandos de reprodução e lista de dispositivos | API do Spotify (internet) | Você conectou a conta do Spotify |
+| Autorização e estado de voz | Cliente do Discord, pelo canal local do próprio app (o `rpc`) | Modo `rpc` configurado |
+| Cenas, mic, gravação | OBS na sua rede local | OBS habilitado |
+| Estado e comandos de dispositivos | Home Assistant na sua rede local | Endereço e token preenchidos |
+| Download do `node.exe` | nodejs.org | Só no `npm run build`, nunca ao usar |
+
+Onde ficam as suas credenciais:
+
+- **`.env`** (ao lado do `.exe`, dentro de `dados/`): tokens e senhas das
+  integrações. Nunca são enviados de volta para o navegador — a aba
+  Integrações mostra só se o campo está preenchido.
+- **`config/token.json`**: o token de acesso ao deck.
+- **`config/favoritos.json`** e **`config/pages.config.json`**: o seu layout e
+  as suas preferências.
+- **`deckly.log`** (só no modo em segundo plano): mensagens de diagnóstico.
+  Credenciais são substituídas por `«NOME_DA_CHAVE oculto»` antes de qualquer
+  coisa ir para lá.
+
+Tudo isso são arquivos comuns na sua pasta: para apagar seus dados, apague a
+pasta `dados/`. Para revogar o acesso de um aparelho, apague
+`config/token.json` e reinicie — todos os pareamentos caem de uma vez.
 
 ## Controle de mídia (Windows via WSL2)
 
@@ -888,6 +934,25 @@ como PDF".
 - **Quero mudar a porta**
   Edite `PORT` no `.env`. Lembre de ajustar as regras de portproxy/firewall
   (Opção B) se estiver usando esse modo.
+
+- **O deck subiu com os botões errados / avisou que o config está ilegível**
+  A cada vez que você salva, a versão anterior fica em
+  `config/pages.config.backup.json`. Se o `config/pages.config.json` ficar
+  com JSON inválido (edição manual malfeita, desligamento no meio de uma
+  cópia), o servidor **não morre mais**: ele avisa no log e sobe com o
+  backup — e, se nem ele abrir, com o template inicial. O arquivo quebrado é
+  mantido como está, então dá para recuperar um botão à mão. Para adotar o
+  backup de vez:
+
+  ```bash
+  cp config/pages.config.backup.json config/pages.config.json
+  ```
+
+- **Fiquei bloqueado por "tentativas de token demais"**
+  São dez erros seguidos do mesmo aparelho da rede. Espere o tempo indicado
+  na mensagem (começa em 1 minuto) e use o token certo — ele está na tela de
+  boas-vindas, em `http://127.0.0.1:3000/bemvindo/`, que abre no próprio PC e
+  nunca é bloqueada.
 
 ## Contribuindo
 

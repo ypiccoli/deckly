@@ -92,6 +92,17 @@ aceitando só IP e `localhost`. É a defesa contra DNS rebinding — veja o
 | `GET /spotify/dispositivos` | token | Aparelhos Spotify ativos (alimenta o "Tocar em…") |
 | `WS /ws?token=<token>` | token | Estado ao vivo. O token vai na query porque o navegador não deixa mandar header no handshake de WebSocket |
 
+### Respostas de recusa
+
+| Código | Quando |
+|--------|--------|
+| `401` | Token ausente ou errado |
+| `403` | Acesso por nome DNS (use o IP), ou rota `local` pedida de outro aparelho |
+| `429` | Dez tentativas erradas de token do mesmo aparelho **da rede** (o próprio PC é isento). O cabeçalho `Retry-After` diz quantos segundos faltam; o bloqueio começa em 1 min e dobra até 15 |
+
+No WebSocket a recusa vem como código de fechamento: `4001` (token),
+`4003` (nome DNS) e `4029` (bloqueado por tentativas).
+
 ### Testando pelo terminal
 
 ```bash

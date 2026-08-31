@@ -61,6 +61,7 @@ O [README](README.md) é a documentação técnica completa. Os atalhos mais
 | Adicionar uma integração nova | [CLAUDE.md → Adicionando uma nova integração](CLAUDE.md#adicionando-uma-nova-integração) |
 | Saber o que já dá para pôr num botão | [docs/acoes.md](docs/acoes.md) |
 | Ver as rotas e suas travas de acesso | [docs/urls.md](docs/urls.md) |
+| Publicar uma versão nova | [docs/checklist-release.md](docs/checklist-release.md) |
 | Entender as travas de segurança | [SECURITY.md](SECURITY.md) |
 
 Há também um `CLAUDE.md` na raiz: é o guia longo do projeto, com o histórico
@@ -111,6 +112,10 @@ para bater nos endpoints direto.
 Se a mudança afeta a tela do deck, teste **no celular ou tablet** também. O
 alvo do projeto é o toque, não o mouse — coisas como o arraste do editor de
 layout se comportam de forma diferente no dedo.
+
+Antes de gerar uma versão nova do `.exe`, o roteiro completo (travas de
+acesso, config quebrado, executável em pasta limpa e o teste no tablet) está
+em [docs/checklist-release.md](docs/checklist-release.md).
 
 ## Pull requests
 

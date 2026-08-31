@@ -55,7 +55,20 @@ Três decisões que parecem brechas e não são:
 - **`PUT /api/integracoes` só grava chaves declaradas pela própria
   integração** — sem essa lista, um PUT escreveria qualquer variável de
   ambiente, incluindo `PATH` e `DECKLY_TOKEN`.
-- **WebSocket sem token fecha com o código 4001.**
+- **Tentativas erradas de token são limitadas por aparelho**
+  (`server/lib/auth.js`): dez falhas seguidas do mesmo IP da rede bloqueiam
+  por um minuto, dobrando a cada rodada até quinze minutos. Três detalhes
+  deliberados: requisição **sem** token não conta (é o estado normal de quem
+  ainda não pareou); o token certo também é recusado durante o bloqueio
+  (aceitá-lo faria o bloqueio deixar de limitar a taxa de chutes, que é a
+  única coisa que ele faz); e o **próprio PC é isento**, porque quem está
+  nele já pode abrir o `config/token.json` — limitá-lo não protegeria nada e
+  trancaria junto a tela de configuração e o botão de encerrar o servidor.
+- **WebSocket sem token fecha com o código 4001**, e o handshake também
+  recusa nome DNS (código 4003). O *upgrade* de WebSocket não passa pelos
+  middlewares do Express, então o `exigirHostConhecido` é aplicado ali à mão
+  — senão sobraria um caminho por onde uma página maliciosa alcançaria o
+  servidor pelo nome dela.
 - **O corpo do `POST /action/:id` só contribui com `valor` e `opcaoId`**
   (`server/routes/actions.js`). Todo o resto — inclusive o caminho de um
   programa a abrir — vem do config, que só é gravável de `127.0.0.1`. Sem
@@ -83,10 +96,16 @@ Três decisões que parecem brechas e não são:
   deles abre um programa, quem tem o token abre esse programa — mas **só
   aquele** programa: o corpo da requisição não consegue trocar os parâmetros
   do botão (veja abaixo).
-- **Não há limite de tentativas** no envio do token.
 - **O executável não é assinado digitalmente.** O SmartScreen vai avisar na
   primeira execução — isso é esperado. Baixe o `.exe` apenas da aba
   [Releases](../../releases) deste repositório.
+
+## Privacidade
+
+O Deckly não tem servidor, conta nem telemetria: nada sobre o seu uso é
+enviado para lugar nenhum. O que sai da sua máquina, para onde e em que
+condição está na tabela de
+[O que sai do seu PC](README.md#o-que-sai-do-seu-pc-privacidade), no README.
 
 ## Reportando uma falha
 
