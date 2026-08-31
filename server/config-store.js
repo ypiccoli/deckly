@@ -30,16 +30,62 @@ function _ler(caminho) {
   return JSON.parse(bruto);
 }
 
+// Ordem de tentativa na subida: o pessoal, depois o backup que o salvar()
+// deixa, depois o exemplo. O backup existia desde sempre e nada o lia — um
+// pages.config.json com JSON quebrado (edição manual malfeita, desligamento
+// no meio de uma cópia externa) fazia o servidor morrer no require, e a
+// pessoa via o .exe simplesmente não abrir.
+//
+// O arquivo quebrado NÃO é sobrescrito ao cair para o backup: ele é a única
+// cópia do que a pessoa fez por último, e apagá-lo automaticamente tiraria a
+// chance de recuperar um botão à mão. O próximo Salvar grava por cima no
+// fluxo normal.
 function carregar() {
-  caminhoEmUso = fs.existsSync(CAMINHO_PESSOAL) ? CAMINHO_PESSOAL : CAMINHO_EXEMPLO;
-  config = _ler(caminhoEmUso);
-  if (caminhoEmUso === CAMINHO_EXEMPLO) {
-    console.log(
-      '[config] Usando config/pages.config.example.json — ele vira seu ' +
-        'config/pages.config.json na primeira vez que você salvar pela tela de configuração.',
-    );
+  const candidatos = [
+    { caminho: CAMINHO_PESSOAL, rotulo: 'config/pages.config.json' },
+    { caminho: CAMINHO_BACKUP, rotulo: 'config/pages.config.backup.json' },
+    { caminho: CAMINHO_EXEMPLO, rotulo: 'config/pages.config.example.json' },
+  ];
+
+  let falhou = null;
+  for (const candidato of candidatos) {
+    if (!fs.existsSync(candidato.caminho)) continue;
+    try {
+      config = _ler(candidato.caminho);
+    } catch (erro) {
+      console.error(`[config] ${candidato.rotulo} está ilegível: ${erro.message}`);
+      falhou = falhou || candidato.rotulo;
+      continue;
+    }
+
+    caminhoEmUso = candidato.caminho;
+    if (falhou && candidato.caminho === CAMINHO_BACKUP) {
+      console.warn(
+        `[config] Subindo com ${candidato.rotulo} porque ${falhou} não pôde ser lido. ` +
+          'O arquivo com problema foi mantido como está — para adotar o backup de vez, ' +
+          'copie o .backup.json por cima do .json.',
+      );
+    } else if (falhou) {
+      console.warn(
+        `[config] Nem ${falhou} nem o backup puderam ser lidos — subindo com o template ` +
+          'inicial (config/pages.config.example.json). Os arquivos com problema foram ' +
+          'mantidos como estão.',
+      );
+    } else if (candidato.caminho === CAMINHO_EXEMPLO) {
+      console.log(
+        '[config] Usando config/pages.config.example.json — ele vira seu ' +
+          'config/pages.config.json na primeira vez que você salvar pela tela de configuração.',
+      );
+    }
+    return config;
   }
-  return config;
+
+  // Nem o exemplo abriu: aí não há deck nenhum a mostrar, e falhar alto é
+  // melhor do que subir uma grade vazia sem explicação.
+  throw new Error(
+    'Nenhum arquivo de configuração pôde ser lido (pessoal, backup e exemplo). ' +
+      `Confira a pasta ${PASTA_CONFIG}.`,
+  );
 }
 
 function recarregar() {
