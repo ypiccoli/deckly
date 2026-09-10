@@ -17,3 +17,8 @@ config/token.json
 # servidores reais. Nasce vazio na primeira execução.
 config/favoritos.json
 build/
+
+# Preferências locais do Claude Code (permissões desta máquina, com caminhos
+# e IPs da LAN). O CLAUDE.md, esse sim, é versionado de propósito: é o guia
+# longo do projeto.
+.claude/settings.local.json

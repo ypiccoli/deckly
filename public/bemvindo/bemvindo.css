@@ -188,6 +188,14 @@ h1 {
   color: var(--texto-fraco);
 }
 .rodape p { margin: 0 0 14px; }
+/* Aviso de licença: a GPL recomenda que programa interativo mostre copyright e
+   ausência de garantia. Fica abaixo do botão de encerrar, menor que o resto do
+   rodapé, para não competir com o que a pessoa veio fazer aqui. */
+.rodape-licenca {
+  margin: 18px 0 0;
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
 .rodape code {
   font-family: ui-monospace, Consolas, monospace;
   color: var(--texto);

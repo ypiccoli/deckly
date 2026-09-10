@@ -72,6 +72,7 @@ O resto deste README é a documentação técnica. Veja também:
 - [Estrutura de pastas](#estrutura-de-pastas)
 - [Scripts npm](#scripts-npm)
 - [Solução de problemas](#solução-de-problemas)
+- [Como este projeto foi construído](#como-este-projeto-foi-construído)
 - [Contribuindo](#contribuindo)
 - [Licença](#licença)
 
@@ -953,6 +954,41 @@ como PDF".
   na mensagem (começa em 1 minuto) e use o token certo — ele está na tela de
   boas-vindas, em `http://127.0.0.1:3000/bemvindo/`, que abre no próprio PC e
   nunca é bloqueada.
+
+## Como este projeto foi construído
+
+O Deckly foi escrito em par com o [Claude Code](https://claude.com/claude-code)
+— por isso boa parte dos commits traz um `Co-Authored-By`. Está dito aqui
+porque é mais honesto do que deixar quem lê descobrir sozinho no histórico.
+
+O que nenhuma ferramenta decidiu é o que este repositório tem de mais próprio:
+
+- **A arquitetura.** Integração é um singleton que emite estado; o
+  `config/pages.config.json` é a única fonte de verdade do layout; o
+  `POST /action/:id` é um dispatcher genérico. É o que faz um botão novo não
+  exigir uma linha nova em `server/` nem em `public/`.
+- **O modelo de segurança.** Um programa que executa comandos no Windows a
+  partir de requisições HTTP precisa de trava, e cada uma responde a um ataque
+  concreto: o token, o `exigirLocal` no que reconfigura o app, o
+  `exigirHostConhecido` contra DNS rebinding, e a lista fechada de campos que
+  o corpo de um `POST /action` pode sobrescrever. O [SECURITY.md](SECURITY.md)
+  explica uma a uma — e também o que **não** está protegido.
+- **O que fica de fora.** O Go Live do Discord não existe em API, em RPC nem
+  em tecla de atalho: só no botão da interface. O modo `rpc` sabe o estado de
+  verdade, mas exige criar um app no portal do Discord, então quem baixa o
+  `.exe` recebe o modo `teclado`. Decisões assim são a maior parte do
+  trabalho, e nenhuma delas sai de um catálogo de ações.
+
+O registro dessas decisões é o [CLAUDE.md](CLAUDE.md): quase 900 linhas de
+*por que* cada parte delicada é do jeito que é, inclusive os erros que
+custaram caro — o service worker cache-primeiro que serviu CSS novo com
+JavaScript antigo, o COM que o PowerShell não consegue chamar, a conexão do
+OBS que no WSL nunca resolve nem rejeita. Se algo no código parecer estranho,
+a explicação provavelmente está lá.
+
+Não há suíte de testes automatizados. O CI cobre sintaxe, template inicial e
+documentação gerada; o resto é teste manual, e o roteiro está em
+[docs/checklist-release.md](docs/checklist-release.md).
 
 ## Contribuindo
 
