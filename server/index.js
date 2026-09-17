@@ -206,11 +206,17 @@ function iniciarServidor() {
   // conexão pode demorar bem mais que o normal para dar timeout dependendo da
   // rede) trave a subida do servidor inteiro.
   servidorHttp.listen(PORTA, '0.0.0.0', () => {
-    const { urlLocal } = mostrarBoasVindas(PORTA);
+    // Rodando em segundo plano quem cuida das boas-vindas é o processo
+    // lançador, que ainda tem console e navegador na mão. Aqui a saída vai
+    // para o deckly.log, e o banner leva o token de acesso, a URL de
+    // pareamento e o QR junto — arquivo que o CONTRIBUTING pede anexado em
+    // issue pública. Do filho sai só a linha que diz que o servidor subiu.
+    if (segundoPlano.ehFilho()) {
+      console.log(`Deckly rodando na porta ${PORTA}.`);
+      return;
+    }
 
-    // Rodando em segundo plano quem cuida disso é o processo lançador, que
-    // ainda tem console e navegador na mão — aqui só encheria o log.
-    if (segundoPlano.ehFilho()) return;
+    const { urlLocal } = mostrarBoasVindas(PORTA);
 
     // Abre a tela de boas-vindas sozinha quando é a PRIMEIRA execução (o
     // token acabou de ser gerado) — é o momento em que a pessoa precisa ver o
