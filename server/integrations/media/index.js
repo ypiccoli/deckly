@@ -113,14 +113,23 @@ class IntegracaoMedia extends EventEmitter {
       aumentarVolume: () => this._executarEAtualizar(this.controlador.aumentarVolume()),
       diminuirVolume: () => this._executarEAtualizar(this.controlador.diminuirVolume()),
       definirVolume: (parametros = {}) => {
-        const valor = parametros.valor ?? parametros.value;
-        return this._executarEAtualizar(this.controlador.definirVolume(valor));
+        const valor = Number(parametros.valor ?? parametros.value);
+        if (!Number.isFinite(valor)) throw new Error('Parâmetro "valor" (0–100) é obrigatório.');
+        return this._executarEAtualizar(
+          this.controlador.definirVolume(Math.max(0, Math.min(100, Math.round(valor)))),
+        );
       },
       definirSaida: (parametros = {}) => {
         // "opcaoId" vem da escolha no seletor; "dispositivoId" de um botão
         // fixo numa saída específica.
         const id = parametros.opcaoId || parametros.dispositivoId;
         if (!id) throw new Error('Nenhuma saída de áudio informada.');
+        // Formato do id de endpoint do Windows: {0.0.0.00000000}.{guid}.
+        // Qualquer outra coisa não é uma saída de áudio, e não deveria
+        // chegar ao PowerShell.
+        if (!/^\{[\d.]+\}\.\{[0-9a-f-]{36}\}$/i.test(String(id))) {
+          throw new Error('Identificador de saída de áudio inválido.');
+        }
         // O script já devolve o estado do dispositivo novo — cada saída tem
         // seu próprio volume e mudo, então isso mantém o slider honesto.
         return this._executarEAtualizar(this.controlador.definirSaida(id));

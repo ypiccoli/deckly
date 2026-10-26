@@ -37,7 +37,9 @@ function ler() {
   try {
     const dados = JSON.parse(fs.readFileSync(CAMINHO, 'utf8'));
     // Aceita só o formato esperado: { fonte: [id, id, ...] }.
-    cache = {};
+    // Sem protótipo: uma fonte chamada "toString" acharia uma função herdada
+    // em vez de "lista nenhuma", e a rota respondia 500.
+    cache = Object.create(null);
     for (const [fonte, ids] of Object.entries(dados || {})) {
       if (CHAVES_PROIBIDAS.has(fonte)) continue;
       if (Array.isArray(ids)) cache[fonte] = ids.map(String);
@@ -45,7 +47,7 @@ function ler() {
   } catch {
     // Arquivo ausente na primeira execução, ou corrompido: começa vazio em
     // vez de derrubar o servidor por causa de uma preferência.
-    cache = {};
+    cache = Object.create(null);
   }
   return cache;
 }

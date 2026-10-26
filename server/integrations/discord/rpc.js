@@ -229,11 +229,15 @@ class ClienteRpcDiscord {
 
     // O READY chega como quadro sem nonce; esperamos por ele antes de seguir.
     const pronto = new Promise((resolve, reject) => {
-      const timer = setTimeout(
-        () => reject(new Error('O Discord não respondeu ao handshake.')),
-        TEMPO_LIMITE_COMANDO_MS,
-      );
-      const checar = setInterval(() => {
+      // O `checar` precisa morrer também quando o prazo estoura: antes só o
+      // caminho feliz o limpava, e cada handshake sem resposta deixava um
+      // setInterval de 50 ms rodando para sempre.
+      let checar = null;
+      const timer = setTimeout(() => {
+        clearInterval(checar);
+        reject(new Error('O Discord não respondeu ao handshake.'));
+      }, TEMPO_LIMITE_COMANDO_MS);
+      checar = setInterval(() => {
         if (this.conectado) {
           clearInterval(checar);
           clearTimeout(timer);

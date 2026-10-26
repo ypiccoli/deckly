@@ -58,6 +58,8 @@ que podem se acumular:
 - **token** — header `X-Token: <token>` (ou `?token=` na query). Sem ele,
   qualquer aparelho da rede mandaria o seu PC abrir programas.
 - **local** — só responde de `127.0.0.1`; libere com `CONFIG_REMOTO=true`.
+- **só local** — só responde de `127.0.0.1`, **e o `CONFIG_REMOTO` não libera**.
+  É o caso do que revela o token e do OAuth.
 
 Além dessas duas, há uma trava que vale para **todas** as rotas, inclusive as
 abertas: o Deckly recusa requisição cujo `Host` seja um nome de domínio,
@@ -68,14 +70,14 @@ aceitando só IP e `localhost`. É a defesa contra DNS rebinding — veja o
 | Método e rota | Travas | O que faz |
 |---------------|--------|-----------|
 | `GET /` , `/config/`, `/bemvindo/` | — | Arquivos estáticos. Abertos de propósito: não têm segredo, e a página precisa carregar para poder pedir o token |
-| `GET /api/bemvindo` | local | Token, IP, QR, status. **Única rota sem token** — não poderia exigir, é onde o token é revelado |
-| `POST /api/bemvindo/encerrar` | local + token | Desliga o servidor |
+| `GET /api/bemvindo` | só local | Token, IP, QR, status. **Única rota sem token** — não poderia exigir, é onde o token é revelado |
+| `POST /api/bemvindo/encerrar` | só local + token | Desliga o servidor |
 | `GET /api/config` | token | O layout do deck (é o que o tablet busca ao abrir) |
 | `PUT /api/config` | local + token | Grava o layout. Valida antes; erro devolve 400 e não grava nada |
 | `GET /api/catalogo` | local + token | Ações e estados de cada integração (monta os formulários do editor) e as receitas de botão pronto, já resolvidas contra o catálogo ao vivo |
 | `GET /api/integracoes` | local + token | Credenciais: quais campos existem e se estão preenchidos (**nunca o valor**) |
 | `PUT /api/integracoes` | local + token | Grava credenciais no `.env` e reconfigura a integração na hora |
-| `POST /action/:id` | token | Dispara o botão de `id`. O corpo JSON vira parâmetro extra (ex.: `{"valor":30}` num slider) |
+| `POST /action/:id` | token | Dispara o botão de `id`. Do corpo só entram `valor` (número, em slider) e `opcaoId` (em lista) — ex.: `{"valor":30}`. Valor inválido dá 400 |
 | `GET /atalhos/janelas` | token | Janelas abertas agora (alimenta o seletor "Janelas") |
 | `GET /atalhos/jogos` | token | Jogos instalados na Steam (alimenta o "Jogar…") |
 | `PUT /api/layout` | token | Salva **só** posição, tamanho, colunas e altura. **Não exige local**: aceita apenas ids, ordem e spans, e lê ação/integração do disco — veja `server/routes/layout.js` |
@@ -84,11 +86,11 @@ aceitando só IP e `localhost`. É a defesa contra DNS rebinding — veja o
 | `GET /media/saidas` | token | Saídas de áudio ativas do Windows (alimenta o seletor "Saída") |
 | `GET /discord/destinos` | token | Canais e servidores configurados (alimenta o "Ir para…", modo teclado) |
 | `GET /discord/canais` | token | Canais de voz de verdade, via RPC, com quantas pessoas há em cada um (alimenta o seletor "Canais") |
-| `GET /discord/autorizar` | local | Aprova o app no Discord e grava o token do modo RPC |
+| `GET /discord/autorizar` | só local | Aprova o app no Discord e grava o token do modo RPC |
 | `GET /homeassistant/entidades` | token | Entidades do Home Assistant (alimenta os seletores de casa inteligente) |
 | `GET /homeassistant/cores` | token | Paleta fixa de cores (alimenta o seletor de cor da luz) |
-| `GET /spotify/login` | local | Redireciona para a autorização do Spotify |
-| `GET /spotify/callback` | local | Retorno do Spotify. **Não exige token** — o Spotify redireciona o navegador sem ele |
+| `GET /spotify/login` | só local | Redireciona para a autorização do Spotify |
+| `GET /spotify/callback` | só local | Retorno do Spotify. **Não exige token** — o Spotify redireciona o navegador sem ele. Exige o `state` emitido pelo `/login` (uso único, 10 min) |
 | `GET /spotify/dispositivos` | token | Aparelhos Spotify ativos (alimenta o "Tocar em…") |
 | `WS /ws?token=<token>` | token | Estado ao vivo. O token vai na query porque o navegador não deixa mandar header no handshake de WebSocket |
 

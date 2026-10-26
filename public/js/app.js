@@ -318,15 +318,28 @@
   // "info" saber como se desenhar sem uma ida ao servidor por render.
   const favoritosPorFonte = {};
 
-  async function carregarFavoritos(fonte) {
-    try {
-      const resposta = await window.acesso.buscar(`/api/favoritos?fonte=${encodeURIComponent(fonte)}`);
-      const dados = await resposta.json();
-      if (dados.ok) favoritosPorFonte[fonte] = dados.ids.map(String);
-    } catch (erro) {
-      console.error(erro);
+  // Uma busca por fonte, não uma por render: criarBotaoInfo roda de novo a
+  // cada troca de aba e a cada config_atualizado. Daí em diante o espelho
+  // acima se mantém sozinho (alternarFavorito e abrirSeletor o atualizam).
+  // Falha não fica guardada, para a próxima tentativa buscar de novo.
+  const buscasDeFavoritos = {};
+
+  function carregarFavoritos(fonte) {
+    if (!buscasDeFavoritos[fonte]) {
+      buscasDeFavoritos[fonte] = (async () => {
+        try {
+          const resposta = await window.acesso.buscar(`/api/favoritos?fonte=${encodeURIComponent(fonte)}`);
+          const dados = await resposta.json();
+          if (dados.ok) favoritosPorFonte[fonte] = dados.ids.map(String);
+          else delete buscasDeFavoritos[fonte];
+        } catch (erro) {
+          console.error(erro);
+          delete buscasDeFavoritos[fonte];
+        }
+        return favoritosPorFonte[fonte] || [];
+      })();
     }
-    return favoritosPorFonte[fonte] || [];
+    return buscasDeFavoritos[fonte];
   }
 
   async function alternarFavorito(fonte, id) {

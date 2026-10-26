@@ -13,6 +13,7 @@
 // (curta duração) é renovado sozinho a partir do refresh token (longa
 // duração) sempre que necessário.
 
+const crypto = require('crypto');
 const EventEmitter = require('events');
 const { redigir } = require('../../lib/segredos');
 
@@ -20,6 +21,7 @@ const URL_CONTAS_SPOTIFY = 'https://accounts.spotify.com';
 const URL_API_SPOTIFY = 'https://api.spotify.com/v1';
 const ESCOPOS = ['user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing'].join(' ');
 const INTERVALO_POLLING_MS = 5000;
+const VALIDADE_ESTADO_OAUTH_MS = 10 * 60 * 1000;
 
 // O Redirect URI precisa bater EXATAMENTE com o cadastrado no painel do
 // Spotify, e é a tela de configuração que diz qual cadastrar. Se ele fosse
@@ -51,17 +53,37 @@ class IntegracaoSpotify extends EventEmitter {
     this.accessToken = null;
     this.accessTokenExpiraEm = 0;
     this._intervaloPolling = null;
+    this._estadosOAuth = new Map();
+    // Tem algum tablet olhando? Sem ninguém, consultar a API a cada 5 s é
+    // trabalho jogado fora (veja definirAudiencia).
+    this._temAudiencia = false;
   }
 
   // Usado por server/routes/spotify-auth.js para montar o link de autorização.
   obterUrlAutorizacao() {
+    // `state` de uso único: prova, no callback, que o retorno veio de um
+    // /login que partiu daqui (veja routes/spotify-auth.js).
+    const estado = crypto.randomBytes(16).toString('hex');
+    this._estadosOAuth.set(estado, Date.now() + VALIDADE_ESTADO_OAUTH_MS);
     const parametros = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
       scope: ESCOPOS,
       redirect_uri: this.redirectUri,
+      state: estado,
     });
     return `${URL_CONTAS_SPOTIFY}/authorize?${parametros.toString()}`;
+  }
+
+  // true uma vez só por `state` emitido, e só dentro do prazo.
+  consumirEstadoOAuth(estado) {
+    const agora = Date.now();
+    for (const [chave, expira] of this._estadosOAuth) {
+      if (expira <= agora) this._estadosOAuth.delete(chave);
+    }
+    if (typeof estado !== 'string' || !this._estadosOAuth.has(estado)) return false;
+    this._estadosOAuth.delete(estado);
+    return true;
   }
 
   // Usado por server/routes/spotify-auth.js na troca inicial código -> tokens.
@@ -127,8 +149,37 @@ class IntegracaoSpotify extends EventEmitter {
   }
 
   _atualizarEstado(parcial) {
+    // O polling chama isto a cada 5 s com o mesmo conteúdo quase sempre, e
+    // cada emit é um broadcast para todos os tablets. Só emite se mudou.
+    const mudou = Object.keys(parcial).some((chave) => this.estado[chave] !== parcial[chave]);
+    if (!mudou) return;
     this.estado = { ...this.estado, ...parcial };
     this.emit('estado', this.estado);
+  }
+
+  _iniciarPolling() {
+    if (this._intervaloPolling || !this.habilitado || !this._temAudiencia) return;
+    this._intervaloPolling = setInterval(() => this._atualizarNowPlaying(), INTERVALO_POLLING_MS);
+  }
+
+  _pararPolling() {
+    if (!this._intervaloPolling) return;
+    clearInterval(this._intervaloPolling);
+    this._intervaloPolling = null;
+  }
+
+  // Chamado pelo server/index.js quando o primeiro tablet conecta e quando o
+  // último sai. Ao voltar alguém, consulta na hora — o estado pode estar
+  // velho de horas.
+  definirAudiencia(temAlguem) {
+    this._temAudiencia = Boolean(temAlguem);
+    if (!this._temAudiencia) {
+      this._pararPolling();
+      return;
+    }
+    if (!this.habilitado || this._intervaloPolling) return;
+    this._atualizarNowPlaying();
+    this._iniciarPolling();
   }
 
   async _atualizarNowPlaying() {
@@ -175,7 +226,7 @@ class IntegracaoSpotify extends EventEmitter {
     try {
       await this._obterAccessToken();
       await this._atualizarNowPlaying();
-      this._intervaloPolling = setInterval(() => this._atualizarNowPlaying(), INTERVALO_POLLING_MS);
+      this._iniciarPolling();
       console.log('[spotify] Conectado à Web API do Spotify.');
     } catch (erro) {
       console.warn(`[spotify] Falha ao conectar (${redigir(erro.message)}). Refaça a autorização em /spotify/login se o refresh token expirou.`);
@@ -306,7 +357,9 @@ class IntegracaoSpotify extends EventEmitter {
       },
       definirVolume: async (parametros = {}) => {
         this._garantirConfigurado();
-        const valor = Math.round(Number(parametros.valor ?? parametros.value ?? 0));
+        const numero = Number(parametros.valor ?? parametros.value);
+        if (!Number.isFinite(numero)) throw new Error('Parâmetro "valor" (0–100) é obrigatório.');
+        const valor = Math.max(0, Math.min(100, Math.round(numero)));
         const resposta = await this._chamarApi(`/me/player/volume?volume_percent=${valor}`, { method: 'PUT' });
         if (!resposta.ok && resposta.status !== 204) {
           throw new Error(`Spotify retornou ${resposta.status} — verifique se há um dispositivo Spotify ativo.`);
@@ -319,6 +372,9 @@ class IntegracaoSpotify extends EventEmitter {
         // "opcaoId" vem da escolha do usuário no seletor (tipo "lista").
         const dispositivoId = parametros.opcaoId || parametros.dispositivoId;
         if (!dispositivoId) throw new Error('Parâmetro "dispositivoId" é obrigatório.');
+        if (!/^[A-Za-z0-9]{1,100}$/.test(String(dispositivoId))) {
+          throw new Error('Identificador de dispositivo do Spotify inválido.');
+        }
         const resposta = await this._chamarApi('/me/player', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

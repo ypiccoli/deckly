@@ -6,24 +6,13 @@
 
 const express = require('express');
 const spotify = require('../integrations/spotify');
-const { exigirToken, exigirLocal } = require('../lib/auth');
+const { exigirToken, exigirSoLocal } = require('../lib/auth');
 const envStore = require('../lib/env-store');
 const { redigir } = require('../lib/segredos');
+const { pagina, escaparHtml } = require('../lib/pagina-html');
 
-// Estas rotas são as únicas do app que respondem HTML solto: o Spotify
-// devolve o navegador para cá, então a resposta é lida por uma pessoa, não
-// pelo frontend. Um casco mínimo no visual do resto do app.
-function pagina(titulo, blocos) {
-  return `<!doctype html>
-<html lang="pt-BR"><head><meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${titulo} — Deckly</title></head>
-<body style="font-family:'Segoe UI',system-ui,sans-serif;background:#0f1115;color:#eef0f4;margin:0;padding:40px 24px">
-<div style="max-width:560px;margin:0 auto;background:#1b1e27;border:1px solid #2a2e3a;border-radius:18px;padding:28px">
-<h1 style="margin:0 0 14px;font-size:1.3rem">${titulo}</h1>
-${blocos.join('\n')}
-</div></body></html>`;
-}
+// As páginas HTML soltas (o Spotify devolve o navegador para cá) saem de
+// lib/pagina-html.js — e tudo que é dinâmico passa por escaparHtml.
 
 module.exports = function criarRotaSpotifyAuth() {
   const router = express.Router();
@@ -31,8 +20,10 @@ module.exports = function criarRotaSpotifyAuth() {
   // /login e /callback NÃO podem exigir token: o Spotify redireciona o
   // navegador de volta para /callback sem ele. São protegidas por serem
   // acessíveis só do próprio PC — o que casa com o fluxo, que é feito uma
-  // vez na máquina onde o servidor roda.
-  router.get('/login', exigirLocal, (req, res) => {
+  // vez na máquina onde o servidor roda. exigirSoLocal, e não exigirLocal:
+  // CONFIG_REMOTO libera a configuração pela rede, não o OAuth — o redirect
+  // URI é 127.0.0.1, então pela rede ele nem funcionaria.
+  router.get('/login', exigirSoLocal, (req, res) => {
     if (!spotify.clientId || !spotify.clientSecret) {
       res
         .status(400)
@@ -45,12 +36,23 @@ module.exports = function criarRotaSpotifyAuth() {
     res.redirect(spotify.obterUrlAutorizacao());
   });
 
-  router.get('/callback', exigirLocal, async (req, res) => {
-    const { code, error } = req.query;
+  router.get('/callback', exigirSoLocal, async (req, res) => {
+    const { code, error, state } = req.query;
+
+    // O `state` amarra o retorno a um /login que partiu daqui. Sem ele, um
+    // site qualquer mandaria o navegador para o callback com o código DELE, e
+    // o deck passaria a controlar a conta do Spotify de outra pessoa.
+    if (!spotify.consumirEstadoOAuth(state)) {
+      res.status(400).send(pagina('Autorização não reconhecida', [
+        '<p>Este retorno não veio de uma conexão iniciada por este Deckly (ou demorou ' +
+          'demais). Volte à tela de configuração e clique em conectar de novo.</p>',
+      ]));
+      return;
+    }
 
     if (error) {
       res.status(400).send(pagina('Autorização recusada', [
-        `<p>O Spotify respondeu: <code>${error}</code></p>`,
+        `<p>O Spotify respondeu: <code>${escaparHtml(error)}</code></p>`,
         '<p>Volte à tela de configuração e tente de novo.</p>',
       ]));
       return;
@@ -63,7 +65,7 @@ module.exports = function criarRotaSpotifyAuth() {
     }
 
     try {
-      const dados = await spotify.trocarCodigoPorToken(code);
+      const dados = await spotify.trocarCodigoPorToken(String(code));
       if (!dados.refresh_token) {
         throw new Error('o Spotify não devolveu um refresh token');
       }
@@ -81,10 +83,10 @@ module.exports = function criarRotaSpotifyAuth() {
       ]));
     } catch (erro) {
       res.status(500).send(pagina('Falhou ao conectar', [
-        `<p>${redigir(erro.message)}</p>`,
+        `<p>${escaparHtml(redigir(erro.message))}</p>`,
         '<p>Confira se o Client ID e o Client Secret estão certos, e se o ' +
           'Redirect URI cadastrado no painel do Spotify é exatamente ' +
-          `<code>${spotify.redirectUri}</code>.</p>`,
+          `<code>${escaparHtml(spotify.redirectUri)}</code>.</p>`,
       ]));
     }
   });

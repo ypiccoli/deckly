@@ -211,12 +211,17 @@ class IntegracaoAtalhos extends EventEmitter {
         // escolha do usuário no seletor (parametros.opcaoId).
         const appId = parametros.opcaoId || parametros.appId;
         if (!appId) throw new Error('Parâmetro "appId" é obrigatório.');
-        return this.controlador.abrirJogo(appId);
+        // Só dígitos: o valor vira steam://rungameid/<appId>, e qualquer
+        // coisa além do número (ex.: "440//+exec …") seria repassada pela
+        // Steam como argumento de linha de comando para o jogo.
+        if (!/^\d{1,10}$/.test(String(appId))) throw new Error(`AppID da Steam inválido: "${appId}".`);
+        return this.controlador.abrirJogo(String(appId));
       },
       focarJanela: (parametros = {}) => {
         this._garantirDisponivel();
         const handle = parametros.opcaoId || parametros.handle;
         if (!handle) throw new Error('Parâmetro "handle" é obrigatório.');
+        if (!/^\d{1,20}$/.test(String(handle))) throw new Error('Identificador de janela inválido.');
         return this.controlador.focarJanela(handle);
       },
     };

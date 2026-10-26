@@ -84,7 +84,10 @@
   acesso.buscar = function (url, opcoes) {
     opcoes = opcoes || {};
     var headers = Object.assign({}, opcoes.headers || {});
-    if (acesso.token) headers['X-Token'] = acesso.token;
+    // Só para a própria origem: uma "fonte" de lista apontando para fora
+    // levaria o token junto no cabeçalho.
+    var mesmaOrigem = new URL(url, location.href).origin === location.origin;
+    if (acesso.token && mesmaOrigem) headers['X-Token'] = acesso.token;
     return fetch(url, Object.assign({}, opcoes, { headers: headers }));
   };
 

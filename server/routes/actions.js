@@ -26,24 +26,47 @@ const { redigir } = require('../lib/segredos');
 // POST em qualquer botão de `atalhos.abrirApp` com
 // { caminho: 'powershell.exe', argumentos: '-Command …' } executava o que
 // quisesse, com token e sem passar pelo exigirLocal.
-const CHAVES_DO_CLIENTE = ['valor', 'opcaoId'];
+//
+// E cada chave só vale no tipo de botão que a manda. Aceitar `opcaoId` em
+// qualquer botão deixava o tablet sobrescrever o parâmetro FIXO: um botão
+// "Luz da sala" recebendo { opcaoId: 'cover.garagem' } abria o portão, e
+// { opcaoId: 'all' } num "desligar" apagava a casa inteira. Só valores
+// escalares passam — array ou objeto não é o que nenhum dos dois manda.
+const CHAVES_DO_CLIENTE = {
+  valor: { tipo: 'slider', aceita: (v) => typeof v === 'number' && Number.isFinite(v) },
+  opcaoId: {
+    tipo: 'lista',
+    aceita: (v) =>
+      (typeof v === 'string' && v.length > 0 && v.length <= 200) ||
+      (typeof v === 'number' && Number.isFinite(v)),
+  },
+};
 
-function parametrosDoCliente(corpo) {
+function parametrosDoCliente(corpo, botao) {
   const filtrados = {};
   if (!corpo || typeof corpo !== 'object') return filtrados;
-  for (const chave of CHAVES_DO_CLIENTE) {
-    if (Object.prototype.hasOwnProperty.call(corpo, chave)) filtrados[chave] = corpo[chave];
+  const tipoBotao = botao.tipo || 'botao';
+  for (const [chave, regra] of Object.entries(CHAVES_DO_CLIENTE)) {
+    if (!Object.prototype.hasOwnProperty.call(corpo, chave)) continue;
+    if (regra.tipo !== tipoBotao) continue;
+    if (!regra.aceita(corpo[chave])) {
+      throw new Error(`Valor inválido em "${chave}".`);
+    }
+    filtrados[chave] = corpo[chave];
   }
   return filtrados;
 }
 
 function resolverAcao(integracoes, passo) {
-  const integracao = integracoes[passo.integracao];
+  // Object.hasOwn: sem isso "toString" ou "constructor" achariam coisa no
+  // protótipo em vez de dizer que não existem.
+  const integracao = Object.hasOwn(integracoes, passo.integracao) ? integracoes[passo.integracao] : null;
   if (!integracao) {
     throw new Error(`Integração "${passo.integracao}" não existe.`);
   }
-  const acao = integracao.acoes[passo.acao];
-  if (!acao) {
+  const acoes = integracao.acoes;
+  const acao = Object.hasOwn(acoes, passo.acao) ? acoes[passo.acao] : null;
+  if (typeof acao !== 'function') {
     throw new Error(`Ação "${passo.acao}" não existe na integração "${passo.integracao}".`);
   }
   return acao;
@@ -62,6 +85,14 @@ module.exports = function criarRotaAcoes(integracoes) {
     // Normaliza os dois formatos (simples e macro) para uma lista de passos.
     const passos = botao.acoes || [{ integracao: botao.integracao, acao: botao.acao, parametros: botao.parametros }];
 
+    let doCliente;
+    try {
+      doCliente = parametrosDoCliente(req.body, botao);
+    } catch (erro) {
+      res.status(400).json({ ok: false, erro: erro.message });
+      return;
+    }
+
     try {
       let estado = null;
       for (const passo of passos) {
@@ -71,7 +102,7 @@ module.exports = function criarRotaAcoes(integracoes) {
         // recebem corpo, mas manter uniforme evita surpresa. Só as chaves de
         // CHAVES_DO_CLIENTE passam: o resto do que define a ação vem do
         // config, que só é gravável de 127.0.0.1.
-        const parametros = { ...(passo.parametros || {}), ...parametrosDoCliente(req.body) };
+        const parametros = { ...(passo.parametros || {}), ...doCliente };
         estado = await acao(parametros);
       }
       res.json({ ok: true, estado });

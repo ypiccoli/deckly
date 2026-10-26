@@ -227,9 +227,30 @@ function exigirLocal(req, res, next) {
   });
 }
 
+// Igual ao exigirLocal, mas o CONFIG_REMOTO NÃO abre. Vale para o que nunca
+// deveria responder pela rede, nem com a configuração remota liberada:
+//
+//   - GET /api/bemvindo, que revela o token SEM pedir token. Com
+//     CONFIG_REMOTO=true ela respondia para a LAN inteira, e qualquer aparelho
+//     da rede saía de lá com o token — anulando a trava principal do app.
+//     Quem liga CONFIG_REMOTO quer configurar pelo tablet, não isso.
+//   - O OAuth do Spotify e do Discord: o redirect URI é 127.0.0.1, então pela
+//     rede ele nem funcionaria; deixar aberto só aumentaria a superfície.
+function exigirSoLocal(req, res, next) {
+  if (ehLocal(req)) {
+    next();
+    return;
+  }
+  res.status(403).json({
+    ok: false,
+    erro: 'Esta parte só responde no próprio PC, pelo endereço 127.0.0.1.',
+  });
+}
+
 module.exports = {
   exigirToken,
   exigirLocal,
+  exigirSoLocal,
   exigirHostConhecido,
   ehLocal,
   hostAceito,

@@ -12,19 +12,8 @@ const express = require('express');
 const discord = require('../integrations/discord');
 const favoritos = require('../lib/favoritos-store');
 const { redigir } = require('../lib/segredos');
-const { exigirLocal, exigirToken } = require('../lib/auth');
-
-function pagina(titulo, blocos) {
-  return `<!doctype html>
-<html lang="pt-BR"><head><meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${titulo} — Deckly</title></head>
-<body style="font-family:'Segoe UI',system-ui,sans-serif;background:#0f1115;color:#eef0f4;margin:0;padding:40px 24px">
-<div style="max-width:560px;margin:0 auto;background:#1b1e27;border:1px solid #2a2e3a;border-radius:18px;padding:28px">
-<h1 style="margin:0 0 14px;font-size:1.3rem">${titulo}</h1>
-${blocos.join('\n')}
-</div></body></html>`;
-}
+const { exigirSoLocal, exigirToken } = require('../lib/auth');
+const { pagina, escaparHtml } = require('../lib/pagina-html');
 
 module.exports = function criarRotaDiscord() {
   const router = express.Router();
@@ -53,7 +42,7 @@ module.exports = function criarRotaDiscord() {
   // a pessoa aprova numa janela do próprio Discord, e os tokens são gravados
   // e aplicados na hora — sem copiar e colar nada. Quem grava é a própria
   // integração: a renovação automática grava pelo mesmo caminho.
-  router.get('/autorizar', exigirLocal, async (req, res) => {
+  router.get('/autorizar', exigirSoLocal, async (req, res) => {
     try {
       await discord.autorizarRpc();
       await discord.reconfigurar();
@@ -65,7 +54,7 @@ module.exports = function criarRotaDiscord() {
       ]));
     } catch (erro) {
       res.status(500).send(pagina('Não deu para conectar', [
-        `<p>${redigir(erro.message)}</p>`,
+        `<p>${escaparHtml(redigir(erro.message))}</p>`,
         '<p>Confira se o Discord está aberto neste PC (o app, não a versão web) e se o ' +
           'Client ID e o Client Secret estão certos.</p>',
       ]));

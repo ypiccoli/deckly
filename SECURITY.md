@@ -20,7 +20,8 @@ aparelho aleatório do Wi-Fi não consiga mandar o seu PC abrir programas.
 | Trava | Onde se aplica | Por quê |
 |-------|----------------|---------|
 | **`exigirToken`** | Tudo que dispara ação ou lê estado: `POST /action/:id`, `/api/*`, `/atalhos/*`, `/media/saidas`, `/discord/*`, `/homeassistant/*`, `/spotify/dispositivos` e o WebSocket `/ws` | Sem isso, qualquer aparelho da rede mandaria o seu PC abrir programas |
-| **`exigirLocal`** | Só o que **reconfigura** o app: `PUT /api/config`, `GET /api/catalogo`, `GET/PUT /api/integracoes`, `/api/bemvindo`, e o OAuth do Spotify e do Discord | Um botão pode mandar abrir qualquer programa. Criar botão é, na prática, execução de código — então fica restrito ao próprio PC (`127.0.0.1`), liberável com `CONFIG_REMOTO=true` por quem aceitar o risco |
+| **`exigirLocal`** | Só o que **reconfigura** o app: `PUT /api/config`, `GET /api/catalogo`, `GET/PUT /api/integracoes` | Um botão pode mandar abrir qualquer programa. Criar botão é, na prática, execução de código — então fica restrito ao próprio PC (`127.0.0.1`), liberável com `CONFIG_REMOTO=true` por quem aceitar o risco |
+| **`exigirSoLocal`** | `/api/bemvindo` (e `/encerrar`), e o OAuth do Spotify e do Discord | Igual ao anterior, mas **o `CONFIG_REMOTO` não abre**. `/api/bemvindo` revela o token sem pedir token: liberada pela rede, qualquer aparelho da LAN sairia de lá com ele. E o OAuth volta para `127.0.0.1`, então pela rede nem funcionaria |
 
 A tabela completa, rota por rota, está em
 [docs/urls.md](docs/urls.md#rotas-da-api).
@@ -31,7 +32,8 @@ Três decisões que parecem brechas e não são:
   propósito.** HTML, CSS e JS não têm segredo, e a página precisa carregar
   para poder pedir o token a quem ainda não pareou.
 - **`GET /api/bemvindo` é a única rota sem token** — não poderia exigir um,
-  é justamente onde o token é revelado. Ela se protege por `exigirLocal`.
+  é justamente onde o token é revelado. Ela se protege por `exigirSoLocal`,
+  que nem o `CONFIG_REMOTO=true` abre.
 - **`PUT /api/layout` e `POST /api/favoritos` não exigem `exigirLocal`**,
   porque arrastar botão e favoritar canal são coisas que se faz do tablet.
   O `layout` é seguro pela **forma do payload**, não por uma verificação: ele
@@ -75,6 +77,35 @@ Três decisões que parecem brechas e não são:
   esse filtro daria para pegar qualquer botão de "abrir programa" e trocar o
   caminho dele por um comando qualquer, o que contornaria na prática o
   `exigirLocal` do `PUT /api/config`.
+- **E cada uma dessas duas só vale no tipo de botão que a manda**: `valor`
+  (número) só em `slider`, `opcaoId` (texto ou número curto) só em `lista`.
+  Antes, `opcaoId` num botão fixo sobrescrevia o parâmetro dele — um botão
+  "Luz da sala" virava "abrir o portão", e `"all"` num "desligar" apagava a
+  casa inteira.
+- **O que vem do seletor é validado na ação que o usa**: AppID da Steam só
+  dígitos (o valor vira `steam://rungameid/…`, e o resto viraria argumento de
+  linha de comando do jogo), entidade do Home Assistant no formato
+  `dominio.nome` e só de domínios acionáveis, canal do Discord só snowflake,
+  destino do "Ir para…" só da lista `DISCORD_DESTINOS`, saída de áudio e
+  dispositivo do Spotify só no formato de id deles.
+- **Páginas HTML soltas escapam tudo que vem de fora**
+  (`server/lib/pagina-html.js`). O callback do Spotify repetia o `?error=` cru
+  no HTML: qualquer site aberto no PC navegava para lá, rodava script na
+  origem do Deckly, lia o token em `/api/bemvindo` e criava um botão de
+  "abrir programa". O OAuth do Spotify também passou a usar `state`, então só
+  é aceito o retorno de uma autorização que partiu deste Deckly.
+- **Cabeçalhos de segurança em toda resposta**: CSP com `script-src 'self'`
+  (não há script inline no projeto), `frame-ancestors 'none'` e
+  `X-Frame-Options: DENY` (ninguém emoldura a tela de boas-vindas para
+  induzir o clique em "Encerrar servidor"), `nosniff` e
+  `Referrer-Policy: no-referrer`.
+- **WebSocket malformado não derruba o servidor.** O socket tem listener de
+  erro antes de qualquer checagem, e quadro maior que 4 KB é recusado — o
+  servidor nunca lê mensagem do cliente. Sem isso, seis bytes vindos de
+  qualquer aparelho da rede, sem token, encerravam o processo.
+- **O service worker só guarda arquivo estático** — nada de lista vinda da
+  API (títulos de janela, canais) no disco do tablet, e a chave do cache vai
+  sem query, para o `?token=` do link de pareamento nunca ser gravado.
 - **Requisição por nome DNS é recusada** (`exigirHostConhecido`, em
   `server/lib/auth.js`): só IP literal e `localhost` passam. É a defesa
   contra **DNS rebinding** — sem ela, um site malicioso poderia fazer o seu

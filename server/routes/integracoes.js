@@ -81,7 +81,14 @@ module.exports = function criarRotaIntegracoes(integracoes) {
       // navegador nunca recebeu o valor atual para poder reenviá-lo. Para
       // apagar de verdade existe o botão "limpar", que manda null.
       if (valor === undefined) continue;
-      paraGravar[chave] = valor === null ? '' : String(valor).trim();
+      const texto = valor === null ? '' : String(valor).trim();
+      // O .env é lido linha a linha (lib/env-store.js): uma quebra de linha
+      // no meio do valor corromperia a entrada na próxima gravação.
+      if (/[\r\n]/.test(texto)) {
+        res.status(400).json({ ok: false, erro: `O campo ${chave} não pode ter quebra de linha.` });
+        return;
+      }
+      paraGravar[chave] = texto;
     }
 
     if (Object.keys(paraGravar).length === 0) {

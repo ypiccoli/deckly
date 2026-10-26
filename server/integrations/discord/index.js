@@ -1009,6 +1009,8 @@ class IntegracaoDiscord extends EventEmitter {
         this._garantirRpc();
         const id = parametros.opcaoId || parametros.canalId;
         if (!id) throw new Error('Nenhum canal informado.');
+        // Snowflake do Discord: só dígitos.
+        if (!/^\d{15,25}$/.test(String(id))) throw new Error('Identificador de canal inválido.');
         // Já estando num canal, trocar exige `forcar` — senão o Discord
         // recusa e o seletor só funcionaria fora de chamada.
         await this.rpc.entrarNoCanal(String(id), { forcar: this.estado.emChamada });
@@ -1039,7 +1041,15 @@ class IntegracaoDiscord extends EventEmitter {
       servidorProximo: () => this._tecla('DISCORD_TECLA_SERVIDOR_PROXIMO'),
       ligacaoAtual: () => this._tecla('DISCORD_TECLA_LIGACAO_ATUAL'),
       abrirBusca: () => this._tecla('DISCORD_TECLA_BUSCA'),
-      irPara: (parametros = {}) => this._irParaPorBusca(parametros.opcaoId || parametros.destino),
+      irPara: (parametros = {}) => {
+        // O nome é DIGITADO no Discord, seguido de ENTER. Do seletor, só vale
+        // um dos nomes de DISCORD_DESTINOS — que é tudo que a lista oferece —,
+        // senão o tablet mandaria digitar texto livre no PC.
+        if (parametros.opcaoId != null && !this.destinos.includes(String(parametros.opcaoId))) {
+          throw new Error('Destino fora da lista de DISCORD_DESTINOS.');
+        }
+        return this._irParaPorBusca(parametros.opcaoId || parametros.destino);
+      },
     };
   }
 }

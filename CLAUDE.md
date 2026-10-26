@@ -27,6 +27,13 @@ português.** Mantenha esse padrão em qualquer código novo.
     classe que o JS antigo não criava. O servidor está na mesma LAN, então
     buscar da rede custa milissegundos, e o cache continua cobrindo o caso que
     motivou o service worker (Wi-Fi caindo, PC ainda subindo).
+  - **O que entra no cache é lista positiva**: só GET de mesma origem com
+    `request.destination` de arquivo estático, gravado com a URL **sem
+    query**. Antes era "tudo menos `/api`, `/action` e `/ws`", e isso guardava
+    no tablet as listas autenticadas (títulos de janela do PC, canais) e o
+    `/?token=…` do link de pareamento como chave.
+  - **Nada de `<script>` inline nem `onclick=`**: o servidor manda CSP com
+    `script-src 'self'`. Estilo inline (`style=`) pode — o CSP libera.
 - **Integrações**: cada uma em `server/integrations/<nome>/`, isolada.
 - Segredos em `.env` (nunca commitado — só `.env.example`).
 
@@ -616,8 +623,12 @@ diferentes:
   `/atalhos`, `/api`, `/spotify/dispositivos`, e o WebSocket). Sem isso,
   qualquer aparelho da rede mandaria o PC abrir programas.
 - **`exigirLocal`** — camada extra no que *reconfigura* o app (`PUT
-  /api/config`, `GET /api/catalogo`, OAuth do Spotify): por padrão só
+  /api/config`, `GET /api/catalogo`, `/api/integracoes`): por padrão só
   responde de 127.0.0.1, liberável com `CONFIG_REMOTO=true`.
+- **`exigirSoLocal`** — o mesmo, mas **o `CONFIG_REMOTO` não abre**. Vale para
+  `/api/bemvindo` (revela o token sem pedir token — com `exigirLocal`, ligar o
+  `CONFIG_REMOTO` entregava o token à LAN inteira) e para o OAuth do Spotify e
+  do Discord, cujo retorno é `127.0.0.1` de qualquer forma.
 
 Detalhes que importam ao mexer aqui:
 
@@ -629,6 +640,13 @@ Detalhes que importam ao mexer aqui:
   `hostAceito` (anti DNS rebinding) e o limite de tentativas são aplicados à
   mão dentro do `wss.on('connection')` — código 4003 para nome DNS, 4029 para
   bloqueio. Esquecer isso deixaria um caminho aberto ao lado da porta trancada.
+- **`socket.on('error')` é a primeira linha do `connection`**, e o `wss` tem
+  `maxPayload` de 4 KB e um `on('error')` vazio. Sem o listener do socket, um
+  quadro WebSocket malformado virava exceção não tratada e derrubava o
+  processo — seis bytes de qualquer aparelho da rede, **sem token**, logo
+  depois do handshake (o `close()` da recusa ainda está em andamento quando o
+  quadro chega). Sem o do `wss`, porta ocupada virava `[fatal]` cru em vez de
+  "o Deckly já está rodando?", porque o `ws` repassa os erros do HTTP.
 - **Dez tentativas erradas de token bloqueiam o IP** por 1 min, dobrando até
   15 min (`bloqueioRestante`/`registrarFalha`/`registrarSucesso` em
   `lib/auth.js`, `Map` em memória, limpeza preguiçosa — sem `setInterval`).
@@ -700,6 +718,32 @@ padrão.
 Ao adicionar uma ação que receba dado do cliente em runtime, o caminho é
 acrescentar a chave em `CHAVES_DO_CLIENTE` **conscientemente** — não voltar
 a mesclar o corpo inteiro.
+
+**Cada chave também é amarrada ao tipo do botão**: `valor` (número finito)
+só entra em `slider`, `opcaoId` (escalar curto) só em `lista`. Aceitar
+`opcaoId` em qualquer botão deixava o tablet sobrescrever o parâmetro fixo —
+`{ opcaoId: 'cover.garagem' }` num botão "Luz da sala" abria o portão, e
+`'all'` num "desligar" apagava a casa.
+
+E o `opcaoId` de um botão `lista` **é validado na ação que o usa**, porque a
+lista é só o que o frontend ofereceu — o POST pode mandar qualquer coisa:
+AppID da Steam só dígitos (vira `steam://rungameid/…`, e o resto viraria
+argumento do jogo), entidade do HA em `dominio.nome` e de
+`DOMINIOS_ACIONAVEIS` (a lista de domínios **não** vale para entidade fixa no
+config, que foi gravada do PC), canal do Discord snowflake, "Ir para…" só da
+`DISCORD_DESTINOS`, saída de áudio no formato `{0.0.0.00000000}.{guid}`.
+Ação nova que aceite seletor deve fazer o mesmo.
+
+### Páginas HTML soltas passam por `lib/pagina-html.js`
+
+As rotas de OAuth respondem HTML lido por gente (o Spotify devolve o
+navegador para lá). O callback repetia o `?error=` cru, e isso era
+**execução de código com um clique**: qualquer site aberto no PC navegava
+para `http://127.0.0.1:3000/spotify/callback?error=<script>…`, passava no
+anti-rebinding (é IP) e no `exigirLocal` (é 127.0.0.1), lia o token em
+`/api/bemvindo` e gravava um botão `abrirApp`. Tudo que entra num bloco de
+`pagina()` passa por `escaparHtml()`. O OAuth do Spotify também usa `state`
+(uso único, 10 min, em memória) contra CSRF de login.
 
 ## Modo de edição de layout (no próprio deck)
 
@@ -854,7 +898,7 @@ estruturada, que é como a tela de configuração monta os formulários.
 | `estadoComparar` | `botao` | Compara `estadoChave` com `parametros[<valor>]` — é como vários botões de cena do OBS compartilham a mesma chave e só um acende |
 | `estiloEstado` | todos | `destaque` \| `perigo` \| `gravando` |
 | `min` / `max` | `slider` | Faixa numérica (obrigatórios) |
-| `fonte` | `lista` | Endpoint GET que devolve `{ ok, opcoes: [...] }` (obrigatório) |
+| `fonte` | `lista` | Endpoint GET que devolve `{ ok, opcoes: [...] }` (obrigatório). Caminho **deste** servidor, começando com `/` — o deck manda o token junto |
 | `iconeItem` / `mensagemVazia` | `lista` | Ícone padrão dos itens e texto de lista vazia |
 | `estadoTexto` / `…Secundario` / `…Terciario` | `info` | Dot-paths das linhas de texto exibidas |
 | `textoVazio` | `info` | Texto quando não há nada a mostrar. Ausente = "Nada tocando" |

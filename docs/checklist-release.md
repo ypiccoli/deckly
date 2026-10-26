@@ -62,6 +62,37 @@ curl -s -o /dev/null -w "%{http_code}\n" -H "Host: qualquer.exemplo.com:3555" \
       para o bloqueio
 - [ ] `Host:` com nome DNS devolve 403
 
+### Os furos já fechados continuam fechados
+
+```bash
+B=http://127.0.0.1:3555
+
+# Página do OAuth escapa o que vem da URL, e recusa retorno sem `state`
+curl -s "$B/spotify/callback?error=%3Cscript%3E" | grep -c "<script>"   # 0
+
+# Cabeçalhos de segurança
+curl -sI $B/ | grep -iE "content-security|x-frame|nosniff"
+
+# opcaoId só vale em botão "lista", e é validado na ação
+curl -s -X POST -H "X-Token: $TOKEN" -H "Content-Type: application/json" \
+  $B/action/atalhos.jogos_steam -d '{"opcaoId":"440//+exec x"}'        # recusado
+
+# Quadro WebSocket inválido, SEM token, não derruba o servidor
+node -e "
+const s=require('net').connect(3555,'127.0.0.1',()=>{s.write('GET /ws HTTP/1.1\r\nHost: 127.0.0.1\r\n'+
+'Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n'+
+'Sec-WebSocket-Version: 13\r\n\r\n');s.write(Buffer.from([0x83,0x80,1,2,3,4]))});
+s.on('error',()=>{});setTimeout(()=>process.exit(0),1500)"
+curl -s -o /dev/null -w "%{http_code}\n" $B/                            # 200
+```
+
+- [ ] O callback não devolve `<script>` cru, e sem `state` responde 400
+- [ ] CSP, `X-Frame-Options` e `nosniff` presentes
+- [ ] `opcaoId` malformado é recusado; num botão fixo é ignorado
+- [ ] O servidor sobrevive ao quadro WebSocket inválido
+- [ ] Com `CONFIG_REMOTO=true`, `GET /api/bemvindo` pelo IP da LAN dá 403
+      (a tela de boas-vindas revela o token — nunca pode abrir para a rede)
+
 ## 4. Config quebrado não derruba
 
 ```bash

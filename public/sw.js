@@ -1,13 +1,13 @@
 // Service worker mínimo: só o necessário para o PWA ser instalável e
-// funcionar em rede instável. Requisições dinâmicas (ações, WS, config)
-// nunca são cacheadas — sempre vão direto para a rede.
+// funcionar em rede instável. Só arquivo estático é cacheado; requisição
+// dinâmica (ações, listas, WS, config) sempre vai direto para a rede.
 
 // A versão serve para descartar o cache antigo no `activate`. Ela NÃO é mais
 // a única linha de defesa contra arquivo velho: veja a estratégia do `fetch`
 // mais abaixo. Depender de subir isto à mão já falhou uma vez, e o sintoma é
 // péssimo de diagnosticar — CSS novo com JS antigo deixa a tela meio
 // quebrada, sem erro nenhum no console.
-const CACHE_NOME = 'deckly-v14';
+const CACHE_NOME = 'deckly-v15';
 const ARQUIVOS_ESTATICOS = [
   '/',
   '/index.html',
@@ -45,24 +45,37 @@ self.addEventListener('activate', (evento) => {
 // O servidor está na mesma LAN, então buscar da rede custa alguns
 // milissegundos — e o cache continua salvando o caso que motivou o service
 // worker: Wi-Fi caindo ou PC ainda subindo.
-self.addEventListener('fetch', (evento) => {
-  const url = new URL(evento.request.url);
+//
+// O QUE vai para o cache é decidido por lista positiva: só arquivo estático
+// da própria origem (página, script, estilo, imagem, manifesto, fonte). Antes
+// era "tudo que não for /api, /action ou /ws", e isso guardava no disco do
+// tablet as listas autenticadas — títulos de janela do PC, canais do
+// Discord, entidades da casa — e fazia o cache crescer a cada URL nova.
+const DESTINOS_ESTATICOS = new Set(['document', 'script', 'style', 'image', 'manifest', 'font']);
 
-  const ehDinamico =
-    url.pathname.startsWith('/action') || url.pathname.startsWith('/api') || url.pathname.startsWith('/ws');
-  if (ehDinamico || evento.request.method !== 'GET') return;
+self.addEventListener('fetch', (evento) => {
+  const pedido = evento.request;
+  if (pedido.method !== 'GET') return;
+
+  const url = new URL(pedido.url);
+  if (url.origin !== self.location.origin) return;
+  if (!DESTINOS_ESTATICOS.has(pedido.destination)) return;
+
+  // A chave do cache é a URL SEM query: o link de pareamento (/?token=…)
+  // senão gravaria o token na chave do Cache Storage.
+  const chave = url.origin + url.pathname;
 
   evento.respondWith(
-    fetch(evento.request)
+    fetch(pedido)
       .then((resposta) => {
         // Só guarda resposta boa: cachear um 404 do servidor subindo
         // deixaria o erro grudado no aparelho.
         if (resposta && resposta.ok) {
           const copia = resposta.clone();
-          caches.open(CACHE_NOME).then((cache) => cache.put(evento.request, copia));
+          caches.open(CACHE_NOME).then((cache) => cache.put(chave, copia));
         }
         return resposta;
       })
-      .catch(() => caches.match(evento.request)),
+      .catch(() => caches.match(chave)),
   );
 });

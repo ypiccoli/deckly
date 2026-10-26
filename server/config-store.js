@@ -190,6 +190,15 @@ function validar(novoConfig, integracoes) {
       if (tipo === 'lista' && !botao.fonte) {
         erros.push(`${onde}: botão do tipo "lista" precisa do campo "fonte".`);
       }
+      // Fonte é uma rota DESTE servidor: o deck busca a lista mandando o
+      // token junto, então uma URL de fora o entregaria a terceiros.
+      for (const campo of ['fonte', 'favoritoFonte']) {
+        const valor = botao[campo];
+        if (valor == null || valor === '') continue;
+        if (typeof valor !== 'string' || !valor.startsWith('/') || valor.startsWith('//')) {
+          erros.push(`${onde}: "${campo}" precisa ser um caminho deste servidor, começando com "/" (ex.: /atalhos/janelas).`);
+        }
+      }
 
       // A estrela de favoritar precisa dos dois: de qual lista o item é
       // ("favoritoFonte") e onde está o id do item exibido agora
@@ -230,7 +239,9 @@ function validar(novoConfig, integracoes) {
           erros.push(`${ondePasso}: falta o campo "integracao".`);
           return;
         }
-        const integracao = integracoes[passo.integracao];
+        // Object.hasOwn: "toString" ou "constructor" achariam coisa no
+        // protótipo — e "acao": "constructor" chegava a passar.
+        const integracao = Object.hasOwn(integracoes, passo.integracao) ? integracoes[passo.integracao] : null;
         if (!integracao) {
           erros.push(`${ondePasso}: integração "${passo.integracao}" não existe.`);
           return;
@@ -239,7 +250,8 @@ function validar(novoConfig, integracoes) {
           erros.push(`${ondePasso}: falta o campo "acao".`);
           return;
         }
-        if (!integracao.acoes[passo.acao]) {
+        const acoes = integracao.acoes;
+        if (!Object.hasOwn(acoes, passo.acao) || typeof acoes[passo.acao] !== 'function') {
           erros.push(`${ondePasso}: ação "${passo.acao}" não existe na integração "${passo.integracao}".`);
         }
       });
@@ -297,7 +309,11 @@ function aplicarLayout(paginasLayout) {
       continue;
     }
 
-    const idsPedidos = paginaLayout.botoes.map((b) => b?.id);
+    if (paginaLayout.botoes.some((b) => !b || typeof b !== 'object' || typeof b.id !== 'string')) {
+      erros.push(`${onde}: cada botão da lista precisa ser um objeto com "id".`);
+      continue;
+    }
+    const idsPedidos = paginaLayout.botoes.map((b) => b.id);
     const idsAtuais = pagina.botoes.map((b) => b.id);
 
     if (idsPedidos.length !== idsAtuais.length) {

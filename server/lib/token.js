@@ -59,7 +59,9 @@ function carregar() {
   }
 
   const token = gerar();
-  fs.writeFileSync(CAMINHO_TOKEN, JSON.stringify({ token }, null, 2) + '\n', 'utf8');
+  // 0600: só o próprio usuário lê (vale no Linux/WSL; no Windows quem manda
+  // é a ACL da pasta).
+  fs.writeFileSync(CAMINHO_TOKEN, JSON.stringify({ token }, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
   return { token, origem: 'gerado agora' };
 }
 

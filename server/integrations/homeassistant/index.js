@@ -44,6 +44,27 @@ const DOMINIOS_ACIONAVEIS = new Set([
   'climate',
 ]);
 
+// entity_id do Home Assistant: "dominio.objeto", minúsculo. A regra recusa
+// o que a API aceitaria e o deck não deveria mandar: "all" (que em
+// turn_off desliga a casa inteira), listas, e domínios fora da lista acima.
+const FORMATO_ENTIDADE = /^[a-z_]+\.[a-z0-9_]+$/;
+
+//
+// A lista de domínios só vale para o que vem do SELETOR (opcaoId), que é
+// escolha feita no tablet. Entidade fixa no config foi gravada do próprio PC
+// por quem montou o deck, então só o formato é conferido — quem quiser um
+// botão de fechadura pode ter.
+function validarEntidade(entidade, dominiosPermitidos = null) {
+  if (typeof entidade !== 'string' || !FORMATO_ENTIDADE.test(entidade)) {
+    throw new Error(`Entidade inválida: "${entidade}". Use o formato dominio.nome, ex.: light.sala.`);
+  }
+  const dominio = entidade.split('.')[0];
+  if (dominiosPermitidos && !dominiosPermitidos.has(dominio)) {
+    throw new Error(`Entidades do tipo "${dominio}" não podem ser acionadas por este botão.`);
+  }
+  return entidade;
+}
+
 // Chave de estado precisa ser um dot-path (ex.: homeassistant.entidades.X),
 // e entity_id tem ponto no meio ("light.sala"). Trocar por underscore evita
 // que o resolvedor de estado do frontend se perca no meio do caminho.
@@ -412,10 +433,12 @@ class IntegracaoHomeAssistant extends EventEmitter {
 
   get acoes() {
     // opcaoId vem do seletor genérico; `entidade` vem de um botão fixo.
-    const alvoDe = (p) => {
-      const entidade = p.opcaoId || p.entidade;
-      if (!entidade) throw new Error('Parâmetro "entidade" é obrigatório.');
-      return entidade;
+    // Do seletor, só os domínios acionáveis (ou os que a ação pede); fixa no
+    // config, só o formato.
+    const alvoDe = (p, dominios = DOMINIOS_ACIONAVEIS) => {
+      if (p.opcaoId) return validarEntidade(p.opcaoId, dominios);
+      if (!p.entidade) throw new Error('Parâmetro "entidade" é obrigatório.');
+      return validarEntidade(p.entidade);
     };
 
     return {
@@ -435,7 +458,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
         return this.estado;
       },
       definirBrilho: async (parametros = {}) => {
-        const entidade = alvoDe(parametros);
+        const entidade = alvoDe(parametros, new Set(['light']));
         const valor = Number(parametros.valor);
         if (Number.isNaN(valor)) throw new Error('Parâmetro "valor" (0–100) é obrigatório.');
         await this._chamarServico('light', 'turn_on', {
@@ -449,6 +472,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
         // isso esta ação não usa alvoDe(): a entidade vem fixa do botão.
         const entidade = parametros.entidade;
         if (!entidade) throw new Error('Parâmetro "entidade" é obrigatório.');
+        validarEntidade(entidade);
         const cor = String(parametros.opcaoId || parametros.cor || '').trim();
         if (!cor) throw new Error('Parâmetro "cor" é obrigatório.');
 
@@ -475,8 +499,12 @@ class IntegracaoHomeAssistant extends EventEmitter {
       enviarComando: async (parametros = {}) => {
         const entidade = parametros.entidade;
         if (!entidade) throw new Error('Parâmetro "entidade" é obrigatório (ex.: remote.controle_universal).');
+        validarEntidade(entidade);
         const comando = parametros.opcaoId || parametros.comando;
         if (!comando) throw new Error('Parâmetro "comando" é obrigatório (ex.: ligar).');
+        if (typeof comando !== 'string' || comando.length > 100) {
+          throw new Error('Parâmetro "comando" precisa ser o nome de um código aprendido.');
+        }
         await this._chamarServico('remote', 'send_command', {
           entity_id: entidade,
           // "device" agrupa os códigos por aparelho na hora de aprender: o
@@ -487,7 +515,7 @@ class IntegracaoHomeAssistant extends EventEmitter {
         return this.estado;
       },
       ativarCena: async (parametros = {}) => {
-        await this._chamarServico('scene', 'turn_on', { entity_id: alvoDe(parametros) });
+        await this._chamarServico('scene', 'turn_on', { entity_id: alvoDe(parametros, new Set(['scene'])) });
         return this.estado;
       },
     };

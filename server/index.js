@@ -89,6 +89,29 @@ function iniciarServidor() {
   // a explicação longa em lib/auth.js.
   app.use(exigirHostConhecido);
 
+  // Cabeçalhos de segurança. O CSP é a rede de proteção para o próximo XSS:
+  // não há <script> inline no projeto, então script-src 'self' cabe sem
+  // quebrar nada. 'unsafe-inline' fica só no estilo (atributos style= das
+  // páginas de OAuth e o --cor-botao dos botões). O avatar do card "Em
+  // chamada" é a única imagem de fora (CDN do Discord).
+  //
+  // frame-ancestors/X-Frame-Options: sem eles, um site podia emoldurar
+  // /bemvindo/ ou /config/ e induzir o clique em "Encerrar servidor" ou
+  // "Salvar" por baixo de outra coisa.
+  app.disable('x-powered-by');
+  app.use((req, res, next) => {
+    res.set({
+      'Content-Security-Policy':
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https://cdn.discordapp.com; connect-src 'self' ws: wss:; " +
+        "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
+      'X-Frame-Options': 'DENY',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+    });
+    next();
+  });
+
   app.use(express.json());
 
   // Os arquivos estáticos ficam abertos de propósito: HTML, CSS e JS não têm
@@ -128,7 +151,23 @@ function iniciarServidor() {
   app.use('/spotify', criarRotaSpotifyAuth());
 
   const servidorHttp = http.createServer(app);
-  const wss = new WebSocket.Server({ server: servidorHttp, path: '/ws' });
+  // O servidor nunca lê mensagem do cliente — o WebSocket é só de ida. Sem
+  // maxPayload, o padrão do `ws` aceitaria quadros de até 100 MiB.
+  const wss = new WebSocket.Server({ server: servidorHttp, path: '/ws', maxPayload: 4 * 1024 });
+  // O `ws` repassa os erros do servidor HTTP (porta ocupada, por exemplo)
+  // como 'error' do wss. Sem listener aqui isso virava exceção não tratada
+  // ANTES do servidorHttp.on('error') abaixo, e a mensagem "o Deckly já está
+  // rodando?" nunca aparecia. Quem trata é o handler do HTTP.
+  wss.on('error', () => {});
+
+  // Integrações que fazem polling (Spotify) param quando não há nenhum tablet
+  // olhando. Hook opcional: quem não tem definirAudiencia ignora.
+  function avisarAudiencia() {
+    const temAlguem = wss.clients.size > 0;
+    for (const integracao of Object.values(integracoes)) {
+      if (typeof integracao.definirAudiencia === 'function') integracao.definirAudiencia(temAlguem);
+    }
+  }
 
   // Estado global: espelha o estado de cada integração, é enviado por completo
   // quando um cliente conecta e atualizado via broadcast a cada mudança.
@@ -152,6 +191,12 @@ function iniciarServidor() {
   // volume), então também precisa de token. Um navegador não consegue mandar
   // header no handshake de WebSocket — por isso ele vai na query string.
   wss.on('connection', (socket, req) => {
+    // PRIMEIRA coisa, antes de qualquer checagem: um quadro malformado (ou
+    // maior que o maxPayload) vira evento 'error' no socket, e sem listener
+    // isso é exceção não tratada — o processo morria. Bastavam 6 bytes vindos
+    // de qualquer aparelho da rede, SEM token, logo depois do handshake: o
+    // close() da recusa ainda está em andamento quando o quadro chega.
+    socket.on('error', () => socket.terminate());
     // O handshake de WebSocket é um "upgrade", e upgrade não passa pelos
     // middlewares do Express — nem pelo exigirHostConhecido. Então a mesma
     // recusa de nome DNS é aplicada aqui à mão, senão sobraria um caminho
@@ -178,6 +223,9 @@ function iniciarServidor() {
     }
     registrarSucesso(ip);
     socket.send(JSON.stringify({ tipo: 'estado_completo', dados: estadoGlobal }));
+    avisarAudiencia();
+    // No 'close' o socket já saiu de wss.clients, então a contagem bate.
+    socket.on('close', avisarAudiencia);
   });
 
   // Chamada pela rota PUT /api/config depois de gravar: cada cliente rebusca
