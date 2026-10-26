@@ -311,6 +311,46 @@ o Discord responde `User is already joined to a voice channel` e a troca só
 funciona quando você já está fora de qualquer canal, que é justamente quando
 não se precisa dela. Sair (`channel_id: null`) não precisa de `force`.
 
+### Quem está no canal (`discord.pessoas`)
+
+O card "Em chamada" lista as pessoas do seu canal de voz — avatar, mudo/surdo e
+o nome aceso de quem está falando — e o seletor "Canais" diz quantas pessoas
+há em cada canal. Só no modo RPC. Três coisas que custam caro se desfeitas:
+
+- **Trocar de canal exige `UNSUBSCRIBE`.** `VOICE_STATE_*` e `SPEAKING_*` são
+  assinados **por canal** e não morrem sozinhos: sem desassinar, depois de três
+  trocas chegariam eventos dos três canais e a lista encheria de gente que não
+  está com você. `_trocarAssinaturasDeCanal()` faz isso numa fila, para duas
+  trocas seguidas não intercalarem SUBSCRIBE e UNSUBSCRIBE.
+- **O `rpc.js` repassa `args` dos eventos**, e não só `data`: é no
+  `args.channel_id` que vem o canal do evento, e `_tratarEventoRpc()` descarta
+  o que não for do canal atual — a corrida entre `SELECT_VOICE_CHANNEL` e o
+  `UNSUBSCRIBE` existe.
+- **`SPEAKING_*` passa por um freio de 150 ms** (`_agendarEmissaoPessoas()`).
+  Falar acende e apaga várias vezes por segundo, e cada emit é um broadcast do
+  estado inteiro do Discord. A primeira sílaba sai na hora; o resto se junta.
+  Presença (entrar, sair, mutar) não passa pelo freio.
+
+Também: o mudo de uma pessoa é o que está **dentro** de `voice_state`. O `mute`
+do topo do objeto é o mudo *local* (você silenciou a pessoa para você). E a
+contagem do seletor custa um `GET_CHANNEL` por canal de todos os servidores
+(o `GET_CHANNELS` em lote não traz quem está dentro), com até 8 em voo — medido
+em ~0,2 s para 97 canais.
+
+**Testar isso exige o `.exe`.** O RPC fala por named pipe do Windows, que não
+é alcançável de dentro do WSL: `npm run dev` sempre dá "Não achei o Discord
+rodando". Use uma cópia descartável do `.exe` com o `dados/.env` copiado do
+deck real **e `DISCORD_REFRESH_TOKEN` vazio** — o Discord rotaciona o refresh,
+e uma renovação feita pela cópia invalidaria a autorização do deck de verdade.
+
+**O avatar é a primeira coisa do deck que carrega da internet** (CDN do
+Discord). Sem imagem, ou com o tablet sem saída, aparece a inicial. E print do
+card tem nome e foto de gente real — não entra em `docs/img/`.
+
+O frontend não sabe nada de Discord: a lista é o campo genérico `estadoLista`
+do mostrador, que reconcilia as linhas por id (refazer por `innerHTML`
+recriaria o `<img>` a cada sílaba falada, piscando).
+
 Não cobre, e continua por teclado nos dois modos: atender, recusar, painel
 de som, ligação atual, busca, servidor anterior/próximo. Por isso os campos
 `DISCORD_TECLA_*` e `DISCORD_FOCAR_ANTES` aparecem na aba Integrações
@@ -818,6 +858,7 @@ estruturada, que é como a tela de configuração monta os formulários.
 | `iconeItem` / `mensagemVazia` | `lista` | Ícone padrão dos itens e texto de lista vazia |
 | `estadoTexto` / `…Secundario` / `…Terciario` | `info` | Dot-paths das linhas de texto exibidas |
 | `textoVazio` | `info` | Texto quando não há nada a mostrar. Ausente = "Nada tocando" |
+| `estadoLista` | `info` | Dot-path de um array `[{ id, nome, icone, imagem, ativo, atenuado }]`, desenhado uma linha por item abaixo do texto (ex.: `discord.pessoas`). Peça `altura` 3 ou mais |
 | `favoritoFonte` + `favoritoId` | `info` | Mostram uma estrela que favorita o item exibido agora: a URL da lista e o dot-path do id. **Andam juntos** |
 | `largura` / `altura` | todos | Tamanho em células da grade (1–6). Ausente = 1 |
 | `cor` | todos | Cor de destaque do botão, hex (`#6c5ce7`). Ausente = segue o tema |

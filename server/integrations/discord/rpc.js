@@ -139,8 +139,11 @@ class ClienteRpcDiscord {
       this.conectado = true;
       return;
     }
+    // `args` vai junto porque eventos assinados por canal (VOICE_STATE_*,
+    // SPEAKING_*) trazem ali o `channel_id` — sem ele a integração não teria
+    // como descartar evento atrasado de um canal que você já deixou.
     if (dados.evt) {
-      this.aoMudarEstado(dados.evt, dados.data);
+      this.aoMudarEstado(dados.evt, dados.data, dados.args);
     }
   }
 
@@ -330,6 +333,18 @@ class ClienteRpcDiscord {
 
   assinar(evento, args = {}) {
     return this._comando('SUBSCRIBE', args, { evt: evento });
+  }
+
+  // Espelho do assinar(). Obrigatório ao trocar de canal: as assinaturas por
+  // canal não morrem sozinhas, e sem isso elas acumulariam a cada troca.
+  desassinar(evento, args = {}) {
+    return this._comando('UNSUBSCRIBE', args, { evt: evento });
+  }
+
+  // Único comando que devolve `voice_states` de um canal em que você NÃO
+  // está — o GET_CHANNELS em lote traz só id/nome/tipo.
+  obterCanal(idCanal) {
+    return this._comando('GET_CHANNEL', { channel_id: idCanal });
   }
 
   obterConfiguracaoVoz() {

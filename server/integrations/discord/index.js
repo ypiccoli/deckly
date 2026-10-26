@@ -56,6 +56,23 @@ const NOMES_AFK_PADRAO = 'afk, ausente, ausentes, away, inativo, inativos';
 
 // Código do erro (posto pelo rpc.js) -> motivo mostrado à pessoa. Ver
 // `_diagnosticoRpc()`.
+// Eventos assinados por canal de voz, para a lista de quem está com você.
+// Trocam a cada troca de canal (ver `_trocarAssinaturasDeCanal()`).
+const EVENTOS_DO_CANAL = [
+  'VOICE_STATE_CREATE',
+  'VOICE_STATE_UPDATE',
+  'VOICE_STATE_DELETE',
+  'SPEAKING_START',
+  'SPEAKING_STOP',
+];
+
+// Falar acende e apaga várias vezes por segundo, e cada emit é um broadcast do
+// estado inteiro do Discord para todos os clientes. Ver `_agendarEmissaoPessoas()`.
+const FREIO_FALA_MS = 150;
+
+// Limite de GET_CHANNEL em voo ao contar pessoas no seletor.
+const CONTAGEM_EM_PARALELO = 8;
+
 const MOTIVO_POR_ERRO = {
   discord_fechado: 'discord_fechado',
   token_invalido: 'autorizacao_expirada',
@@ -78,9 +95,24 @@ class IntegracaoDiscord extends EventEmitter {
       canalId: null,
       servidor: null,
       servidorId: null,
+      // Quem está no seu canal de voz: [{ id, nome, imagem, icone, ativo,
+      // atenuado, mudo, surdo, falando, ehVoce }]. `icone`/`ativo`/`atenuado`
+      // são o formato genérico que o mostrador (`estadoLista`) desenha; os
+      // outros ficam para quem quiser ler o estado cru.
+      pessoas: [],
+      pessoasTotal: 0,
     };
 
     this.rpc = null;
+    // user_id -> voice_state cru, do canal atual. Fonte de verdade da lista.
+    this._pessoasPorId = new Map();
+    this._falando = new Set(); // user_ids falando agora
+    this._canalAssinado = null; // channel_id com EVENTOS_DO_CANAL assinados
+    // Serializa as trocas de assinatura: duas trocas de canal seguidas não
+    // podem intercalar SUBSCRIBE/UNSUBSCRIBE.
+    this._filaAssinaturas = Promise.resolve();
+    this._timerFala = null;
+    this._falaPendente = false;
     this._nomesServidores = new Map(); // guild_id -> nome, preenchido sob demanda
     // Último canal de voz diferente do atual, para o botão "Voltar".
     this._canalAnterior = null; // { id, nome }
@@ -273,9 +305,12 @@ class IntegracaoDiscord extends EventEmitter {
       clientSecret,
       accessToken,
       refreshToken,
-      aoMudarEstado: (evento, dados) => this._tratarEventoRpc(evento, dados),
+      aoMudarEstado: (evento, dados, args) => this._tratarEventoRpc(evento, dados, args),
       aoDesconectar: () => {
-        this._atualizarEstado({ conectado: false });
+        // Socket morto: as assinaturas morreram com ele, e um emit atrasado
+        // do freio não pode reviver gente que já saiu.
+        this._limparPessoas();
+        this._atualizarEstado({ conectado: false, pessoas: [], pessoasTotal: 0 });
         this._agendarReconexaoRpc();
       },
     });
@@ -339,7 +374,20 @@ class IntegracaoDiscord extends EventEmitter {
       this._canalAnterior = { id: anterior.canalId, nome: anterior.canal };
     }
 
+    // Semeia com os voice_states que já vêm no próprio canal — zero chamada
+    // extra. Vai no MESMO emit do canal: emitidos separados, o deck chegava
+    // a mostrar "fora de chamada" com você ainda na lista.
+    const servidor = await this._nomeServidor(canal?.guild_id);
+    this._pessoasPorId.clear();
+    this._falando.clear();
+    for (const vs of canal?.voice_states || []) {
+      if (vs?.user?.id) this._pessoasPorId.set(vs.user.id, vs);
+    }
+    const pessoas = this._montarPessoas();
+
     this._atualizarEstado({
+      pessoas,
+      pessoasTotal: pessoas.length,
       emChamada: Boolean(canal?.id),
       // Acende o botão de AFK enquanto você está no canal de ausentes.
       noAfk: Boolean(canal?.id) && this._pareceAfk(canal.name),
@@ -352,8 +400,125 @@ class IntegracaoDiscord extends EventEmitter {
       canal: canal?.name || null,
       canalId: canal?.id || null,
       servidorId: canal?.guild_id || null,
-      servidor: await this._nomeServidor(canal?.guild_id),
+      servidor,
     });
+
+    await this._trocarAssinaturasDeCanal(canal?.id || null);
+  }
+
+  /* ---------- pessoas no canal de voz ---------- */
+
+  _trocarAssinaturasDeCanal(idNovo) {
+    const tarefa = this._filaAssinaturas.then(async () => {
+      const rpc = this.rpc;
+      if (!rpc || this._canalAssinado === idNovo) return;
+      const anterior = this._canalAssinado;
+      this._canalAssinado = null;
+      // Desassinar canal que você já deixou pode dar erro, e isso não é
+      // problema de ninguém. O que não pode é pular: as assinaturas por canal
+      // acumulariam, e a lista encheria de gente de canais antigos.
+      if (anterior) {
+        await Promise.all(
+          EVENTOS_DO_CANAL.map((e) => rpc.desassinar(e, { channel_id: anterior }).catch(() => {})),
+        );
+      }
+      if (!idNovo || rpc !== this.rpc) return;
+      await Promise.all(EVENTOS_DO_CANAL.map((e) => rpc.assinar(e, { channel_id: idNovo })));
+      this._canalAssinado = idNovo;
+    });
+    // A fila segue mesmo se uma troca falhar.
+    this._filaAssinaturas = tarefa.catch(() => {});
+    return tarefa.catch((erro) => {
+      console.log(`[discord] Não deu para acompanhar quem está no canal (${redigir(erro.message)}).`);
+    });
+  }
+
+  _limparPessoas() {
+    clearTimeout(this._timerFala);
+    this._timerFala = null;
+    this._falaPendente = false;
+    this._pessoasPorId.clear();
+    this._falando.clear();
+    this._canalAssinado = null;
+    this._filaAssinaturas = Promise.resolve();
+  }
+
+  _montarPessoa(vs) {
+    const u = vs.user || {};
+    // Só o que está DENTRO de `voice_state`: o `mute` do topo do objeto é o
+    // mudo local (você silenciou a pessoa para você), não o dela.
+    const voz = vs.voice_state || {};
+    const mudo = Boolean(voz.self_mute || voz.mute || voz.suppress);
+    const surdo = Boolean(voz.self_deaf || voz.deaf);
+    const falando = this._falando.has(u.id);
+    const ehVoce = Boolean(this.rpc?.usuario?.id) && u.id === this.rpc.usuario.id;
+    return {
+      id: u.id,
+      // Apelido do servidor primeiro: é o nome que você reconhece ali.
+      nome: vs.nick || u.global_name || u.username || 'Alguém',
+      // Sem hash de avatar fica null e o deck desenha a inicial — não depende
+      // de internet nem das duas regras de avatar padrão do Discord. O
+      // `size=64` evita o CDN mandar a imagem cheia.
+      imagem: u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=64` : null,
+      icone: surdo ? '🔕' : mudo ? '🔇' : null,
+      ativo: falando,
+      atenuado: ehVoce,
+      mudo,
+      surdo,
+      falando,
+      ehVoce,
+    };
+  }
+
+  // Ordem estável por nome, senão a lista embaralharia a cada evento.
+  _montarPessoas() {
+    return [...this._pessoasPorId.values()]
+      .map((vs) => this._montarPessoa(vs))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  _emitirPessoas() {
+    const pessoas = this._montarPessoas();
+    this._atualizarEstado({ pessoas, pessoasTotal: pessoas.length });
+  }
+
+  // Freio da fala: emite já se não houver janela aberta (a primeira sílaba
+  // aparece sem atraso) e junta o que chegar depois num emit só, no fim dos
+  // 150 ms. Presença (entrar/sair/mutar) não passa por aqui.
+  _agendarEmissaoPessoas() {
+    if (this._timerFala) {
+      this._falaPendente = true;
+      return;
+    }
+    this._emitirPessoas();
+    this._timerFala = setTimeout(() => {
+      this._timerFala = null;
+      if (this._falaPendente) {
+        this._falaPendente = false;
+        this._agendarEmissaoPessoas();
+      }
+    }, FREIO_FALA_MS);
+  }
+
+  _tratarEventoDoCanal(evento, dados) {
+    if (evento === 'SPEAKING_START' || evento === 'SPEAKING_STOP') {
+      const id = dados?.user_id;
+      if (!id) return;
+      const antes = this._falando.has(id);
+      if (evento === 'SPEAKING_START') this._falando.add(id);
+      else this._falando.delete(id);
+      if (antes !== this._falando.has(id)) this._agendarEmissaoPessoas();
+      return;
+    }
+    const id = dados?.user?.id;
+    if (!id) return;
+    if (evento === 'VOICE_STATE_DELETE') {
+      this._pessoasPorId.delete(id);
+      this._falando.delete(id);
+    } else {
+      this._pessoasPorId.set(id, dados);
+    }
+    this._emitirPessoas();
   }
 
   async _sincronizarEstadoRpc() {
@@ -367,7 +532,15 @@ class IntegracaoDiscord extends EventEmitter {
     await this._aplicarCanal(await this._canalAtual());
   }
 
-  _tratarEventoRpc(evento, dados) {
+  _tratarEventoRpc(evento, dados, args) {
+    if (EVENTOS_DO_CANAL.includes(evento)) {
+      // Rede de proteção para a corrida entre SELECT_VOICE_CHANNEL e o
+      // UNSUBSCRIBE: evento atrasado de canal velho é descartado aqui.
+      const canalDoEvento = args?.channel_id || dados?.channel_id;
+      if (canalDoEvento && canalDoEvento !== this.estado.canalId) return;
+      this._tratarEventoDoCanal(evento, dados);
+      return;
+    }
     if (evento === 'VOICE_SETTINGS_UPDATE') {
       this._atualizarEstado({ mudo: Boolean(dados.mute), surdo: Boolean(dados.deaf) });
     } else if (evento === 'VOICE_CHANNEL_SELECT') {
@@ -512,6 +685,7 @@ class IntegracaoDiscord extends EventEmitter {
     this._garantirRpc();
     const { guilds } = await this.rpc.listarServidores();
     const opcoes = [];
+    const nomeDoServidor = new Map(); // id do canal -> nome do servidor
     for (const servidor of guilds || []) {
       let canais;
       try {
@@ -522,6 +696,7 @@ class IntegracaoDiscord extends EventEmitter {
       for (const canal of canais || []) {
         // type 2 = canal de voz na API do Discord.
         if (canal.type !== 2) continue;
+        nomeDoServidor.set(canal.id, servidor.name);
         opcoes.push({
           id: canal.id,
           nome: canal.name,
@@ -532,7 +707,33 @@ class IntegracaoDiscord extends EventEmitter {
         });
       }
     }
+    await this._contarPessoas(opcoes, nomeDoServidor);
     return opcoes;
+  }
+
+  // GET_CHANNELS não traz quem está no canal; GET_CHANNEL traz, mas é um
+  // comando por canal — e a lista cobre TODOS os servidores. Daí o limite de
+  // comandos em voo. Falha vira "sem contagem": canal sem permissão existe e
+  // não deve derrubar a lista. Canal vazio não ganha sufixo: "vazio" repetido
+  // em 40 linhas é ruído.
+  async _contarPessoas(opcoes, nomeDoServidor) {
+    let proxima = 0;
+    const trabalhador = async () => {
+      while (proxima < opcoes.length) {
+        const opcao = opcoes[proxima++];
+        let total;
+        try {
+          const canal = await this.rpc.obterCanal(opcao.id);
+          total = (canal?.voice_states || []).length;
+        } catch {
+          continue;
+        }
+        if (total > 0) {
+          opcao.detalhe = `${nomeDoServidor.get(opcao.id)} · ${total} ${total === 1 ? 'pessoa' : 'pessoas'}`;
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONTAGEM_EM_PARALELO, opcoes.length) }, trabalhador));
   }
 
   /* ================= ciclo de vida ================= */
@@ -557,7 +758,10 @@ class IntegracaoDiscord extends EventEmitter {
     }
     this._nomesServidores.clear();
     this._canalAnterior = null;
+    this._limparPessoas();
     this._atualizarEstado({
+      pessoas: [],
+      pessoasTotal: 0,
       modo: this.modo,
       conectado: false,
       emChamada: false,
@@ -762,6 +966,8 @@ class IntegracaoDiscord extends EventEmitter {
             { chave: 'discord.podeVoltar', rotulo: 'Tem canal anterior para voltar', tipo: 'booleano' },
             { chave: 'discord.canal', rotulo: 'Canal de voz atual', tipo: 'texto' },
             { chave: 'discord.servidor', rotulo: 'Servidor atual', tipo: 'texto' },
+            { chave: 'discord.pessoas', rotulo: 'Pessoas no canal de voz', tipo: 'lista' },
+            { chave: 'discord.pessoasTotal', rotulo: 'Quantas pessoas no canal', tipo: 'numero' },
             // Não serve para mostrar em tela; é o que a estrela de favoritar
             // usa para saber qual item está sendo exibido.
             { chave: 'discord.canalId', rotulo: 'ID do canal de voz atual', tipo: 'texto' },

@@ -137,6 +137,16 @@
       <div class="info-linha-terciaria"></div>
     `;
 
+    // Lista de itens vinda do estado (ex.: quem está no canal de voz). Campo
+    // genérico: qualquer integração que exponha um array no formato do
+    // seletor ({ id, nome, icone, imagem, ativo, atenuado }) ganha isso.
+    if (botao.estadoLista) {
+      el.classList.add('tem-itens');
+      const itens = document.createElement('div');
+      itens.className = 'info-itens';
+      el.appendChild(itens);
+    }
+
     // Estrela para favoritar o que o mostrador está exibindo agora — é como
     // se favorita o canal em que você já está, sem abrir o seletor.
     if (botao.favoritoFonte && botao.favoritoId) {
@@ -193,6 +203,76 @@
     const elTerciaria = el.querySelector('.info-linha-terciaria');
     if (elTerciaria) elTerciaria.textContent = terciaria ? `em ${terciaria}` : '';
     atualizarEstrelaInfo(botao, el);
+    atualizarItensInfo(botao, el);
+  }
+
+  // Reconcilia por id em vez de refazer por innerHTML: refazer recriaria o
+  // <img> do avatar — e o rebuscaria — a cada evento de fala, piscando a cada
+  // sílaba. Linha só nasce e morre na entrada e saída; no resto troca texto e
+  // classes.
+  function atualizarItensInfo(botao, el) {
+    const caixa = el.querySelector('.info-itens');
+    if (!caixa) return;
+    const valor = resolverEstado(estadoGlobal, botao.estadoLista);
+    const itens = Array.isArray(valor) ? valor.filter((i) => i && i.id != null) : [];
+
+    const existentes = new Map();
+    for (const linha of caixa.children) existentes.set(linha.dataset.id, linha);
+
+    let anterior = null;
+    for (const item of itens) {
+      const id = String(item.id);
+      let linha = existentes.get(id);
+      if (linha) existentes.delete(id);
+      else linha = criarLinhaItemInfo(id);
+      pintarLinhaItemInfo(linha, item);
+      // Mantém a ordem que veio do estado sem mexer em quem já está no lugar.
+      const esperado = anterior ? anterior.nextSibling : caixa.firstChild;
+      if (linha !== esperado) caixa.insertBefore(linha, esperado);
+      anterior = linha;
+    }
+    for (const sobra of existentes.values()) sobra.remove();
+  }
+
+  function criarLinhaItemInfo(id) {
+    const linha = document.createElement('div');
+    linha.className = 'info-item';
+    linha.dataset.id = id;
+    linha.innerHTML = `
+      <span class="info-item-avatar"></span>
+      <span class="info-item-nome"></span>
+      <span class="info-item-icone"></span>
+    `;
+    return linha;
+  }
+
+  function pintarLinhaItemInfo(linha, item) {
+    const nome = String(item.nome || '');
+    // textContent: nome de pessoa de outro servidor é texto de terceiros.
+    linha.querySelector('.info-item-nome').textContent = nome;
+    linha.querySelector('.info-item-icone').textContent = item.icone || '';
+    linha.classList.toggle('ativo', Boolean(item.ativo));
+    linha.classList.toggle('atenuado', Boolean(item.atenuado));
+
+    const avatar = linha.querySelector('.info-item-avatar');
+    const imagem = item.imagem || '';
+    if (avatar.dataset.imagem === imagem && avatar.firstChild) return;
+    avatar.dataset.imagem = imagem;
+    avatar.textContent = '';
+    // Sem imagem, ou sem internet no tablet: a inicial no lugar.
+    const inicial = () => {
+      avatar.textContent = (nome.trim()[0] || '?').toUpperCase();
+      avatar.classList.add('sem-imagem');
+    };
+    if (!imagem) return inicial();
+    avatar.classList.remove('sem-imagem');
+    const img = document.createElement('img');
+    img.alt = '';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.addEventListener('error', () => { img.remove(); inicial(); }, { once: true });
+    img.src = imagem;
+    avatar.appendChild(img);
   }
 
   // Ícone de cada item do seletor, escolhido pelo campo "detalhe" que a

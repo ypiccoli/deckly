@@ -534,6 +534,81 @@ body.modo-edicao .grade .botao.arrastando {
   text-overflow: ellipsis;
 }
 
+/* Lista de itens do mostrador (estadoLista), ex.: quem está no canal de
+   voz. O justify-content: center do .botao-info brigaria com a área rolável,
+   daí o flex-start quando há lista. */
+.botao-info.tem-itens {
+  justify-content: flex-start;
+}
+
+.info-itens {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--cor-texto-fraco);
+  transition: color 0.12s;
+}
+
+.info-item.ativo {
+  color: var(--cor-acento-2);
+  font-weight: 700;
+}
+
+.info-item.atenuado {
+  opacity: 0.6;
+}
+
+.info-item-avatar {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--cor-cartao-borda);
+  color: var(--cor-texto);
+  box-shadow: 0 0 0 2px transparent;
+  transition: box-shadow 0.12s;
+}
+
+.info-item.ativo .info-item-avatar {
+  box-shadow: 0 0 0 2px var(--cor-acento-2);
+}
+
+.info-item-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.info-item-nome {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-item-icone {
+  flex: none;
+  font-size: 0.75rem;
+}
+
 /* Overlay do seletor de dispositivo Spotify ("Tocar em…")
    Visibilidade controlada pela classe .aberto, não pelo atributo [hidden]:
    um seletor de classe com "display" tem a MESMA especificidade da regra

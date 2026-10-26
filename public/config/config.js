@@ -489,10 +489,13 @@
 
     // --- info: linhas de texto ---
     if (tipo === 'info') {
+      // Estado do tipo "lista" é um array: numa linha de texto viraria
+      // "[object Object]". Ele vai só para o select "Lista de itens".
       var estadosDisponiveis = [];
+      var estadosLista = [];
       Object.keys(estado.catalogo).forEach(function (nome) {
         (estado.catalogo[nome].estados || []).forEach(function (e) {
-          estadosDisponiveis.push({ valor: e.chave, rotulo: e.rotulo });
+          (e.tipo === 'lista' ? estadosLista : estadosDisponiveis).push({ valor: e.chave, rotulo: e.rotulo });
         });
       });
       var fsInfo = document.createElement('fieldset');
@@ -509,6 +512,15 @@
           })
         );
       });
+
+      fsInfo.appendChild(
+        campoSelect('Lista de itens', botao.estadoLista, estadosLista, function (v) {
+          if (v) botao.estadoLista = v; else delete botao.estadoLista;
+        }, {
+          textoVazio: '— sem lista —',
+          ajuda: 'Uma linha por item, abaixo do texto (ex.: quem está no canal de voz). Aumente a altura do botão para caber.',
+        })
+      );
 
       fsInfo.appendChild(
         campoTexto('Texto quando não há nada a mostrar', botao.textoVazio, function (v) {

@@ -83,7 +83,7 @@ aceitando só IP e `localhost`. É a defesa contra DNS rebinding — veja o
 | `POST /api/favoritos` | token | Alterna (ou define) o favorito de um id. **Não exige local**: favoritar é uso normal, feito do tablet |
 | `GET /media/saidas` | token | Saídas de áudio ativas do Windows (alimenta o seletor "Saída") |
 | `GET /discord/destinos` | token | Canais e servidores configurados (alimenta o "Ir para…", modo teclado) |
-| `GET /discord/canais` | token | Canais de voz de verdade, via RPC (alimenta o seletor "Canais") |
+| `GET /discord/canais` | token | Canais de voz de verdade, via RPC, com quantas pessoas há em cada um (alimenta o seletor "Canais") |
 | `GET /discord/autorizar` | local | Aprova o app no Discord e grava o token do modo RPC |
 | `GET /homeassistant/entidades` | token | Entidades do Home Assistant (alimenta os seletores de casa inteligente) |
 | `GET /homeassistant/cores` | token | Paleta fixa de cores (alimenta o seletor de cor da luz) |
